@@ -1,0 +1,22 @@
+{"properties": [
+  {
+    "name": "whatsapp.urlbase",
+    "type": "java.lang.String",
+    "description": "A description for 'whatsapp.urlBase'"
+  },
+  {
+    "name": "whatsapp.token",
+    "type": "java.lang.String",
+    "description": "A description for 'whatsapp.token'"
+  },
+  {
+    "name": "whatsapp.version",
+    "type": "java.lang.String",
+    "description": "A description for 'whatsapp.version'"
+  },
+  {
+    "name": "Phone-Number-ID",
+    "type": "java.lang.String",
+    "description": "A description for 'Phone-Number-ID'"
+  }
+]}
