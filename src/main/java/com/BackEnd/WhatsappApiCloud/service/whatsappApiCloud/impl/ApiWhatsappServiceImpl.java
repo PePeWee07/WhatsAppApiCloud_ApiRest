@@ -1,15 +1,15 @@
-package com.BackEnd.WhatsappApiCloud.service.api.impl;
+package com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.impl;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
-import com.BackEnd.WhatsappApiCloud.model.dto.RequestMessage;
-import com.BackEnd.WhatsappApiCloud.model.dto.RequestMessageText;
-import com.BackEnd.WhatsappApiCloud.model.dto.ResponseWhatsapp;
-import com.BackEnd.WhatsappApiCloud.model.entity.MessageBody;
-import com.BackEnd.WhatsappApiCloud.service.api.ApiWhatsappService;
+import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestMessage;
+import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestMessageText;
+import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
+import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
+import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 

@@ -1,4 +1,4 @@
-package com.BackEnd.WhatsappApiCloud.model.dto;
+package com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage;
 
 // * Usado por --> RequestMessage.java
 

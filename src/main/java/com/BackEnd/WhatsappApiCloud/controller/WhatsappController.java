@@ -5,9 +5,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.BackEnd.WhatsappApiCloud.model.dto.ResponseWhatsapp;
-import com.BackEnd.WhatsappApiCloud.model.entity.MessageBody;
-import com.BackEnd.WhatsappApiCloud.service.api.ApiWhatsappService;
+import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
+import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
+import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 @RestController
