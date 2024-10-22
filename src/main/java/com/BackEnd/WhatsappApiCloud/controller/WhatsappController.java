@@ -1,6 +1,5 @@
 package com.BackEnd.WhatsappApiCloud.controller;
 
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,7 +28,6 @@ public class WhatsappController {
 
     @PostMapping("/receive")
     public ResponseWhatsapp receiveMessage(@RequestBody WhatsAppData.WhatsAppMessage message) throws JsonProcessingException {
-        System.out.println("Received message: " + message);
         return apiWhatsappService.ResponseMessage(message);
     }
 }

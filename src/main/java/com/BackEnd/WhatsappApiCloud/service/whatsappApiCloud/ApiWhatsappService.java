@@ -9,4 +9,5 @@ public interface ApiWhatsappService {
 
      ResponseWhatsapp sendMessage(MessageBody payload) throws JsonProcessingException;
      ResponseWhatsapp ResponseMessage(WhatsAppData.WhatsAppMessage message) throws JsonProcessingException;
+
 }

@@ -61,7 +61,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             message.entry().get(0).changes().get(0).value().contacts().get(0).wa_id(),
             "text",
             new RequestMessageText(false, "Hola, soy un bot de prueba")
-
         );
 
         String response = restClient.post()
