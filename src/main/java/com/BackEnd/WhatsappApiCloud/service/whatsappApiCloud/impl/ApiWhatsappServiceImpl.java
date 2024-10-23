@@ -25,53 +25,77 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             @Value("${whatsapp.urlbase}") String urlBase,
             @Value("${whatsapp.version}") String version
             ){
+        try {
+            restClient = RestClient.builder()
+                    .baseUrl(urlBase + version + "/" + identificador)
+                    .defaultHeader("Authorization", "Bearer " + token)
+                    .build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Error initializing RestClient: " + e.getMessage());
+        }
+    }
 
-        restClient = RestClient.builder()
-                .baseUrl(urlBase + version + "/" + identificador)
-                .defaultHeader("Authorization", "Bearer " + token)
-                .build();
+    public ResponseWhatsapp ResponseBuilder(RequestMessage request) {
+        try {
+            String response = restClient.post()
+                    .uri("/messages")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .retrieve()
+                    .body(String.class);
+
+            ObjectMapper obj = new ObjectMapper();
+            return obj.readValue(response, ResponseWhatsapp.class);
+        } catch (JsonProcessingException e) {
+            e.printStackTrace();
+            System.err.println("Error al construir respuesta: " + e);
+            return null;
+        }
     }
 
     @Override
-    public ResponseWhatsapp sendMessage(MessageBody payload) throws JsonProcessingException {
-        RequestMessage request = new RequestMessage(
-            "whatsapp", 
-            "individual", 
-            payload.number(),
-            "text",
-            new RequestMessageText(false, payload.message())
-        );
+    public ResponseWhatsapp sendMessage(MessageBody payload) {
+        try {
+            RequestMessage request = new RequestMessage(
+                "whatsapp", 
+                "individual", 
+                payload.number(),
+                "text",
+                new RequestMessageText(false, payload.message())
+            );
 
-        String response = restClient.post()
-                .uri("/messages")
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(request)
-                .retrieve()
-                .body(String.class);
-
-        ObjectMapper obj = new ObjectMapper();
-        return obj.readValue(response, ResponseWhatsapp.class);
+            return ResponseBuilder(request);
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.err.println("Error al enviar mensaje: "+ e);
+            return null;
+        }
     }
 
     @Override
-    public ResponseWhatsapp ResponseMessage(WhatsAppData.WhatsAppMessage message) throws JsonProcessingException {
-        RequestMessage request = new RequestMessage(
-            "whatsapp", 
-            "individual",
-            message.entry().get(0).changes().get(0).value().contacts().get(0).wa_id(),
-            "text",
-            new RequestMessageText(false, "Hola, soy un bot de prueba")
-        );
+    public ResponseWhatsapp ResponseMessage(WhatsAppData.WhatsAppMessage message) {
+        try {
+            String messageType = message.entry().get(0).changes().get(0).value().messages().get(0).type();
 
-        String response = restClient.post()
-                .uri("/messages")
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(request)
-                .retrieve()
-                .body(String.class);
-        
-        ObjectMapper obj = new ObjectMapper();
-        return obj.readValue(response, ResponseWhatsapp.class);
+            if (!messageType.equals("text")) {
+                return null;
+            }
+
+            RequestMessage request = new RequestMessage(
+                "whatsapp", 
+                "individual",
+                message.entry().get(0).changes().get(0).value().contacts().get(0).wa_id(),
+                "text",
+                new RequestMessageText(false, "Hola, soy un bot de prueba")
+            );
+
+            return ResponseBuilder(request);
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.err.println("Error al enviar Respuesta: "+ e);
+            return null;
+        }
     }
 
 }

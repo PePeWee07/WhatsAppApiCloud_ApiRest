@@ -1,6 +1,7 @@
 package com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents;
 
 import java.util.List;
+import java.util.Optional;
 
 public class WhatsAppData {
 
@@ -22,9 +23,9 @@ public class WhatsAppData {
     public record Value(
         String messaging_product,
         Metadata metadata,
-        List<Contact> contacts,  // Para mensajes entrantes
-        List<Message> messages,  // Para mensajes entrantes y posiblemente para eventos relacionados con mensajes
-        List<Status> statuses    // Para actualizaciones de estado de mensajes enviados
+        List<Contact> contacts,
+        List<Message> messages,
+        List<Status> statuses
     ) {}
 
     public record Metadata(
@@ -42,20 +43,49 @@ public class WhatsAppData {
     ) {}
 
     public record Message(
-        String from,     // El remitente del mensaje, útil para mensajes entrantes
+        String from,
         String id,
         String timestamp,
-        Text text,
-        String type
+        Optional<Text> text,
+        String type,
+        Optional<Image> image,
+        Optional<Reaction> reaction,
+        Optional<Location> location,
+        Optional<Sticker> sticker
     ) {}
 
     public record Text(
-        String body  // Cuerpo del mensaje
+        String body
+    ) {}
+
+    public record Image(
+        String caption,
+        String mime_type,
+        String sha256,
+        String id
+    ) {}
+
+    public record Reaction(
+        String message_id,
+        String emoji
+    ) {}
+
+    public record Location(
+        String latitude,
+        String longitude,
+        String name,
+        String address
+    ) {}
+
+    public record Sticker(
+        String mime_type,
+        String sha256,
+        String id
     ) {}
 
     public record Status(
         String id,
-        String status,  // Estado del mensaje, como 'delivered'
+        String status,
         String timestamp,
         String recipient_id,
         Conversation conversation,
@@ -68,12 +98,12 @@ public class WhatsAppData {
     ) {}
 
     public record Origin(
-        String type  // Tipo de origen, útil para clasificar la conversación
+        String type
     ) {}
 
     public record Pricing(
-        boolean billable,    // Si el mensaje es facturable
+        boolean billable,
         String pricing_model,
-        String category      // Categoría del servicio de mensajería
+        String category
     ) {}
 }
