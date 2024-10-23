@@ -23,8 +23,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             @Value("${Phone-Number-ID}") String identificador,
             @Value("${whatsapp.token}") String token,
             @Value("${whatsapp.urlbase}") String urlBase,
-            @Value("${whatsapp.version}") String version
-            ){
+            @Value("${whatsapp.version}") String version) {
         try {
             restClient = RestClient.builder()
                     .baseUrl(urlBase + version + "/" + identificador)
@@ -54,21 +53,29 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
+    public RequestMessage RequestBuilder(String toPhone, String responseType, String responseMessage) {
+        try {
+            return new RequestMessage(
+                    "whatsapp",
+                    "individual",
+                    toPhone,
+                    responseType,
+                    new RequestMessageText(false, responseMessage));
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.err.println("Error al construir RequestMessage: " + e);
+            return null;
+        }
+    }
+
     @Override
     public ResponseWhatsapp sendMessage(MessageBody payload) {
         try {
-            RequestMessage request = new RequestMessage(
-                "whatsapp", 
-                "individual", 
-                payload.number(),
-                "text",
-                new RequestMessageText(false, payload.message())
-            );
-
+            RequestMessage request = RequestBuilder(payload.number(), "text", payload.message());
             return ResponseBuilder(request);
         } catch (Exception e) {
             e.printStackTrace();
-            System.err.println("Error al enviar mensaje: "+ e);
+            System.err.println("Error al enviar mensaje: " + e);
             return null;
         }
     }
@@ -77,23 +84,19 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     public ResponseWhatsapp ResponseMessage(WhatsAppData.WhatsAppMessage message) {
         try {
             String messageType = message.entry().get(0).changes().get(0).value().messages().get(0).type();
+            String toPhone = message.entry().get(0).changes().get(0).value().contacts().get(0).wa_id();
 
             if (!messageType.equals("text")) {
-                return null;
+                RequestMessage request = RequestBuilder(toPhone, "text", "Hola, No puedo procesar este tipo de mensaje");
+                return ResponseBuilder(request);
             }
 
-            RequestMessage request = new RequestMessage(
-                "whatsapp", 
-                "individual",
-                message.entry().get(0).changes().get(0).value().contacts().get(0).wa_id(),
-                "text",
-                new RequestMessageText(false, "Hola, soy un bot de prueba")
-            );
-
+            RequestMessage request = RequestBuilder(toPhone, messageType, "Hola, soy un bot de prueba");
             return ResponseBuilder(request);
+
         } catch (Exception e) {
             e.printStackTrace();
-            System.err.println("Error al enviar Respuesta: "+ e);
+            System.err.println("Error al enviar Respuesta: " + e);
             return null;
         }
     }
