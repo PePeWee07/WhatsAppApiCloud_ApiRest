@@ -1,5 +1,6 @@
 package com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.impl;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -9,7 +10,9 @@ import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.Reques
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestMessageText;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppData;
+import com.BackEnd.WhatsappApiCloud.model.entity.UserChatEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
+import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -35,10 +38,11 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
-    public ResponseWhatsapp ResponseBuilder(RequestMessage request) {
+    // Constructor de la respuesta
+    public ResponseWhatsapp ResponseBuilder(RequestMessage request, String uri) {
         try {
             String response = restClient.post()
-                    .uri("/messages")
+                    .uri(uri)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(request)
                     .retrieve()
@@ -53,6 +57,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
+    // Constructor de la peticion
     public RequestMessage RequestBuilder(String toPhone, String responseType, String responseMessage) {
         try {
             return new RequestMessage(
@@ -68,11 +73,12 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
+    // Metodo para enviar mensaje
     @Override
     public ResponseWhatsapp sendMessage(MessageBody payload) {
         try {
             RequestMessage request = RequestBuilder(payload.number(), "text", payload.message());
-            return ResponseBuilder(request);
+            return ResponseBuilder(request, "/messages");
         } catch (Exception e) {
             e.printStackTrace();
             System.err.println("Error al enviar mensaje: " + e);
@@ -80,6 +86,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
+    // Metodo para recibir y responder mensajes automaticamente
     @Override
     public ResponseWhatsapp ResponseMessage(WhatsAppData.WhatsAppMessage message) {
         try {
@@ -88,17 +95,24 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
             if (!messageType.equals("text")) {
                 RequestMessage request = RequestBuilder(toPhone, "text", "Hola, No puedo procesar este tipo de mensaje");
-                return ResponseBuilder(request);
+                return ResponseBuilder(request, "/messages");
             }
 
             RequestMessage request = RequestBuilder(toPhone, messageType, "Hola, soy un bot de prueba");
-            return ResponseBuilder(request);
+            return ResponseBuilder(request, "/messages");
 
         } catch (Exception e) {
             e.printStackTrace();
             System.err.println("Error al enviar Respuesta: " + e);
             return null;
         }
+    }
+
+    @Autowired
+    private UserChatRepository usuarioRepository;
+
+    public UserChatEntity guardarUsuario(UserChatEntity usuario) {
+        return usuarioRepository.save(usuario);
     }
 
 }
