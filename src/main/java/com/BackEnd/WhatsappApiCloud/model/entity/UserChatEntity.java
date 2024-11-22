@@ -30,17 +30,20 @@ public class UserChatEntity {
     @Column(name = "name", length = 100, nullable = false)
     private String nombres;
 
-    @NotNull
+    // @Column(unique = true)
     private String cedula;
 
-    @NotNull
+    private String phone;
+
     private String rol;
 
-    @NotNull
     private String sede;
 
-    @NotNull
-    private String carrera;    
+    private String carrera;
 
     private String thread_id;
+
+    // Agregar un campo para el último tiempo de interacción y el session ID
+    private long lastInteraction;
+
 }
