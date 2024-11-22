@@ -1,7 +1,10 @@
 package com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.impl;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
@@ -50,50 +53,50 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
-    // Parte de ResponseMessage adaptada a tu modelo
+    
     @Override
     public ResponseWhatsapp ResponseMessage(WhatsAppData.WhatsAppMessage message) {
         try {
             String messageType = message.entry().get(0).changes().get(0).value().messages().get(0).type();
             String waId = message.entry().get(0).changes().get(0).value().contacts().get(0).wa_id();
 
-            // Buscar usuario por WA ID (telefono)
-            // ? Simular Erp_emulator
-            UserChatEntity user = userChatRepository.findByPhone(waId)
-            .orElseGet(() -> {
-                UserChatEntity newUser = new UserChatEntity();
-                newUser.setNombres("Anonymus");
-                newUser.setCedula("0000000000");
-                newUser.setPhone(waId);
-                newUser.setRol("Invitado");
-                newUser.setThread_id("xxxxxx");
-                newUser.setLastInteraction(System.currentTimeMillis());
-                return userChatRepository.save(newUser);  // Guarda inmediatamente el usuario nuevo
-            });
+            // Mensjae de Texto debe traer la cedula
+            String messaText = message.entry().get(0).changes().get(0).value().messages().get(0).text().get().body();
 
             if (!messageType.equals("text")) {
                 RequestMessage request = RequestBuilder(waId, "text", "Hola, no puedo procesar este tipo de mensaje.");
                 return ResponseBuilder(request, "/messages");
             }
 
-             // Verificar si el usuario es un invitado o no
-            if (user.getRol().equals("Invitado")) {
-                RequestMessage request = RequestBuilder(waId, "text", "Estás como modo invitado. No perteneces a la universidad.");
-                return ResponseBuilder(request, "/messages");
-            } else {
-                // Enviar datos del usuario a la IA y obtener respuesta
-                String respuestaIA = "Respuesta simulada de la IA basada en los datos del usuario.";
-                RequestMessage request = RequestBuilder(waId, "text", respuestaIA);
+            // Buscar usuario en json-server
+            UserChatEntity user;
+            try {
+                RestClient localRestClient = RestClient.builder()
+                    .baseUrl("http://localhost:3000")
+                    .build();
 
-                // Guardar o actualizar usuario
-                user.setLastInteraction(System.currentTimeMillis());
-                userChatRepository.save(user);
+                
+                String url = "/data?cedula=" + messaText; // Endpoint de json-server
+                List<UserChatEntity> users = localRestClient.get()
+                    .uri(url)
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<List<UserChatEntity>>() {});
 
-                return ResponseBuilder(request, "/messages");
+                if (users.isEmpty()) {
+                    RequestMessage request = RequestBuilder(waId, "text", "Estás como modo invitado. No perteneces a la universidad.");
+                    return ResponseBuilder(request, "/messages");
+                } else {
+                    //? Simular peticion IA
+                    // Obtener el primer usuario encontrado
+                    user = users.get(0);
+                    String respuestaIA = "Hola " + user.getNombres() + ", tu rol es " + user.getRol();
+                    RequestMessage request = RequestBuilder(waId, "text", respuestaIA);
+                    return ResponseBuilder(request, "/messages");
+                }
+            } catch (Exception apiException) {
+                System.err.println("Error al conectar con json-server: " + apiException.getMessage());
+                throw new RuntimeException("Error al obtener datos del usuario desde json-server.");
             }
-
-            // RequestMessage request = RequestBuilder(waId, messageType, "Hola, soy un bot de prueba.");
-            // return ResponseBuilder(request, "/messages");
 
         } catch (Exception e) {
             e.printStackTrace();
