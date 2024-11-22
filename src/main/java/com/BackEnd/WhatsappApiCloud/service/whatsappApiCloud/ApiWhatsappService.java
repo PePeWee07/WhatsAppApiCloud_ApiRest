@@ -9,7 +9,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 public interface ApiWhatsappService {
 
      ResponseWhatsapp sendMessage(MessageBody payload) throws JsonProcessingException;
-     ResponseWhatsapp ResponseMessage(WhatsAppData.WhatsAppMessage message) throws JsonProcessingException;
+
+     ResponseWhatsapp handleUserMessage(WhatsAppData.WhatsAppMessage message);
 
      //? TEST SAVE USER
      UserChatEntity guardarUsuario(UserChatEntity usuario);

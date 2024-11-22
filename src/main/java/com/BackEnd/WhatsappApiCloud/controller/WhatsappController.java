@@ -34,7 +34,7 @@ public class WhatsappController {
             System.out.println("Mensaje recibido: " + message.entry().get(0).changes().get(0).value().messages().get(0).text());
             System.out.println(ResponseEntity.ok()); 
         }
-        return apiWhatsappService.ResponseMessage(message);
+        return apiWhatsappService.handleUserMessage(message);
     }
 
     //? TEST SAVE USER

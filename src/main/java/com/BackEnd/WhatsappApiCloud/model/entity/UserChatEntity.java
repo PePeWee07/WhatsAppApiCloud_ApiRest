@@ -46,4 +46,6 @@ public class UserChatEntity {
     // Agregar un campo para el último tiempo de interacción y el session ID
     private long lastInteraction;
 
+    private String conversationState; // Ejemplo de estados: "WAITING_FOR_CEDULA", "READY"
+
 }
