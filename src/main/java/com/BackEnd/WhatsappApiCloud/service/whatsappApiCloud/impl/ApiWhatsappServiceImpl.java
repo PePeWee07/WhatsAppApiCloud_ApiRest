@@ -106,7 +106,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                         return sendSimpleResponse(waId, "Hola " + user.getNombres() + ", bienvenido al Asistente Tecnológico de TICs. ¿En qué puedo ayudarte hoy?");
 
                     } else {
-                        return sendSimpleResponse(waId, "Por favor, introduce tu número de cédula para continuar.");
+                        return sendSimpleResponse(waId, "Por favor, introduce tu número de cédula valida para continuar.");
                     }
                 case "READY":
                     AnswersOpenIa data = getAnswerIA(messageText, user.getNombres(), user.getThread_id());
@@ -124,10 +124,68 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             return sendSimpleResponse(waId, "Ha ocurrido un error inesperado. Por favor, inténtalo nuevamente más tarde.");
         }
     }
-
-    // Metodo para validar cedula
-    private boolean isValidCedula(String cedula) {
-        return cedula != null && cedula.matches("\\d{10}");
+    
+    private static boolean isValidCedula(String cedula) {
+        // Validar que tenga 10 dígitos
+        if (cedula == null || cedula.length() != 10) {
+            System.out.println("Esta cédula tiene menos o más de 10 dígitos");
+            return false;
+        }
+    
+        try {
+            // Obtener los dos primeros dígitos (región)
+            int digitoRegion = Integer.parseInt(cedula.substring(0, 2));
+    
+            // Validar región (1 a 24)
+            if (digitoRegion < 1 || digitoRegion > 24) {
+                System.out.println("Esta cédula no pertenece a ninguna región");
+                return false;
+            }
+    
+            // Extraer el último dígito
+            int ultimoDigito = Integer.parseInt(cedula.substring(9, 10));
+    
+            // Sumar los pares
+            int pares = Integer.parseInt(cedula.substring(1, 2)) +
+                        Integer.parseInt(cedula.substring(3, 4)) +
+                        Integer.parseInt(cedula.substring(5, 6)) +
+                        Integer.parseInt(cedula.substring(7, 8));
+    
+            // Sumar los impares, multiplicando por 2 y ajustando si > 9
+            int impares = sumarImpar(cedula.substring(0, 1)) +
+                          sumarImpar(cedula.substring(2, 3)) +
+                          sumarImpar(cedula.substring(4, 5)) +
+                          sumarImpar(cedula.substring(6, 7)) +
+                          sumarImpar(cedula.substring(8, 9));
+    
+            // Suma total
+            int sumaTotal = pares + impares;
+    
+            // Obtener el primer dígito de la suma total
+            int primerDigitoSuma = Integer.parseInt(String.valueOf(sumaTotal).substring(0, 1));
+    
+            // Obtener la decena inmediata
+            int decena = (primerDigitoSuma + 1) * 10;
+    
+            // Calcular el dígito validador
+            int digitoValidador = decena - sumaTotal;
+    
+            // Si el dígito validador es 10, se ajusta a 0
+            if (digitoValidador == 10) {
+                digitoValidador = 0;
+            }
+    
+            // Validar el dígito validador contra el último dígito
+            return digitoValidador == ultimoDigito;
+    
+        } catch (NumberFormatException e) {
+            System.out.println("Error en el formato de la cédula");
+            return false;
+        }
+    }
+    private static int sumarImpar(String numero) {
+        int valor = Integer.parseInt(numero) * 2;
+        return (valor > 9) ? (valor - 9) : valor;
     }
     
     // Metodo para enviar mensaje simple
@@ -149,7 +207,14 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 .retrieve()
                 .body(new ParameterizedTypeReference<List<UserChatEntity>>() {});
 
-            return users.isEmpty() ? null : users.get(0);
+            System.out.println("Users: " + localRestClient.get().uri(url).retrieve().body(String.class));
+            
+            // Buscar el rol que no sea "Estudiante"
+            UserChatEntity nonStudentRole = users.stream()
+                .filter(user -> !user.getRol().equalsIgnoreCase("Estudiante"))
+                .findFirst().orElse(users.get(0));
+
+            return nonStudentRole;
         } catch (Exception apiException) {
             System.err.println("Error al obtener datos del usuario desde ERP: " + apiException.getMessage());
             throw new CustomJsonServerException("Error al obtener datos del usuario desde ERP.", apiException);
