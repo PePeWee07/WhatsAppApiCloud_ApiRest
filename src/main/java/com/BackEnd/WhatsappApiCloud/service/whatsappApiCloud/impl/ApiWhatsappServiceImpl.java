@@ -26,9 +26,13 @@ import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class ApiWhatsappServiceImpl implements ApiWhatsappService {
+
+    private static final Logger logger = LoggerFactory.getLogger(ApiWhatsappServiceImpl.class);
 
     private final RestClient restClient;
     @Autowired
@@ -53,7 +57,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             RequestMessage request = RequestBuilder(payload.number(), "text", payload.message());
             return ResponseBuilder(request, "/messages");
         } catch (Exception e) {
-            System.err.println("Error al enviar mensaje: " + e);
+            logger.error("Error al enviar mensaje: " + e);
             return null;
         }
     }
@@ -133,7 +137,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             }
 
         } catch (Exception e) {
-            System.err.println("Error al procesar mensaje de usuario: " + e.getMessage());
+            logger.error("Error al procesar mensaje de usuario: " + e);
             return sendSimpleResponse(waId, "Ha ocurrido un error inesperado. Por favor, inténtalo nuevamente más tarde.");
         }
     }
@@ -141,7 +145,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     private static boolean isValidCedula(String cedula) {
         // Validar que tenga 10 dígitos
         if (cedula == null || cedula.length() != 10) {
-            System.out.println("Esta cédula tiene menos o más de 10 dígitos");
             return false;
         }
     
@@ -151,7 +154,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     
             // Validar región (1 a 24)
             if (digitoRegion < 1 || digitoRegion > 24) {
-                System.out.println("Esta cédula no pertenece a ninguna región");
                 return false;
             }
     
@@ -192,7 +194,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             return digitoValidador == ultimoDigito;
     
         } catch (NumberFormatException e) {
-            System.out.println("Error en el formato de la cédula");
+            logger.info(cedula + " no es un número válido.");
             return false;
         }
     }
@@ -235,7 +237,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
             return nonStudentRole;
         } catch (Exception apiException) {
-            System.err.println("Error al obtener datos del usuario desde ERP: " + apiException.getMessage());
+            logger.error("Error al obtener datos del usuario desde ERP: " + apiException.getMessage());
             throw new CustomJsonServerException("Error al obtener datos del usuario desde ERP.", apiException);
         }
     }  
@@ -261,7 +263,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             return answer;
     
         } catch (Exception e) {
-            System.err.println("Error al obtener respuesta de IA: " + e.getMessage());
+            logger.error("Error al obtener respuesta de IA: " + e.getMessage());
             throw new CustomOpenIaServerException("Error al obtener respuesta de IA: ", e);
         }
     }    
@@ -278,7 +280,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         try {
             return obj.readValue(response, ResponseWhatsapp.class);
         } catch (JsonProcessingException e) {
-            System.err.println("Error al procesar JSON: " + e);
+            logger.error("Error al procesar JSON: " + e);
             throw new RuntimeException("Error processing JSON", e);
         }
     }
@@ -293,8 +295,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     responseType,
                     new RequestMessageText(false, responseMessage));
         } catch (Exception e) {
-            e.printStackTrace();
-            System.err.println("Error al construir RequestMessage: " + e);
+            logger.error("Error al construir mensaje de petición: " + e);
             return null;
         }
     }
