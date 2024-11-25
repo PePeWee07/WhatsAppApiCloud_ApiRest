@@ -1,5 +1,7 @@
 package com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.impl;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -74,6 +76,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     UserChatEntity newUser = new UserChatEntity();
                     newUser.setPhone(waId);
                     newUser.setNombres("Anonymus");
+                    newUser.setLastInteraction(getCurrentDateAsYYYYMMDD());
                     newUser.setConversationState("WAITING_FOR_CEDULA");
                     return userChatRepository.save(newUser);
                 });
@@ -85,7 +88,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     
                         //! Si no encuentro la cédula dentro de ERP
                         if (userFromJsonServer == null) {
-                            user.setLastInteraction(0);
+                            user.setLastInteraction(getCurrentDateAsYYYYMMDD());
                             user.setNombres("Usuario");
                             user.setConversationState("READY");
                             user.setRol("Invitado");
@@ -94,7 +97,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                         }
     
                         //! Si Lo encuentro
-                        user.setLastInteraction(0);
+                        user.setLastInteraction(getCurrentDateAsYYYYMMDD());
                         user.setNombres(userFromJsonServer.getNombres());
                         user.setCarrera(userFromJsonServer.getCarrera());
                         user.setCedula(userFromJsonServer.getCedula());
@@ -119,7 +122,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     AnswersOpenIa data = getAnswerIA(messageText, user.getNombres(), user.getThread_id());
 
                     user.setThread_id(data.thread_id());
-                    user.setLastInteraction(1);
+                    user.setLastInteraction(getCurrentDateAsYYYYMMDD());
                     userChatRepository.save(user);
 
                     return sendSimpleResponse(waId, data.respuesta());
@@ -202,6 +205,12 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     private ResponseWhatsapp sendSimpleResponse(String waId, String message) {
         RequestMessage request = RequestBuilder(waId, "text", message);
         return ResponseBuilder(request, "/messages");
+    }
+
+    private String getCurrentDateAsYYYYMMDD() {
+        LocalDate currentDate = LocalDate.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+        return currentDate.format(formatter);
     }
 
     // Metodo para obtener usuario desde ERP
