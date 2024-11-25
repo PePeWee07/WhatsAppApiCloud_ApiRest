@@ -70,6 +70,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         try {
             UserChatEntity user = userChatRepository.findByPhone(waId)
                 .orElseGet(() -> {
+                    //! Si no existe el usuario, lo creo
                     UserChatEntity newUser = new UserChatEntity();
                     newUser.setPhone(waId);
                     newUser.setNombres("Anonymus");
@@ -102,16 +103,25 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                         user.setSede(userFromJsonServer.getSede());
                         userChatRepository.save(user);
 
-                        //! Enviar mensaje de bienvenida
                         return sendSimpleResponse(waId, "Hola " + user.getNombres() + ", bienvenido al Asistente Tecnológico de TICs. ¿En qué puedo ayudarte hoy?");
 
                     } else {
                         return sendSimpleResponse(waId, "Por favor, introduce tu número de cédula valida para continuar.");
                     }
                 case "READY":
+                   //! Actualizar datos del usuario
+                    UserChatEntity userFromJsonServer = fetchUserFromJsonServer(user.getCedula());
+                    user.setNombres(userFromJsonServer.getNombres());
+                    user.setCarrera(userFromJsonServer.getCarrera());
+                    user.setRol(userFromJsonServer.getRol());
+                    user.setSede(userFromJsonServer.getSede());
+
                     AnswersOpenIa data = getAnswerIA(messageText, user.getNombres(), user.getThread_id());
+
                     user.setThread_id(data.thread_id());
+                    user.setLastInteraction(1);
                     userChatRepository.save(user);
+
                     return sendSimpleResponse(waId, data.respuesta());
                 default:
                     user.setConversationState("WAITING_FOR_CEDULA");
@@ -124,7 +134,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             return sendSimpleResponse(waId, "Ha ocurrido un error inesperado. Por favor, inténtalo nuevamente más tarde.");
         }
     }
-    
+
     private static boolean isValidCedula(String cedula) {
         // Validar que tenga 10 dígitos
         if (cedula == null || cedula.length() != 10) {
