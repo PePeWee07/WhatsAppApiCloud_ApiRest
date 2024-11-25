@@ -59,15 +59,15 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
     @Override
     public ResponseWhatsapp handleUserMessage(WhatsAppData.WhatsAppMessage message) {
+        String messageType = message.entry().get(0).changes().get(0).value().messages().get(0).type();
+        String waId = message.entry().get(0).changes().get(0).value().contacts().get(0).wa_id();
+        String messageText = message.entry().get(0).changes().get(0).value().messages().get(0).text().get().body();
+
+        if (!messageType.equals("text") || messageText == null || messageText.isEmpty()) {
+            return sendSimpleResponse(waId, "Hola, no puedo procesar este tipo de mensaje.");
+        }
+
         try {
-            String messageType = message.entry().get(0).changes().get(0).value().messages().get(0).type();
-            String waId = message.entry().get(0).changes().get(0).value().contacts().get(0).wa_id();
-            String messageText = message.entry().get(0).changes().get(0).value().messages().get(0).text().get().body();
-
-            if (!messageType.equals("text") || messageText == null || messageText.isEmpty()) {
-                return sendSimpleResponse(waId, "Hola, no puedo procesar este tipo de mensaje.");
-            }
-
             // Buscar usuario en la base de datos o crearlo como invitado
             UserChatEntity user = userChatRepository.findByPhone(waId)
                 .orElseGet(() -> {
@@ -126,7 +126,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         } catch (Exception e) {
             e.printStackTrace();
             System.err.println("Error al manejar el mensaje: " + e.getMessage());
-            return sendSimpleResponse(null, "Ocurrió un error. Por favor, intenta más tarde.");
+            return sendSimpleResponse(waId, "Ocurrió un error. Por favor, intenta más tarde.");
         }
     }
 
@@ -181,7 +181,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     
         } catch (Exception e) {
             System.err.println("Error al obtener respuesta de IA: " + e.getMessage());
-            throw new CustomOpenIaServerException("Error al obtener respuesta de IA.", e);
+            throw new CustomOpenIaServerException("Error al obtener respuesta de IA: ", e);
         }
     }    
 
