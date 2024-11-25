@@ -12,7 +12,7 @@
 	<artifactId>WhatsappApiCloud</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>WhatsappApiCloud</name>
-	<description>Cnx with Whatsapp Api Cloud</description>
+	<description>Implementation of WhatsApp Cloud API and OpenAI for intelligent chat functionality</description>
 	<url/>
 	<licenses>
 		<license/>
@@ -33,16 +33,11 @@
 		<lombok-version>1.18.12</lombok-version>
 	</properties>
 	<dependencies>
+		
+		<!-- Spring Boot Starter Web -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
-		</dependency>
-
-		<dependency>
-			<groupId>javax.servlet</groupId>
-			<artifactId>javax.servlet-api</artifactId>
-			<version>4.0.1</version>
-			<scope>provided</scope>
 		</dependency>
 
 		<!-- Lombok -->
@@ -77,6 +72,7 @@
 			<version>${org.mapstruct.version}</version>
 		</dependency>
 
+		<!-- Devtools -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-devtools</artifactId>
@@ -84,22 +80,20 @@
 			<optional>true</optional>
 		</dependency>
 
+		<!-- Spring Boot Starter Data JPA -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
 		</dependency>
 
+		<!-- PostgreSQL -->
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
 			<scope>runtime</scope>
 		</dependency>
-		
-		<dependency>
-			<groupId>org.projectlombok</groupId>
-			<artifactId>lombok</artifactId>
-			<optional>true</optional>
-		</dependency>
+
+		<!-- Spring Boot Starter Test -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>

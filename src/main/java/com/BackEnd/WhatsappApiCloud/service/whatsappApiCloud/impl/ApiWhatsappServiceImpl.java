@@ -15,10 +15,10 @@ import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.Reques
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestMessageText;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppData;
-import com.BackEnd.WhatsappApiCloud.model.entity.AnswersOpenIa;
-import com.BackEnd.WhatsappApiCloud.model.entity.UserChatEntity;
+import com.BackEnd.WhatsappApiCloud.model.entity.OpenIA.AnswersOpenIa;
+import com.BackEnd.WhatsappApiCloud.model.entity.OpenIA.QuestionOpenIa;
+import com.BackEnd.WhatsappApiCloud.model.entity.User.UserChatEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
-import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.QuestionOpenIa;
 import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -44,19 +44,19 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     .build();
     }
 
-    // Metodo para enviar mensaje
+    // Metodo para enviar mensaje a un usuario
     @Override
     public ResponseWhatsapp sendMessage(MessageBody payload) {
         try {
             RequestMessage request = RequestBuilder(payload.number(), "text", payload.message());
             return ResponseBuilder(request, "/messages");
         } catch (Exception e) {
-            e.printStackTrace();
             System.err.println("Error al enviar mensaje: " + e);
             return null;
         }
     }
 
+    // Metodo Recibir y enviar respuesta automatica
     @Override
     public ResponseWhatsapp handleUserMessage(WhatsAppData.WhatsAppMessage message) {
         String messageType = message.entry().get(0).changes().get(0).value().messages().get(0).type();
@@ -64,34 +64,32 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         String messageText = message.entry().get(0).changes().get(0).value().messages().get(0).text().get().body();
 
         if (!messageType.equals("text") || messageText == null || messageText.isEmpty()) {
-            return sendSimpleResponse(waId, "Hola, no puedo procesar este tipo de mensaje.");
+            return sendSimpleResponse(waId, "Lo sentimos, no es posible procesar este tipo de mensaje. Por favor, verifica el formato o el contenido e inténtalo nuevamente.");
         }
 
         try {
-            // Buscar usuario en la base de datos o crearlo como invitado
             UserChatEntity user = userChatRepository.findByPhone(waId)
                 .orElseGet(() -> {
                     UserChatEntity newUser = new UserChatEntity();
                     newUser.setPhone(waId);
                     newUser.setNombres("Anonymus");
-                    newUser.setConversationState("WAITING_FOR_CEDULA"); // Estado inicial
+                    newUser.setConversationState("WAITING_FOR_CEDULA");
                     return userChatRepository.save(newUser);
                 });
 
-            // Manejar el flujo basado en el estado
             switch (user.getConversationState()) {
                 case "WAITING_FOR_CEDULA":
                     if (isValidCedula(messageText)) {
                         UserChatEntity userFromJsonServer = fetchUserFromJsonServer(messageText);
     
-                        //! Si no encuentro la cédula dentro de json-server
+                        //! Si no encuentro la cédula dentro de ERP
                         if (userFromJsonServer == null) {
                             user.setLastInteraction(0);
                             user.setNombres("Usuario");
-                            user.setConversationState("READY"); // Cambiar estado a READY
+                            user.setConversationState("READY");
                             user.setRol("Invitado");
                             userChatRepository.save(user);
-                            return sendSimpleResponse(waId, "Estás como modo invitado. No perteneces a la universidad, pero en que puedo ayudarte?.");
+                            return sendSimpleResponse(waId, "Actualmente estás en modo invitado y no perteneces a la universidad. ¿En qué puedo ayudarte?");
                         }
     
                         //! Si Lo encuentro
@@ -99,46 +97,46 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                         user.setNombres(userFromJsonServer.getNombres());
                         user.setCarrera(userFromJsonServer.getCarrera());
                         user.setCedula(userFromJsonServer.getCedula());
-                        user.setConversationState("READY"); // Cambiar estado a READY
+                        user.setConversationState("READY");
                         user.setRol(userFromJsonServer.getRol());
                         user.setSede(userFromJsonServer.getSede());
                         userChatRepository.save(user);
 
                         //! Enviar mensaje de bienvenida
-                        return sendSimpleResponse(waId, "Hola " + user.getNombres() + ", bienvenido al Chat con OpenIA. que se puede hacer por ti?");
+                        return sendSimpleResponse(waId, "Hola " + user.getNombres() + ", bienvenido al Asistente Tecnológico de TICs. ¿En qué puedo ayudarte hoy?");
 
                     } else {
-                        return sendSimpleResponse(waId, "Por favor, ingresa tu número de cédula.");
+                        return sendSimpleResponse(waId, "Por favor, introduce tu número de cédula para continuar.");
                     }
                 case "READY":
-                    //! Llamar a la API de IA
                     AnswersOpenIa data = getAnswerIA(messageText, user.getNombres(), user.getThread_id());
                     user.setThread_id(data.thread_id());
                     userChatRepository.save(user);
                     return sendSimpleResponse(waId, data.respuesta());
                 default:
-                    // En caso de estado desconocido, reiniciar el flujo
                     user.setConversationState("WAITING_FOR_CEDULA");
                     userChatRepository.save(user);
-                    return sendSimpleResponse(waId, "No te entiendo. Por favor, ingresa tu número de cédula.");
+                    return sendSimpleResponse(waId, "No hemos podido procesar tu solicitud. Por favor, introduce tu número de cédula nuevamente para continuar.");
             }
 
         } catch (Exception e) {
-            e.printStackTrace();
-            System.err.println("Error al manejar el mensaje: " + e.getMessage());
-            return sendSimpleResponse(waId, "Ocurrió un error. Por favor, intenta más tarde.");
+            System.err.println("Error al procesar mensaje de usuario: " + e.getMessage());
+            return sendSimpleResponse(waId, "Ha ocurrido un error inesperado. Por favor, inténtalo nuevamente más tarde.");
         }
     }
 
+    // Metodo para validar cedula
     private boolean isValidCedula(String cedula) {
-        return cedula != null && cedula.matches("\\d{10}"); // Ejemplo: cédula de 10 dígitos
+        return cedula != null && cedula.matches("\\d{10}");
     }
     
+    // Metodo para enviar mensaje simple
     private ResponseWhatsapp sendSimpleResponse(String waId, String message) {
         RequestMessage request = RequestBuilder(waId, "text", message);
         return ResponseBuilder(request, "/messages");
     }
 
+    // Metodo para obtener usuario desde ERP
     private UserChatEntity fetchUserFromJsonServer(String cedula) {
         try {
             RestClient localRestClient = RestClient.builder()
@@ -153,11 +151,12 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
             return users.isEmpty() ? null : users.get(0);
         } catch (Exception apiException) {
-            System.err.println("Error al conectar con json-server: " + apiException.getMessage());
-            throw new CustomJsonServerException("Error al obtener datos del usuario desde json-server.", apiException);
+            System.err.println("Error al obtener datos del usuario desde ERP: " + apiException.getMessage());
+            throw new CustomJsonServerException("Error al obtener datos del usuario desde ERP.", apiException);
         }
     }  
     
+    // Metodo para obtener respuesta de IA
     private AnswersOpenIa getAnswerIA(String pregunta, String nombre, String thread_id) {
         try {
             RestClient openAi = RestClient.builder()
@@ -166,14 +165,12 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     
             String url = "/preguntar";
             
-            // Construir el cuerpo de la solicitud
             QuestionOpenIa question = new QuestionOpenIa(pregunta, nombre, thread_id);
-    
-            // Hacer la llamada POST
+
             AnswersOpenIa answer = openAi.post()
                 .uri(url)
-                .body(question) // Enviar el cuerpo en formato JSON
-                .header("Content-Type", "application/json") // Asegurar encabezado correcto
+                .body(question)
+                .header("Content-Type", "application/json")
                 .retrieve()
                 .body(AnswersOpenIa.class);
     
@@ -197,6 +194,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         try {
             return obj.readValue(response, ResponseWhatsapp.class);
         } catch (JsonProcessingException e) {
+            System.err.println("Error al procesar JSON: " + e);
             throw new RuntimeException("Error processing JSON", e);
         }
     }
@@ -216,9 +214,5 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             return null;
         }
     }
-
-    @Override
-    public UserChatEntity guardarUsuario(UserChatEntity usuario) {
-        return userChatRepository.save(usuario);
-    }
+ 
 }

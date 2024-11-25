@@ -8,7 +8,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppData;
-import com.BackEnd.WhatsappApiCloud.model.entity.UserChatEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -31,16 +30,9 @@ public class WhatsappController {
     @PostMapping("/receive")
     public ResponseWhatsapp receiveMessage(@RequestBody WhatsAppData.WhatsAppMessage message) throws JsonProcessingException {
         if(message.entry().get(0).changes().get(0).value().messages() != null){
-            System.out.println("Mensaje recibido: " + message.entry().get(0).changes().get(0).value().messages().get(0).text());
-            System.out.println(ResponseEntity.ok()); 
+            System.out.println("Mensaje recibido: " + message.entry().get(0).changes().get(0).value().messages().get(0).text() + "STATUS: " + ResponseEntity.ok());
         }
         return apiWhatsappService.handleUserMessage(message);
     }
 
-    //? TEST SAVE USER
-    @PostMapping("/guardarUsuario")
-    public ResponseEntity<UserChatEntity> guardarUsuario(@RequestBody UserChatEntity usuario) {
-        UserChatEntity usuarioGuardado = apiWhatsappService.guardarUsuario(usuario);
-        return ResponseEntity.ok(usuarioGuardado);
-    }
 }

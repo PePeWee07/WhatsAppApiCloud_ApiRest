@@ -1,4 +1,4 @@
-package com.BackEnd.WhatsappApiCloud.model.entity;
+package com.BackEnd.WhatsappApiCloud.model.entity.User;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
