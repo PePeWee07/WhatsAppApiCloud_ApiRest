@@ -1,6 +1,6 @@
 package com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.impl;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
@@ -210,9 +210,9 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     }
 
     private String getCurrentDateAsYYYYMMDD() {
-        LocalDate currentDate = LocalDate.now();
+        LocalDateTime currentDateTime = LocalDateTime.now();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
-        return currentDate.format(formatter);
+        return currentDateTime.format(formatter);
     }
 
     // Metodo para obtener usuario desde ERP
