@@ -2,7 +2,7 @@
 <configuration>
 
     <!-- Directorio de logs -->
-    <property name="LOGS" value="/tmp/logs" />
+    <property name="LOGS" value="./var/log"/>
 
     <!-- Appender para consola -->
     <appender name="Console" class="ch.qos.logback.core.ConsoleAppender">

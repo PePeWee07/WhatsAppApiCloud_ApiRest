@@ -209,6 +209,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         return ResponseBuilder(request, "/messages");
     }
 
+    // Metodo para obtener la fecha actual en formato YYYYMMDD
     private String getCurrentDateAsYYYYMMDD() {
         LocalDateTime currentDateTime = LocalDateTime.now();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
