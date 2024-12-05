@@ -33,6 +33,12 @@
 		<lombok-version>1.18.12</lombok-version>
 	</properties>
 	<dependencies>
+
+		<!-- Spring Boot Starter -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter</artifactId>
+		</dependency>
 		
 		<!-- Spring Boot Starter Web -->
 		<dependency>

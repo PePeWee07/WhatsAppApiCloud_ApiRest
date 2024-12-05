@@ -1,5 +1,7 @@
 package com.BackEnd.WhatsappApiCloud.model.entity.User;
 
+import java.time.LocalDateTime;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -32,7 +34,6 @@ public class UserChatEntity {
     @Column(name = "name", length = 100, nullable = false)
     private String nombres;
 
-    // @Column(unique = true)
     private String cedula;
 
     private String phone;
@@ -45,9 +46,14 @@ public class UserChatEntity {
 
     private String thread_id;
 
-    // Agregar un campo para el último tiempo de interacción y el session ID
-    private String lastInteraction;
+    private int limite = 10;
 
-    private String conversationState; // Ejemplo de estados: "WAITING_FOR_CEDULA", "READY"
+    private LocalDateTime firstInteraction;
+    
+    private LocalDateTime lastInteraction;
+    
+    private LocalDateTime nextResetDate;
+
+    private String conversationState;
 
 }

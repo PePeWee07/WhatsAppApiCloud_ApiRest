@@ -1,7 +1,8 @@
 package com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.impl;
 
+import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -65,6 +66,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     // Metodo Recibir y enviar respuesta automatica
     @Override
     public ResponseWhatsapp handleUserMessage(WhatsAppData.WhatsAppMessage message) {
+        LocalDateTime timeNow = LocalDateTime.now();
         String messageType = message.entry().get(0).changes().get(0).value().messages().get(0).type();
         String waId = message.entry().get(0).changes().get(0).value().contacts().get(0).wa_id();
         String messageText = message.entry().get(0).changes().get(0).value().messages().get(0).text().get().body();
@@ -76,11 +78,11 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         try {
             UserChatEntity user = userChatRepository.findByPhone(waId)
                 .orElseGet(() -> {
-                    //! Si no existe el usuario, lo creo
+                    //! Si no existe el usuario en mi BD, lo creo
                     UserChatEntity newUser = new UserChatEntity();
                     newUser.setPhone(waId);
                     newUser.setNombres("Anonymus");
-                    newUser.setLastInteraction(getCurrentDateAsYYYYMMDD());
+                    newUser.setFirstInteraction(timeNow);
                     newUser.setConversationState("WAITING_FOR_CEDULA");
                     return userChatRepository.save(newUser);
                 });
@@ -90,33 +92,68 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     if (isValidCedula(messageText)) {
                         UserChatEntity userFromJsonServer = fetchUserFromJsonServer(messageText);
     
-                        //! Si no encuentro la cédula dentro de ERP
+                        //! Si NO encuentro la cédula dentro de ERP
                         if (userFromJsonServer == null) {
-                            user.setLastInteraction(getCurrentDateAsYYYYMMDD());
+                            user.setLastInteraction(timeNow);
                             user.setNombres("Usuario");
                             user.setConversationState("READY");
                             user.setRol("Invitado");
                             userChatRepository.save(user);
                             return sendSimpleResponse(waId, "Actualmente estás en modo invitado y no perteneces a la universidad. ¿En qué puedo ayudarte?");
+                        } 
+                        //! Si encuentro la cédula dentro de ERP
+                        else {
+                            user.setLastInteraction(timeNow);
+                            user.setNombres(userFromJsonServer.getNombres());
+                            user.setCarrera(userFromJsonServer.getCarrera());
+                            user.setCedula(userFromJsonServer.getCedula());
+                            user.setConversationState("READY");
+                            user.setRol(userFromJsonServer.getRol());
+                            user.setSede(userFromJsonServer.getSede());
+                            userChatRepository.save(user);
+                            return sendSimpleResponse(waId, "Hola " + user.getNombres() + ", bienvenido al Asistente Tecnológico de TICs. ¿En qué puedo ayudarte hoy?");
                         }
-    
-                        //! Si Lo encuentro
-                        user.setLastInteraction(getCurrentDateAsYYYYMMDD());
-                        user.setNombres(userFromJsonServer.getNombres());
-                        user.setCarrera(userFromJsonServer.getCarrera());
-                        user.setCedula(userFromJsonServer.getCedula());
-                        user.setConversationState("READY");
-                        user.setRol(userFromJsonServer.getRol());
-                        user.setSede(userFromJsonServer.getSede());
-                        userChatRepository.save(user);
-
-                        return sendSimpleResponse(waId, "Hola " + user.getNombres() + ", bienvenido al Asistente Tecnológico de TICs. ¿En qué puedo ayudarte hoy?");
 
                     } else {
                         return sendSimpleResponse(waId, "Por favor, introduce tu número de cédula valida para continuar.");
                     }
                 case "READY":
-                   //! Actualizar datos del usuario
+
+                    //! 1. Verifica si ya pasaron 24 horas para incremetar el límite y restablecer el contador
+                    if (!user.getLastInteraction().toLocalDate().isEqual(LocalDate.now())) {
+                        user.setLimite(10);
+                        user.setNextResetDate(null);
+                        userChatRepository.save(user);
+                    }
+
+                    //! 2. Si ya pasó la fecha de reseteo, restablece el límite
+                    if (user.getNextResetDate() != null && timeNow.isAfter(user.getNextResetDate())) {
+                        user.setLimite(10);
+                        user.setNextResetDate(null);
+                        userChatRepository.save(user);
+                    }
+
+                    //! 3. Si hay una fecha de reseteo definida y aún no ha pasado, no puede realizar la acción
+                    if (user.getNextResetDate() != null && timeNow.isBefore(user.getNextResetDate())) {
+                        Duration remainingTime = Duration.between(timeNow, user.getNextResetDate());
+                        long hours = remainingTime.toHours();
+                        long minutes = remainingTime.toMinutes() % 60;
+                        long seconds = remainingTime.toSeconds() % 60;
+                    
+                        return sendSimpleResponse(waId, String.format(
+                            "Tu límite de interacciones ha sido alcanzado, tiempo faltante: %02d:%02d:%02d.", 
+                            hours, minutes, seconds
+                        ));
+                    }
+
+                    //! 4. Si el límite de interacciones es 0, bloquear por 24 horas
+                    if (user.getLimite() <= 0) {
+                        user.setNextResetDate(timeNow.plusHours(24));
+                        userChatRepository.save(user);
+                        return sendSimpleResponse(waId, "Tu límite de interacciones ha sido alcanzado, vuelve mañana.");
+                    }
+
+                    //! 5. Actualizar datos del usuario y obtener respuesta de IA
                     UserChatEntity userFromJsonServer = fetchUserFromJsonServer(user.getCedula());
                     user.setNombres(userFromJsonServer.getNombres());
                     user.setCarrera(userFromJsonServer.getCarrera());
@@ -125,8 +162,9 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
                     AnswersOpenIa data = getAnswerIA(messageText, user.getNombres(), user.getThread_id());
 
+                    user.setLastInteraction(timeNow);
                     user.setThread_id(data.thread_id());
-                    user.setLastInteraction(getCurrentDateAsYYYYMMDD());
+                    user.setLimite(user.getLimite() - 1);
                     userChatRepository.save(user);
 
                     return sendSimpleResponse(waId, data.respuesta());
@@ -207,13 +245,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     private ResponseWhatsapp sendSimpleResponse(String waId, String message) {
         RequestMessage request = RequestBuilder(waId, "text", message);
         return ResponseBuilder(request, "/messages");
-    }
-
-    // Metodo para obtener la fecha actual en formato YYYYMMDD
-    private String getCurrentDateAsYYYYMMDD() {
-        LocalDateTime currentDateTime = LocalDateTime.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
-        return currentDateTime.format(formatter);
     }
 
     // Metodo para obtener usuario desde ERP
