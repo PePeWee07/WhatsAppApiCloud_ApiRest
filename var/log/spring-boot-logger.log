@@ -1,21 +1,271 @@
-2024-11-26 10:30:02.968 INFO  [restartedMain] o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
-2024-11-26 10:30:02.981 INFO  [restartedMain] o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 11 ms. Found 1 JPA repository interface.
-2024-11-26 10:30:03.041 INFO  [restartedMain] o.s.b.w.e.t.TomcatWebServer - Tomcat initialized with port 8080 (http)
-2024-11-26 10:30:03.042 INFO  [restartedMain] o.a.c.h.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-8080"]
-2024-11-26 10:30:03.042 INFO  [restartedMain] o.a.c.c.StandardService - Starting service [Tomcat]
-2024-11-26 10:30:03.043 INFO  [restartedMain] o.a.c.c.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.30]
-2024-11-26 10:30:03.053 INFO  [restartedMain] o.a.c.c.C.[.[.[/] - Initializing Spring embedded WebApplicationContext
-2024-11-26 10:30:03.053 INFO  [restartedMain] o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 189 ms
-2024-11-26 10:30:03.079 INFO  [restartedMain] o.h.j.i.u.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
-2024-11-26 10:30:03.080 INFO  [restartedMain] o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
-2024-11-26 10:30:03.085 INFO  [restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
-2024-11-26 10:30:03.086 INFO  [restartedMain] c.z.h.HikariDataSource - HikariPool-13 - Starting...
-2024-11-26 10:30:03.127 INFO  [restartedMain] c.z.h.p.HikariPool - HikariPool-13 - Added connection org.postgresql.jdbc.PgConnection@1ee1c84a
-2024-11-26 10:30:03.127 INFO  [restartedMain] c.z.h.HikariDataSource - HikariPool-13 - Start completed.
-2024-11-26 10:30:03.165 INFO  [restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
-2024-11-26 10:30:03.205 INFO  [restartedMain] o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
-2024-11-26 10:30:03.298 WARN  [restartedMain] o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
-2024-11-26 10:30:03.381 INFO  [restartedMain] o.s.b.d.a.OptionalLiveReloadServer - LiveReload server is running on port 35729
-2024-11-26 10:30:03.388 INFO  [restartedMain] o.a.c.h.Http11NioProtocol - Starting ProtocolHandler ["http-nio-8080"]
-2024-11-26 10:30:03.391 INFO  [restartedMain] o.s.b.w.e.t.TomcatWebServer - Tomcat started on port 8080 (http) with context path '/'
-2024-11-26 10:30:03.396 INFO  [restartedMain] o.s.b.d.a.ConditionEvaluationDeltaLoggingListener - Condition evaluation unchanged
+2024-12-10 08:10:11.234 WARN  [HikariPool-1 housekeeper] c.z.h.p.HikariPool - HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=14h42m43s100ms587µs200ns).
+2024-12-10 08:30:48.859 INFO  [background-preinit] o.h.v.i.u.Version - HV000001: Hibernate Validator 8.0.1.Final
+2024-12-10 08:30:48.991 INFO  [restartedMain] o.s.b.d.e.DevToolsPropertyDefaultsPostProcessor - Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+2024-12-10 08:30:48.998 INFO  [restartedMain] o.s.b.d.e.DevToolsPropertyDefaultsPostProcessor - For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+2024-12-10 08:30:49.848 INFO  [restartedMain] o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2024-12-10 08:30:49.928 INFO  [restartedMain] o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 64 ms. Found 1 JPA repository interface.
+2024-12-10 08:30:50.883 INFO  [restartedMain] o.s.b.w.e.t.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2024-12-10 08:30:50.910 INFO  [restartedMain] o.a.c.h.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-8082"]
+2024-12-10 08:30:50.928 INFO  [restartedMain] o.a.c.c.StandardService - Starting service [Tomcat]
+2024-12-10 08:30:50.928 INFO  [restartedMain] o.a.c.c.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.30]
+2024-12-10 08:30:51.012 INFO  [restartedMain] o.a.c.c.C.[.[.[/] - Initializing Spring embedded WebApplicationContext
+2024-12-10 08:30:51.012 INFO  [restartedMain] o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 2014 ms
+2024-12-10 08:30:51.198 INFO  [restartedMain] o.h.j.i.u.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2024-12-10 08:30:51.301 INFO  [restartedMain] o.h.Version - HHH000412: Hibernate ORM core version 6.5.3.Final
+2024-12-10 08:30:51.348 INFO  [restartedMain] o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2024-12-10 08:30:51.759 INFO  [restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2024-12-10 08:30:51.791 INFO  [restartedMain] c.z.h.HikariDataSource - HikariPool-1 - Starting...
+2024-12-10 08:30:52.008 INFO  [restartedMain] c.z.h.p.HikariPool - HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@783c7efb
+2024-12-10 08:30:52.008 INFO  [restartedMain] c.z.h.HikariDataSource - HikariPool-1 - Start completed.
+2024-12-10 08:30:53.073 INFO  [restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2024-12-10 08:30:53.148 INFO  [restartedMain] o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2024-12-10 08:30:53.760 WARN  [restartedMain] o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2024-12-10 08:30:54.180 INFO  [restartedMain] o.s.b.d.a.OptionalLiveReloadServer - LiveReload server is running on port 35729
+2024-12-10 08:30:54.199 INFO  [restartedMain] o.a.c.h.Http11NioProtocol - Starting ProtocolHandler ["http-nio-8082"]
+2024-12-10 08:30:54.209 INFO  [restartedMain] o.s.b.w.e.t.TomcatWebServer - Tomcat started on port 8082 (http) with context path '/'
+2024-12-10 09:56:49.885 INFO  [http-nio-8082-exec-1] o.a.c.c.C.[.[.[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2024-12-10 09:56:49.902 INFO  [http-nio-8082-exec-1] o.s.w.s.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2024-12-10 09:56:49.955 INFO  [http-nio-8082-exec-1] o.s.w.s.DispatcherServlet - Completed initialization in 52 ms
+2024-12-10 11:05:17.162 INFO  [background-preinit] o.h.v.i.u.Version - HV000001: Hibernate Validator 8.0.1.Final
+2024-12-10 11:05:17.245 INFO  [restartedMain] o.s.b.d.e.DevToolsPropertyDefaultsPostProcessor - Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+2024-12-10 11:05:17.245 INFO  [restartedMain] o.s.b.d.e.DevToolsPropertyDefaultsPostProcessor - For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+2024-12-10 11:05:17.790 INFO  [restartedMain] o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2024-12-10 11:05:17.854 INFO  [restartedMain] o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 56 ms. Found 1 JPA repository interface.
+2024-12-10 11:05:18.316 INFO  [restartedMain] o.s.b.w.e.t.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2024-12-10 11:05:18.327 INFO  [restartedMain] o.a.c.h.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-8082"]
+2024-12-10 11:05:18.332 INFO  [restartedMain] o.a.c.c.StandardService - Starting service [Tomcat]
+2024-12-10 11:05:18.336 INFO  [restartedMain] o.a.c.c.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.30]
+2024-12-10 11:05:18.366 INFO  [restartedMain] o.a.c.c.C.[.[.[/] - Initializing Spring embedded WebApplicationContext
+2024-12-10 11:05:18.366 INFO  [restartedMain] o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 1120 ms
+2024-12-10 11:05:18.486 INFO  [restartedMain] o.h.j.i.u.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2024-12-10 11:05:18.556 INFO  [restartedMain] o.h.Version - HHH000412: Hibernate ORM core version 6.5.3.Final
+2024-12-10 11:05:18.603 INFO  [restartedMain] o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2024-12-10 11:05:18.857 INFO  [restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2024-12-10 11:05:18.888 INFO  [restartedMain] c.z.h.HikariDataSource - HikariPool-1 - Starting...
+2024-12-10 11:05:19.061 INFO  [restartedMain] c.z.h.p.HikariPool - HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@55db2d84
+2024-12-10 11:05:19.063 INFO  [restartedMain] c.z.h.HikariDataSource - HikariPool-1 - Start completed.
+2024-12-10 11:05:19.866 INFO  [restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2024-12-10 11:05:19.944 INFO  [restartedMain] o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2024-12-10 11:05:20.397 WARN  [restartedMain] o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2024-12-10 11:05:20.636 INFO  [restartedMain] o.s.b.d.a.OptionalLiveReloadServer - LiveReload server is running on port 35729
+2024-12-10 11:05:20.647 INFO  [restartedMain] o.a.c.h.Http11NioProtocol - Starting ProtocolHandler ["http-nio-8082"]
+2024-12-10 11:05:20.658 INFO  [restartedMain] o.s.b.w.e.t.TomcatWebServer - Tomcat started on port 8082 (http) with context path '/'
+2024-12-10 11:06:14.650 INFO  [SpringApplicationShutdownHook] o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2024-12-10 11:06:14.656 INFO  [SpringApplicationShutdownHook] c.z.h.HikariDataSource - HikariPool-1 - Shutdown initiated...
+2024-12-10 11:06:14.656 INFO  [SpringApplicationShutdownHook] c.z.h.HikariDataSource - HikariPool-1 - Shutdown completed.
+2024-12-10 11:11:27.618 INFO  [background-preinit] o.h.v.i.u.Version - HV000001: Hibernate Validator 8.0.1.Final
+2024-12-10 11:11:27.710 INFO  [restartedMain] o.s.b.d.e.DevToolsPropertyDefaultsPostProcessor - Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+2024-12-10 11:11:27.710 INFO  [restartedMain] o.s.b.d.e.DevToolsPropertyDefaultsPostProcessor - For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+2024-12-10 11:11:28.211 INFO  [restartedMain] o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2024-12-10 11:11:28.256 INFO  [restartedMain] o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 43 ms. Found 1 JPA repository interface.
+2024-12-10 11:11:28.671 INFO  [restartedMain] o.s.b.w.e.t.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2024-12-10 11:11:28.680 INFO  [restartedMain] o.a.c.h.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-8082"]
+2024-12-10 11:11:28.680 INFO  [restartedMain] o.a.c.c.StandardService - Starting service [Tomcat]
+2024-12-10 11:11:28.686 INFO  [restartedMain] o.a.c.c.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.30]
+2024-12-10 11:11:28.716 INFO  [restartedMain] o.a.c.c.C.[.[.[/] - Initializing Spring embedded WebApplicationContext
+2024-12-10 11:11:28.716 INFO  [restartedMain] o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 1006 ms
+2024-12-10 11:11:28.816 INFO  [restartedMain] o.h.j.i.u.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2024-12-10 11:11:28.852 INFO  [restartedMain] o.h.Version - HHH000412: Hibernate ORM core version 6.5.3.Final
+2024-12-10 11:11:28.877 INFO  [restartedMain] o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2024-12-10 11:11:29.077 INFO  [restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2024-12-10 11:11:29.101 INFO  [restartedMain] c.z.h.HikariDataSource - HikariPool-1 - Starting...
+2024-12-10 11:11:29.227 INFO  [restartedMain] c.z.h.p.HikariPool - HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@55db2d84
+2024-12-10 11:11:29.227 INFO  [restartedMain] c.z.h.HikariDataSource - HikariPool-1 - Start completed.
+2024-12-10 11:11:29.998 INFO  [restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2024-12-10 11:11:30.062 INFO  [restartedMain] o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2024-12-10 11:11:30.506 WARN  [restartedMain] o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2024-12-10 11:11:30.777 INFO  [restartedMain] o.s.b.d.a.OptionalLiveReloadServer - LiveReload server is running on port 35729
+2024-12-10 11:11:30.796 INFO  [restartedMain] o.a.c.h.Http11NioProtocol - Starting ProtocolHandler ["http-nio-8082"]
+2024-12-10 11:11:30.806 INFO  [restartedMain] o.s.b.w.e.t.TomcatWebServer - Tomcat started on port 8082 (http) with context path '/'
+2024-12-10 11:11:43.387 INFO  [http-nio-8082-exec-1] o.a.c.c.C.[.[.[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2024-12-10 11:11:43.387 INFO  [http-nio-8082-exec-1] o.s.w.s.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2024-12-10 11:11:43.387 INFO  [http-nio-8082-exec-1] o.s.w.s.DispatcherServlet - Completed initialization in 0 ms
+2024-12-10 15:05:08.877 INFO  [SpringApplicationShutdownHook] o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2024-12-10 15:05:08.903 INFO  [SpringApplicationShutdownHook] c.z.h.HikariDataSource - HikariPool-1 - Shutdown initiated...
+2024-12-10 15:05:08.907 INFO  [SpringApplicationShutdownHook] c.z.h.HikariDataSource - HikariPool-1 - Shutdown completed.
+2024-12-10 15:05:34.357 INFO  [background-preinit] o.h.v.i.u.Version - HV000001: Hibernate Validator 8.0.1.Final
+2024-12-10 15:05:34.578 INFO  [restartedMain] o.s.b.d.e.DevToolsPropertyDefaultsPostProcessor - Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+2024-12-10 15:05:34.579 INFO  [restartedMain] o.s.b.d.e.DevToolsPropertyDefaultsPostProcessor - For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+2024-12-10 15:05:36.820 INFO  [restartedMain] o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2024-12-10 15:05:37.025 INFO  [restartedMain] o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 180 ms. Found 1 JPA repository interface.
+2024-12-10 15:05:38.604 INFO  [restartedMain] o.s.b.w.e.t.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2024-12-10 15:05:38.634 INFO  [restartedMain] o.a.c.h.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-8082"]
+2024-12-10 15:05:38.646 INFO  [restartedMain] o.a.c.c.StandardService - Starting service [Tomcat]
+2024-12-10 15:05:38.647 INFO  [restartedMain] o.a.c.c.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.30]
+2024-12-10 15:05:38.854 INFO  [restartedMain] o.a.c.c.C.[.[.[/] - Initializing Spring embedded WebApplicationContext
+2024-12-10 15:05:38.855 INFO  [restartedMain] o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 4275 ms
+2024-12-10 15:05:39.232 INFO  [restartedMain] o.h.j.i.u.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2024-12-10 15:05:39.412 INFO  [restartedMain] o.h.Version - HHH000412: Hibernate ORM core version 6.5.3.Final
+2024-12-10 15:05:39.502 INFO  [restartedMain] o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2024-12-10 15:05:40.661 INFO  [restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2024-12-10 15:05:40.770 INFO  [restartedMain] c.z.h.HikariDataSource - HikariPool-1 - Starting...
+2024-12-10 15:05:41.396 INFO  [restartedMain] c.z.h.p.HikariPool - HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@2821c5f5
+2024-12-10 15:05:41.401 INFO  [restartedMain] c.z.h.HikariDataSource - HikariPool-1 - Start completed.
+2024-12-10 15:05:45.052 INFO  [restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2024-12-10 15:05:45.297 INFO  [restartedMain] o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2024-12-10 15:05:46.592 WARN  [restartedMain] o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2024-12-10 15:05:47.147 INFO  [restartedMain] o.s.b.d.a.OptionalLiveReloadServer - LiveReload server is running on port 35729
+2024-12-10 15:05:47.171 INFO  [restartedMain] o.a.c.h.Http11NioProtocol - Starting ProtocolHandler ["http-nio-8082"]
+2024-12-10 15:05:47.187 INFO  [restartedMain] o.s.b.w.e.t.TomcatWebServer - Tomcat started on port 8082 (http) with context path '/'
+2024-12-10 15:05:50.667 INFO  [File Watcher] o.s.b.d.a.LocalDevToolsAutoConfiguration$RestartingClassPathChangeChangedEventListener - Restarting due to 38 class path changes (0 additions, 38 deletions, 0 modifications)
+2024-12-10 15:05:50.700 INFO  [Thread-5] o.a.c.h.Http11NioProtocol - Stopping ProtocolHandler ["http-nio-8082"]
+2024-12-10 15:05:51.212 INFO  [Thread-5] o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2024-12-10 15:05:51.227 INFO  [Thread-5] c.z.h.HikariDataSource - HikariPool-1 - Shutdown initiated...
+2024-12-10 15:05:51.242 INFO  [Thread-5] c.z.h.HikariDataSource - HikariPool-1 - Shutdown completed.
+2024-12-10 15:05:59.830 INFO  [restartedMain] o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2024-12-10 15:05:59.930 INFO  [restartedMain] o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 98 ms. Found 1 JPA repository interface.
+2024-12-10 15:06:00.207 INFO  [restartedMain] o.s.b.w.e.t.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2024-12-10 15:06:00.219 INFO  [restartedMain] o.a.c.c.StandardService - Starting service [Tomcat]
+2024-12-10 15:06:00.220 INFO  [restartedMain] o.a.c.c.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.30]
+2024-12-10 15:06:00.256 INFO  [restartedMain] o.a.c.c.C.[.[.[/] - Initializing Spring embedded WebApplicationContext
+2024-12-10 15:06:00.257 INFO  [restartedMain] o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 1150 ms
+2024-12-10 15:06:00.371 INFO  [restartedMain] o.h.j.i.u.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2024-12-10 15:06:00.381 INFO  [restartedMain] o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2024-12-10 15:06:00.406 INFO  [restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2024-12-10 15:06:00.408 INFO  [restartedMain] c.z.h.HikariDataSource - HikariPool-2 - Starting...
+2024-12-10 15:06:00.525 INFO  [restartedMain] c.z.h.p.HikariPool - HikariPool-2 - Added connection org.postgresql.jdbc.PgConnection@69960325
+2024-12-10 15:06:00.525 INFO  [restartedMain] c.z.h.HikariDataSource - HikariPool-2 - Start completed.
+2024-12-10 15:06:00.683 INFO  [restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2024-12-10 15:06:00.727 INFO  [restartedMain] o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2024-12-10 15:06:00.898 WARN  [restartedMain] o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2024-12-10 15:06:01.164 INFO  [restartedMain] o.s.b.d.a.OptionalLiveReloadServer - LiveReload server is running on port 35729
+2024-12-10 15:06:01.182 INFO  [restartedMain] o.s.b.w.e.t.TomcatWebServer - Tomcat started on port 8082 (http) with context path '/'
+2024-12-10 15:06:01.195 INFO  [restartedMain] o.s.b.d.a.ConditionEvaluationDeltaLoggingListener - Condition evaluation unchanged
+2024-12-10 15:11:46.662 INFO  [File Watcher] o.s.b.d.a.LocalDevToolsAutoConfiguration$RestartingClassPathChangeChangedEventListener - Restarting due to 1 class path change (0 additions, 0 deletions, 1 modification)
+2024-12-10 15:11:47.533 INFO  [Thread-7] o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2024-12-10 15:11:47.533 INFO  [Thread-7] c.z.h.HikariDataSource - HikariPool-2 - Shutdown initiated...
+2024-12-10 15:11:47.540 INFO  [Thread-7] c.z.h.HikariDataSource - HikariPool-2 - Shutdown completed.
+2024-12-10 15:11:47.781 INFO  [restartedMain] o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2024-12-10 15:11:47.797 INFO  [restartedMain] o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 15 ms. Found 1 JPA repository interface.
+2024-12-10 15:11:47.887 INFO  [restartedMain] o.s.b.w.e.t.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2024-12-10 15:11:47.888 INFO  [restartedMain] o.a.c.c.StandardService - Starting service [Tomcat]
+2024-12-10 15:11:47.888 INFO  [restartedMain] o.a.c.c.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.30]
+2024-12-10 15:11:47.902 INFO  [restartedMain] o.a.c.c.C.[.[.[/] - Initializing Spring embedded WebApplicationContext
+2024-12-10 15:11:47.902 INFO  [restartedMain] o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 275 ms
+2024-12-10 15:11:47.940 INFO  [restartedMain] o.h.j.i.u.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2024-12-10 15:11:47.943 INFO  [restartedMain] o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2024-12-10 15:11:47.952 INFO  [restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2024-12-10 15:11:47.954 INFO  [restartedMain] c.z.h.HikariDataSource - HikariPool-3 - Starting...
+2024-12-10 15:11:47.998 INFO  [restartedMain] c.z.h.p.HikariPool - HikariPool-3 - Added connection org.postgresql.jdbc.PgConnection@4dcc6674
+2024-12-10 15:11:47.999 INFO  [restartedMain] c.z.h.HikariDataSource - HikariPool-3 - Start completed.
+2024-12-10 15:11:48.056 INFO  [restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2024-12-10 15:11:48.071 INFO  [restartedMain] o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2024-12-10 15:11:48.147 WARN  [restartedMain] o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2024-12-10 15:11:48.253 INFO  [restartedMain] o.s.b.d.a.OptionalLiveReloadServer - LiveReload server is running on port 35729
+2024-12-10 15:11:48.262 INFO  [restartedMain] o.s.b.w.e.t.TomcatWebServer - Tomcat started on port 8082 (http) with context path '/'
+2024-12-10 15:11:48.273 INFO  [restartedMain] o.s.b.d.a.ConditionEvaluationDeltaLoggingListener - Condition evaluation unchanged
+2024-12-10 15:11:54.805 INFO  [File Watcher] o.s.b.d.a.LocalDevToolsAutoConfiguration$RestartingClassPathChangeChangedEventListener - Restarting due to 1 class path change (0 additions, 0 deletions, 1 modification)
+2024-12-10 15:11:54.984 INFO  [Thread-17] o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2024-12-10 15:11:54.985 INFO  [Thread-17] c.z.h.HikariDataSource - HikariPool-3 - Shutdown initiated...
+2024-12-10 15:11:54.991 INFO  [Thread-17] c.z.h.HikariDataSource - HikariPool-3 - Shutdown completed.
+2024-12-10 15:11:55.229 INFO  [restartedMain] o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2024-12-10 15:11:55.252 INFO  [restartedMain] o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 21 ms. Found 1 JPA repository interface.
+2024-12-10 15:11:55.322 INFO  [restartedMain] o.s.b.w.e.t.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2024-12-10 15:11:55.323 INFO  [restartedMain] o.a.c.c.StandardService - Starting service [Tomcat]
+2024-12-10 15:11:55.324 INFO  [restartedMain] o.a.c.c.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.30]
+2024-12-10 15:11:55.336 INFO  [restartedMain] o.a.c.c.C.[.[.[/] - Initializing Spring embedded WebApplicationContext
+2024-12-10 15:11:55.337 INFO  [restartedMain] o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 258 ms
+2024-12-10 15:11:55.369 INFO  [restartedMain] o.h.j.i.u.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2024-12-10 15:11:55.372 INFO  [restartedMain] o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2024-12-10 15:11:55.387 INFO  [restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2024-12-10 15:11:55.388 INFO  [restartedMain] c.z.h.HikariDataSource - HikariPool-4 - Starting...
+2024-12-10 15:11:55.438 INFO  [restartedMain] c.z.h.p.HikariPool - HikariPool-4 - Added connection org.postgresql.jdbc.PgConnection@25f66d42
+2024-12-10 15:11:55.438 INFO  [restartedMain] c.z.h.HikariDataSource - HikariPool-4 - Start completed.
+2024-12-10 15:11:55.501 INFO  [restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2024-12-10 15:11:55.520 INFO  [restartedMain] o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2024-12-10 15:11:55.601 WARN  [restartedMain] o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2024-12-10 15:11:55.715 INFO  [restartedMain] o.s.b.d.a.OptionalLiveReloadServer - LiveReload server is running on port 35729
+2024-12-10 15:11:55.724 INFO  [restartedMain] o.s.b.w.e.t.TomcatWebServer - Tomcat started on port 8082 (http) with context path '/'
+2024-12-10 15:11:55.730 INFO  [restartedMain] o.s.b.d.a.ConditionEvaluationDeltaLoggingListener - Condition evaluation unchanged
+2024-12-10 15:14:41.784 INFO  [File Watcher] o.s.b.d.a.LocalDevToolsAutoConfiguration$RestartingClassPathChangeChangedEventListener - Restarting due to 2 class path changes (0 additions, 0 deletions, 2 modifications)
+2024-12-10 15:14:41.915 INFO  [Thread-21] o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2024-12-10 15:14:41.922 INFO  [Thread-21] c.z.h.HikariDataSource - HikariPool-4 - Shutdown initiated...
+2024-12-10 15:14:41.927 INFO  [Thread-21] c.z.h.HikariDataSource - HikariPool-4 - Shutdown completed.
+2024-12-10 15:14:42.086 INFO  [restartedMain] o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2024-12-10 15:14:42.102 INFO  [restartedMain] o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 10 ms. Found 1 JPA repository interface.
+2024-12-10 15:14:42.162 INFO  [restartedMain] o.s.b.w.e.t.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2024-12-10 15:14:42.162 INFO  [restartedMain] o.a.c.c.StandardService - Starting service [Tomcat]
+2024-12-10 15:14:42.162 INFO  [restartedMain] o.a.c.c.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.30]
+2024-12-10 15:14:42.173 INFO  [restartedMain] o.a.c.c.C.[.[.[/] - Initializing Spring embedded WebApplicationContext
+2024-12-10 15:14:42.173 INFO  [restartedMain] o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 191 ms
+2024-12-10 15:14:42.202 INFO  [restartedMain] o.h.j.i.u.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2024-12-10 15:14:42.202 INFO  [restartedMain] o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2024-12-10 15:14:42.212 INFO  [restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2024-12-10 15:14:42.215 INFO  [restartedMain] c.z.h.HikariDataSource - HikariPool-5 - Starting...
+2024-12-10 15:14:42.261 INFO  [restartedMain] c.z.h.p.HikariPool - HikariPool-5 - Added connection org.postgresql.jdbc.PgConnection@72efc83e
+2024-12-10 15:14:42.261 INFO  [restartedMain] c.z.h.HikariDataSource - HikariPool-5 - Start completed.
+2024-12-10 15:14:42.292 INFO  [restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2024-12-10 15:14:42.302 INFO  [restartedMain] o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2024-12-10 15:14:42.347 WARN  [restartedMain] o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2024-12-10 15:14:42.429 INFO  [restartedMain] o.s.b.d.a.OptionalLiveReloadServer - LiveReload server is running on port 35729
+2024-12-10 15:14:42.438 INFO  [restartedMain] o.s.b.w.e.t.TomcatWebServer - Tomcat started on port 8082 (http) with context path '/'
+2024-12-10 15:14:42.444 INFO  [restartedMain] o.s.b.d.a.ConditionEvaluationDeltaLoggingListener - Condition evaluation unchanged
+2024-12-10 15:14:51.010 INFO  [File Watcher] o.s.b.d.a.LocalDevToolsAutoConfiguration$RestartingClassPathChangeChangedEventListener - Restarting due to 2 class path changes (0 additions, 0 deletions, 2 modifications)
+2024-12-10 15:14:51.211 INFO  [Thread-25] o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2024-12-10 15:14:51.211 INFO  [Thread-25] c.z.h.HikariDataSource - HikariPool-5 - Shutdown initiated...
+2024-12-10 15:14:51.216 INFO  [Thread-25] c.z.h.HikariDataSource - HikariPool-5 - Shutdown completed.
+2024-12-10 15:14:51.427 INFO  [restartedMain] o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2024-12-10 15:14:51.442 INFO  [restartedMain] o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 14 ms. Found 1 JPA repository interface.
+2024-12-10 15:14:51.505 INFO  [restartedMain] o.s.b.w.e.t.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2024-12-10 15:14:51.505 INFO  [restartedMain] o.a.c.c.StandardService - Starting service [Tomcat]
+2024-12-10 15:14:51.505 INFO  [restartedMain] o.a.c.c.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.30]
+2024-12-10 15:14:51.525 INFO  [restartedMain] o.a.c.c.C.[.[.[/] - Initializing Spring embedded WebApplicationContext
+2024-12-10 15:14:51.526 INFO  [restartedMain] o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 217 ms
+2024-12-10 15:14:51.575 INFO  [restartedMain] o.h.j.i.u.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2024-12-10 15:14:51.577 INFO  [restartedMain] o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2024-12-10 15:14:51.582 INFO  [restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2024-12-10 15:14:51.591 INFO  [restartedMain] c.z.h.HikariDataSource - HikariPool-6 - Starting...
+2024-12-10 15:14:51.632 INFO  [restartedMain] c.z.h.p.HikariPool - HikariPool-6 - Added connection org.postgresql.jdbc.PgConnection@461c4cab
+2024-12-10 15:14:51.632 INFO  [restartedMain] c.z.h.HikariDataSource - HikariPool-6 - Start completed.
+2024-12-10 15:14:51.677 INFO  [restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2024-12-10 15:14:51.700 INFO  [restartedMain] o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2024-12-10 15:14:51.782 WARN  [restartedMain] o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2024-12-10 15:14:51.887 INFO  [restartedMain] o.s.b.d.a.OptionalLiveReloadServer - LiveReload server is running on port 35729
+2024-12-10 15:14:51.892 INFO  [restartedMain] o.s.b.w.e.t.TomcatWebServer - Tomcat started on port 8082 (http) with context path '/'
+2024-12-10 15:14:51.898 INFO  [restartedMain] o.s.b.d.a.ConditionEvaluationDeltaLoggingListener - Condition evaluation unchanged
+2024-12-10 15:19:16.642 INFO  [File Watcher] o.s.b.d.a.LocalDevToolsAutoConfiguration$RestartingClassPathChangeChangedEventListener - Restarting due to 2 class path changes (0 additions, 0 deletions, 2 modifications)
+2024-12-10 15:19:16.802 INFO  [Thread-29] o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2024-12-10 15:19:16.802 INFO  [Thread-29] c.z.h.HikariDataSource - HikariPool-6 - Shutdown initiated...
+2024-12-10 15:19:16.802 INFO  [Thread-29] c.z.h.HikariDataSource - HikariPool-6 - Shutdown completed.
+2024-12-10 15:19:17.048 INFO  [restartedMain] o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2024-12-10 15:19:17.059 INFO  [restartedMain] o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 11 ms. Found 1 JPA repository interface.
+2024-12-10 15:19:17.150 INFO  [restartedMain] o.s.b.w.e.t.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2024-12-10 15:19:17.152 INFO  [restartedMain] o.a.c.c.StandardService - Starting service [Tomcat]
+2024-12-10 15:19:17.152 INFO  [restartedMain] o.a.c.c.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.30]
+2024-12-10 15:19:17.163 INFO  [restartedMain] o.a.c.c.C.[.[.[/] - Initializing Spring embedded WebApplicationContext
+2024-12-10 15:19:17.163 INFO  [restartedMain] o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 281 ms
+2024-12-10 15:19:17.202 INFO  [restartedMain] o.h.j.i.u.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2024-12-10 15:19:17.202 INFO  [restartedMain] o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2024-12-10 15:19:17.220 INFO  [restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2024-12-10 15:19:17.222 INFO  [restartedMain] c.z.h.HikariDataSource - HikariPool-7 - Starting...
+2024-12-10 15:19:17.266 INFO  [restartedMain] c.z.h.p.HikariPool - HikariPool-7 - Added connection org.postgresql.jdbc.PgConnection@7738ea92
+2024-12-10 15:19:17.267 INFO  [restartedMain] c.z.h.HikariDataSource - HikariPool-7 - Start completed.
+2024-12-10 15:19:17.327 INFO  [restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2024-12-10 15:19:17.362 INFO  [restartedMain] o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2024-12-10 15:19:17.438 WARN  [restartedMain] o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2024-12-10 15:19:17.527 INFO  [restartedMain] o.s.b.d.a.OptionalLiveReloadServer - LiveReload server is running on port 35729
+2024-12-10 15:19:17.540 INFO  [restartedMain] o.s.b.w.e.t.TomcatWebServer - Tomcat started on port 8082 (http) with context path '/'
+2024-12-10 15:19:17.543 INFO  [restartedMain] o.s.b.d.a.ConditionEvaluationDeltaLoggingListener - Condition evaluation unchanged
+2024-12-10 15:19:19.989 INFO  [File Watcher] o.s.b.d.a.LocalDevToolsAutoConfiguration$RestartingClassPathChangeChangedEventListener - Restarting due to 2 class path changes (0 additions, 0 deletions, 2 modifications)
+2024-12-10 15:19:20.135 INFO  [Thread-33] o.s.o.j.LocalContainerEntityManagerFactoryBean - Closing JPA EntityManagerFactory for persistence unit 'default'
+2024-12-10 15:19:20.135 INFO  [Thread-33] c.z.h.HikariDataSource - HikariPool-7 - Shutdown initiated...
+2024-12-10 15:19:20.135 INFO  [Thread-33] c.z.h.HikariDataSource - HikariPool-7 - Shutdown completed.
+2024-12-10 15:19:20.401 INFO  [restartedMain] o.s.d.r.c.RepositoryConfigurationDelegate - Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2024-12-10 15:19:20.419 INFO  [restartedMain] o.s.d.r.c.RepositoryConfigurationDelegate - Finished Spring Data repository scanning in 16 ms. Found 1 JPA repository interface.
+2024-12-10 15:19:20.501 INFO  [restartedMain] o.s.b.w.e.t.TomcatWebServer - Tomcat initialized with port 8082 (http)
+2024-12-10 15:19:20.501 INFO  [restartedMain] o.a.c.c.StandardService - Starting service [Tomcat]
+2024-12-10 15:19:20.501 INFO  [restartedMain] o.a.c.c.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.30]
+2024-12-10 15:19:20.520 INFO  [restartedMain] o.a.c.c.C.[.[.[/] - Initializing Spring embedded WebApplicationContext
+2024-12-10 15:19:20.520 INFO  [restartedMain] o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 290 ms
+2024-12-10 15:19:20.572 INFO  [restartedMain] o.h.j.i.u.LogHelper - HHH000204: Processing PersistenceUnitInfo [name: default]
+2024-12-10 15:19:20.577 INFO  [restartedMain] o.h.c.i.RegionFactoryInitiator - HHH000026: Second-level cache disabled
+2024-12-10 15:19:20.585 INFO  [restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo - No LoadTimeWeaver setup: ignoring JPA class transformer
+2024-12-10 15:19:20.586 INFO  [restartedMain] c.z.h.HikariDataSource - HikariPool-8 - Starting...
+2024-12-10 15:19:20.633 INFO  [restartedMain] c.z.h.p.HikariPool - HikariPool-8 - Added connection org.postgresql.jdbc.PgConnection@8040790
+2024-12-10 15:19:20.633 INFO  [restartedMain] c.z.h.HikariDataSource - HikariPool-8 - Start completed.
+2024-12-10 15:19:20.696 INFO  [restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator - HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2024-12-10 15:19:20.717 INFO  [restartedMain] o.s.o.j.LocalContainerEntityManagerFactoryBean - Initialized JPA EntityManagerFactory for persistence unit 'default'
+2024-12-10 15:19:20.788 WARN  [restartedMain] o.s.b.a.o.j.JpaBaseConfiguration$JpaWebConfiguration - spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2024-12-10 15:19:20.869 INFO  [restartedMain] o.s.b.d.a.OptionalLiveReloadServer - LiveReload server is running on port 35729
+2024-12-10 15:19:20.877 INFO  [restartedMain] o.s.b.w.e.t.TomcatWebServer - Tomcat started on port 8082 (http) with context path '/'
+2024-12-10 15:19:20.884 INFO  [restartedMain] o.s.b.d.a.ConditionEvaluationDeltaLoggingListener - Condition evaluation unchanged
