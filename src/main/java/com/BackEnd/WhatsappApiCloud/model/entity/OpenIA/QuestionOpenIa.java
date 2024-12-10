@@ -1,7 +1,7 @@
 package com.BackEnd.WhatsappApiCloud.model.entity.OpenIA;
 
-public record QuestionOpenIa(String pregunta, String nombre, String thread_id) {
-    public QuestionOpenIa(String pregunta, String nombre) {
-        this(pregunta, nombre, null);
+public record QuestionOpenIa(String ask, String name, String thread_id) {
+    public QuestionOpenIa(String ask, String name) {
+        this(ask, name, null);
     }
 }

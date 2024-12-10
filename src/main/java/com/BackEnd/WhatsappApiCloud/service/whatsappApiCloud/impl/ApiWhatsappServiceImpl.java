@@ -167,7 +167,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     user.setLimite(user.getLimite() - 1);
                     userChatRepository.save(user);
 
-                    return sendSimpleResponse(waId, data.respuesta());
+                    return sendSimpleResponse(waId, data.answer());
                 default:
                     user.setConversationState("WAITING_FOR_CEDULA");
                     userChatRepository.save(user);
@@ -275,15 +275,15 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     }  
     
     // Metodo para obtener respuesta de IA
-    private AnswersOpenIa getAnswerIA(String pregunta, String nombre, String thread_id) {
+    private AnswersOpenIa getAnswerIA(String ask, String name, String thread_id) {
         try {
             RestClient openAi = RestClient.builder()
                 .baseUrl("http://127.0.0.1:5000")
                 .build();
     
-            String url = "/preguntar";
+            String url = "/ask";
             
-            QuestionOpenIa question = new QuestionOpenIa(pregunta, nombre, thread_id);
+            QuestionOpenIa question = new QuestionOpenIa(ask, name, thread_id);
 
             AnswersOpenIa answer = openAi.post()
                 .uri(url)
