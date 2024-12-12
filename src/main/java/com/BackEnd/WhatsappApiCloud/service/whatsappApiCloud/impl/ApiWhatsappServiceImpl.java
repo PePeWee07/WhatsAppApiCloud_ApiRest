@@ -3,6 +3,7 @@ package com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.impl;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +40,18 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     private static final Logger logger = LoggerFactory.getLogger(ApiWhatsappServiceImpl.class);
 
     private final RestClient restClient;
+
+    @Value("${restricted.roles}")
+    private String deniedRoles;
+
+    public List<String> getDeniedRoles() {
+        return Arrays.asList(deniedRoles.split(","));
+    }
+
+    public boolean isRoleDenied(String role) {
+        return getDeniedRoles().contains(role);
+    }
+
     @Autowired
     private UserChatRepository userChatRepository;
 
@@ -98,11 +111,9 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                         //! Si NO encuentro la cédula dentro de ERP
                         if (userFromJsonServer == null) {
                             user.setLastInteraction(timeNow);
-                            user.setNombres("Usuario");
-                            user.setConversationState("READY");
                             user.setRol("Invitado");
                             userChatRepository.save(user);
-                            return sendSimpleResponse(waId, "Actualmente estás en modo invitado y no perteneces a la universidad. ¿En qué puedo ayudarte?");
+                            return sendSimpleResponse(waId, "Actualmente no perteneces a la universidad.");
                         } 
                         //! Si encuentro la cédula dentro de ERP
                         else {
@@ -122,21 +133,26 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     }
                 case "READY":
 
-                    //! 1. Verifica si ya pasaron 24 horas para incremetar el límite y restablecer el contador
+                    //! 1. Verificar si el rol del usuario está denegado
+                    if (isRoleDenied(user.getRol())) {
+                        return sendSimpleResponse(waId, "Lo sentimos, esta funcionalidad no está disponible para tu rol de '" + user.getRol() + "' en este momento.");
+                    }
+
+                    //! 2. Verifica si ya pasaron 24 horas para incremetar el límite y restablecer el contador
                     if (!user.getLastInteraction().toLocalDate().isEqual(LocalDate.now())) {
                         user.setLimite(10);
                         user.setNextResetDate(null);
                         userChatRepository.save(user);
                     }
 
-                    //! 2. Si ya pasó la fecha de reseteo, restablece el límite
+                    //! 3. Si ya pasó la fecha de reseteo, restablece el límite
                     if (user.getNextResetDate() != null && timeNow.isAfter(user.getNextResetDate())) {
                         user.setLimite(10);
                         user.setNextResetDate(null);
                         userChatRepository.save(user);
                     }
 
-                    //! 3. Si hay una fecha de reseteo definida y aún no ha pasado, no puede realizar la acción
+                    //! 4. Si hay una fecha de reseteo definida y aún no ha pasado, no puede realizar la acción
                     if (user.getNextResetDate() != null && timeNow.isBefore(user.getNextResetDate())) {
                         Duration remainingTime = Duration.between(timeNow, user.getNextResetDate());
                         long hours = remainingTime.toHours();
@@ -149,14 +165,14 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                         ));
                     }
 
-                    //! 4. Si el límite de interacciones es 0, bloquear por 24 horas
+                    //! 5. Si el límite de interacciones es 0, bloquear por 24 horas
                     if (user.getLimite() <= 0) {
                         user.setNextResetDate(timeNow.plusHours(24));
                         userChatRepository.save(user);
                         return sendSimpleResponse(waId, "Tu límite de interacciones ha sido alcanzado, vuelve mañana.");
                     }
 
-                    //! 5. Actualizar datos del usuario y obtener respuesta de IA
+                    //! 6. Actualizar datos del usuario y obtener respuesta de IA
                     UserChatEntity userFromJsonServer = fetchUserFromJsonServer(user.getCedula());
                     user.setNombres(userFromJsonServer.getNombres());
                     user.setCarrera(userFromJsonServer.getCarrera());
