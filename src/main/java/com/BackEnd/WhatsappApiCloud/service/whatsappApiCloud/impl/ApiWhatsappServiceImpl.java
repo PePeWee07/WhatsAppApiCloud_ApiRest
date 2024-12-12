@@ -10,10 +10,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
+import com.BackEnd.WhatsappApiCloud.exception.ApiInfoException;
 import com.BackEnd.WhatsappApiCloud.exception.CustomJsonServerException;
-import com.BackEnd.WhatsappApiCloud.exception.CustomOpenIaServerException;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestMessage;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestMessageText;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
@@ -25,6 +26,8 @@ import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
 import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.slf4j.Logger;
@@ -174,6 +177,9 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     return sendSimpleResponse(waId, "No hemos podido procesar tu solicitud. Por favor, introduce tu número de cédula nuevamente para continuar.");
             }
 
+        } catch (ApiInfoException e) {
+            logger.warn("Mensaje informativo recibido: " + e.getInfoMessage());
+            return sendSimpleResponse(waId, e.getInfoMessage());
         } catch (Exception e) {
             logger.error("Error al procesar mensaje de usuario: " + e);
             return sendSimpleResponse(waId, "Ha ocurrido un error inesperado. Por favor, inténtalo nuevamente más tarde.");
@@ -268,14 +274,14 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 .findFirst().orElse(users.get(0));
 
             return nonStudentRole;
-        } catch (Exception apiException) {
-            logger.error("Error al obtener datos del usuario desde ERP: " + apiException.getMessage());
-            throw new CustomJsonServerException("Error al obtener datos del usuario desde ERP.", apiException);
+        } catch (Exception e) {
+            logger.error("Error al obtener datos del usuario desde ERP " + e.getMessage());
+            throw new CustomJsonServerException("Error al obtener datos del usuario desde ERP", e.getCause());
         }
     }  
     
     // Metodo para obtener respuesta de IA
-    private AnswersOpenIa getAnswerIA(String ask, String name, String thread_id) {
+    private AnswersOpenIa getAnswerIA(String ask, String name, String thread_id) throws JsonMappingException, JsonProcessingException {
         try {
             RestClient openAi = RestClient.builder()
                 .baseUrl("http://127.0.0.1:5000")
@@ -294,9 +300,20 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     
             return answer;
     
-        } catch (Exception e) {
+        }  catch (HttpClientErrorException.BadRequest e) {
+            String responseBody = e.getResponseBodyAsString();
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode rootNode = objectMapper.readTree(responseBody);
+            if (rootNode.has("info")) {
+                String infoMessage = rootNode.get("info").asText();
+                throw new ApiInfoException(infoMessage);
+            } else {
+                logger.error("Bad Request al obtener respuesta de IA: " + e.getMessage());
+                throw new RuntimeException(e);
+            }
+        }  catch (Exception e) {
             logger.error("Error al obtener respuesta de IA: " + e.getMessage());
-            throw new CustomOpenIaServerException("Error al obtener respuesta de IA: ", e);
+            throw new RuntimeException(e);
         }
     }    
 
