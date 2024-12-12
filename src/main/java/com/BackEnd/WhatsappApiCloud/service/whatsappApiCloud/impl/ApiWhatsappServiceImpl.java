@@ -42,32 +42,48 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     private final RestClient restClient;
 
     @Value("${restricted.roles}")
-    private String deniedRoles;
+    private String restrictedRol;
 
-    public List<String> getDeniedRoles() {
-        return Arrays.asList(deniedRoles.split(","));
-    }
+    @Value("${baseurl.jsonserver}")
+    private String baseUrlJsonServer;
 
-    public boolean isRoleDenied(String role) {
-        return getDeniedRoles().contains(role);
-    }
+    @Value("${uri.jsonserver}")
+    private String uriJsonServer;
+
+    @Value("${baseurl.aiserver}")
+    private String baseAIServer;
+
+    @Value("${uri.aiserver}")
+    private String uriAIServer;
+
+    @Value("${limit.questions.per.day}")
+    private int limitQuestionsPerDay;
+
+    @Value("${hours.to.wait.after.limit}")
+    private int hoursToWaitAfterLimit;
 
     @Autowired
     private UserChatRepository userChatRepository;
 
-    // Constructor para inicializar el cliente REST
+
+    // ======================================================
+    //   Constructor para inicializar el cliente REST
+    // ======================================================
     public ApiWhatsappServiceImpl(
-            @Value("${Phone-Number-ID}") String identificador,
+            @Value("${Phone-Number-ID}") String identifier,
             @Value("${whatsapp.token}") String token,
             @Value("${whatsapp.urlbase}") String urlBase,
             @Value("${whatsapp.version}") String version) {
         restClient = RestClient.builder()
-                    .baseUrl(urlBase + version + "/" + identificador)
+                    .baseUrl(urlBase + version + "/" + identifier)
                     .defaultHeader("Authorization", "Bearer " + token)
                     .build();
     }
 
-    // Metodo para enviar mensaje a un usuario
+
+    // ======================================================
+    //   Envio de mensaje a usaurio especifico
+    // ======================================================
     @Override
     public ResponseWhatsapp sendMessage(MessageBody payload) {
         try {
@@ -79,7 +95,10 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
-    // Metodo Recibir y enviar respuesta automatica
+
+    // ======================================================
+    //   Recibir y enviar respuesta automatica
+    // ======================================================
     @Override
     public ResponseWhatsapp handleUserMessage(WhatsAppData.WhatsAppMessage message) {
         LocalDateTime timeNow = LocalDateTime.now();
@@ -96,8 +115,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 .orElseGet(() -> {
                     //! Si no existe el usuario en mi BD, lo creo
                     UserChatEntity newUser = new UserChatEntity();
-                    newUser.setPhone(waId);
                     newUser.setNombres("Anonymus");
+                    newUser.setPhone(waId);
                     newUser.setFirstInteraction(timeNow);
                     newUser.setConversationState("WAITING_FOR_CEDULA");
                     return userChatRepository.save(newUser);
@@ -111,19 +130,19 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                         //! Si NO encuentro la cédula dentro de ERP
                         if (userFromJsonServer == null) {
                             user.setLastInteraction(timeNow);
-                            user.setRol("Invitado");
                             userChatRepository.save(user);
                             return sendSimpleResponse(waId, "Actualmente no perteneces a la universidad.");
                         } 
                         //! Si encuentro la cédula dentro de ERP
                         else {
-                            user.setLastInteraction(timeNow);
                             user.setNombres(userFromJsonServer.getNombres());
-                            user.setCarrera(userFromJsonServer.getCarrera());
                             user.setCedula(userFromJsonServer.getCedula());
-                            user.setConversationState("READY");
                             user.setRol(userFromJsonServer.getRol());
+                            user.setLimitQuestions(limitQuestionsPerDay);
+                            user.setLastInteraction(timeNow);
+                            user.setConversationState("READY");
                             user.setSede(userFromJsonServer.getSede());
+                            user.setCarrera(userFromJsonServer.getCarrera());
                             userChatRepository.save(user);
                             return sendSimpleResponse(waId, "Hola " + user.getNombres() + ", bienvenido al Asistente Tecnológico de TICs. ¿En qué puedo ayudarte hoy?");
                         }
@@ -140,14 +159,14 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
                     //! 2. Verifica si ya pasaron 24 horas para incremetar el límite y restablecer el contador
                     if (!user.getLastInteraction().toLocalDate().isEqual(LocalDate.now())) {
-                        user.setLimite(10);
+                        user.setLimitQuestions(limitQuestionsPerDay);
                         user.setNextResetDate(null);
                         userChatRepository.save(user);
                     }
 
                     //! 3. Si ya pasó la fecha de reseteo, restablece el límite
                     if (user.getNextResetDate() != null && timeNow.isAfter(user.getNextResetDate())) {
-                        user.setLimite(10);
+                        user.setLimitQuestions(limitQuestionsPerDay);
                         user.setNextResetDate(null);
                         userChatRepository.save(user);
                     }
@@ -166,24 +185,22 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     }
 
                     //! 5. Si el límite de interacciones es 0, bloquear por 24 horas
-                    if (user.getLimite() <= 0) {
-                        user.setNextResetDate(timeNow.plusHours(24));
+                    if (user.getLimitQuestions() <= 0) {
+                        user.setNextResetDate(timeNow.plusHours(hoursToWaitAfterLimit));
                         userChatRepository.save(user);
                         return sendSimpleResponse(waId, "Tu límite de interacciones ha sido alcanzado, vuelve mañana.");
                     }
 
-                    //! 6. Actualizar datos del usuario y obtener respuesta de IA
+                    //! 6. Obtener respuesta de IA y Actualizar datos del usuario
+                    AnswersOpenIa data = getAnswerIA(messageText, user.getNombres(), user.getThreadId());
                     UserChatEntity userFromJsonServer = fetchUserFromJsonServer(user.getCedula());
                     user.setNombres(userFromJsonServer.getNombres());
-                    user.setCarrera(userFromJsonServer.getCarrera());
                     user.setRol(userFromJsonServer.getRol());
-                    user.setSede(userFromJsonServer.getSede());
-
-                    AnswersOpenIa data = getAnswerIA(messageText, user.getNombres(), user.getThread_id());
-
+                    user.setThreadId(data.thread_id());
+                    user.setLimitQuestions(user.getLimitQuestions()- 1);
                     user.setLastInteraction(timeNow);
-                    user.setThread_id(data.thread_id());
-                    user.setLimite(user.getLimite() - 1);
+                    user.setSede(userFromJsonServer.getSede());
+                    user.setCarrera(userFromJsonServer.getCarrera());
                     userChatRepository.save(user);
 
                     return sendSimpleResponse(waId, data.answer());
@@ -202,55 +219,55 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
+
+    // ======================================================
+    //   Verificar si el rol del usuario está denegado
+    // ======================================================
+    public boolean isRoleDenied(String role) {
+        return Arrays.asList(restrictedRol.split(",")).contains(role);
+    }
+
+
+    // ======================================================
+    //   Validar cédula
+    // ======================================================
     private static boolean isValidCedula(String cedula) {
-        // Validar que tenga 10 dígitos
         if (cedula == null || cedula.length() != 10) {
             return false;
         }
     
         try {
-            // Obtener los dos primeros dígitos (región)
             int digitoRegion = Integer.parseInt(cedula.substring(0, 2));
-    
-            // Validar región (1 a 24)
+
             if (digitoRegion < 1 || digitoRegion > 24) {
                 return false;
             }
-    
-            // Extraer el último dígito
+
             int ultimoDigito = Integer.parseInt(cedula.substring(9, 10));
-    
-            // Sumar los pares
+
             int pares = Integer.parseInt(cedula.substring(1, 2)) +
                         Integer.parseInt(cedula.substring(3, 4)) +
                         Integer.parseInt(cedula.substring(5, 6)) +
                         Integer.parseInt(cedula.substring(7, 8));
-    
-            // Sumar los impares, multiplicando por 2 y ajustando si > 9
+
             int impares = sumarImpar(cedula.substring(0, 1)) +
                           sumarImpar(cedula.substring(2, 3)) +
                           sumarImpar(cedula.substring(4, 5)) +
                           sumarImpar(cedula.substring(6, 7)) +
                           sumarImpar(cedula.substring(8, 9));
-    
-            // Suma total
+
             int sumaTotal = pares + impares;
-    
-            // Obtener el primer dígito de la suma total
+
             int primerDigitoSuma = Integer.parseInt(String.valueOf(sumaTotal).substring(0, 1));
-    
-            // Obtener la decena inmediata
+
             int decena = (primerDigitoSuma + 1) * 10;
-    
-            // Calcular el dígito validador
+
             int digitoValidador = decena - sumaTotal;
-    
-            // Si el dígito validador es 10, se ajusta a 0
+
             if (digitoValidador == 10) {
                 digitoValidador = 0;
             }
-    
-            // Validar el dígito validador contra el último dígito
+
             return digitoValidador == ultimoDigito;
     
         } catch (NumberFormatException e) {
@@ -258,25 +275,36 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             return false;
         }
     }
+
+
+    // ======================================================
+    //   Sumar dígitos impares para validación de cédula
+    // ======================================================
     private static int sumarImpar(String numero) {
         int valor = Integer.parseInt(numero) * 2;
         return (valor > 9) ? (valor - 9) : valor;
     }
+
     
-    // Metodo para enviar mensaje simple
+    // ======================================================
+    //   Envíos de mensajes simples
+    // ======================================================
     private ResponseWhatsapp sendSimpleResponse(String waId, String message) {
         RequestMessage request = RequestBuilder(waId, "text", message);
         return ResponseBuilder(request, "/messages");
     }
 
-    // Metodo para obtener usuario desde ERP
+
+    // ======================================================
+    //   Simulación de ERP
+    // ======================================================
     private UserChatEntity fetchUserFromJsonServer(String cedula) {
         try {
             RestClient localRestClient = RestClient.builder()
-                .baseUrl("http://localhost:3000")
+                .baseUrl(baseUrlJsonServer)
                 .build();
 
-            String url = "/data?cedula=" + cedula;
+            String url = uriJsonServer + cedula;
             List<UserChatEntity> users = localRestClient.get()
                 .uri(url)
                 .retrieve()
@@ -284,7 +312,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
             System.out.println("Users: " + localRestClient.get().uri(url).retrieve().body(String.class));
             
-            // Buscar el rol que no sea "Estudiante"
             UserChatEntity nonStudentRole = users.stream()
                 .filter(user -> !user.getRol().equalsIgnoreCase("Estudiante"))
                 .findFirst().orElse(users.get(0));
@@ -296,14 +323,17 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }  
     
-    // Metodo para obtener respuesta de IA
+
+    // ======================================================
+    //   Consulta a IA
+    // ======================================================
     private AnswersOpenIa getAnswerIA(String ask, String name, String thread_id) throws JsonMappingException, JsonProcessingException {
         try {
             RestClient openAi = RestClient.builder()
-                .baseUrl("http://127.0.0.1:5000")
+                .baseUrl(baseAIServer)
                 .build();
     
-            String url = "/ask";
+            String url = uriAIServer;
             
             QuestionOpenIa question = new QuestionOpenIa(ask, name, thread_id);
 
@@ -333,7 +363,10 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }    
 
-    // Metodo para construir mensaje de respuesta
+
+    // ======================================================
+    //   Constructor de mensajes de respuesta
+    // ======================================================
     private ResponseWhatsapp ResponseBuilder(RequestMessage request, String uri) {
         String response = restClient.post()
                     .uri(uri)
@@ -350,7 +383,10 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
-    // Metodo para construir mensaje de petición
+
+    // ======================================================
+    //   Constructor de mensajes de petición
+    // ======================================================
     public RequestMessage RequestBuilder(String toPhone, String responseType, String responseMessage) {
         try {
             return new RequestMessage(

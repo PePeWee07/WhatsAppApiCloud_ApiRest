@@ -22,17 +22,24 @@ public class WhatsappController {
         this.apiWhatsappService = apiWhatsappService;
     }
 
+    // ======================================================
+    //   Enviar mensaje a un usuario de WhatsApp especifico
+    // ======================================================
     @PostMapping("/send")
     ResponseWhatsapp enviar(@RequestBody MessageBody payload) throws JsonProcessingException {
-        return apiWhatsappService.sendMessage(payload);
+            return apiWhatsappService.sendMessage(payload);
     }
 
+    // ======================================================
+    //   Recibir mensaje de un usuario de WhatsApp
+    // ======================================================
     @PostMapping("/receive")
     public ResponseWhatsapp receiveMessage(@RequestBody WhatsAppData.WhatsAppMessage message) throws JsonProcessingException {
         if(message.entry().get(0).changes().get(0).value().messages() != null){
             System.out.println("Mensaje recibido: " + message.entry().get(0).changes().get(0).value().messages().get(0).text() + "STATUS: " + ResponseEntity.ok());
+            return apiWhatsappService.handleUserMessage(message);
         }
-        return apiWhatsappService.handleUserMessage(message);
+        return null;
     }
 
 }
