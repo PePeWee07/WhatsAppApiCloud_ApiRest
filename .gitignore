@@ -6,6 +6,7 @@ target/
 src/main/resources/application.properties
 var/log/
 *.log
+.pem
 
 ### STS ###
 .apt_generated
