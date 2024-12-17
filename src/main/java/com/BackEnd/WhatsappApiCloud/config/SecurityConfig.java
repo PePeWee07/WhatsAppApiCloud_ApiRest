@@ -15,15 +15,15 @@ public class SecurityConfig {
         this.apiKeyFilter = apiKeyFilter;
     }
 
+    // ======================================================
+    //   Configuración de seguridad
+    // ======================================================
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable()) // Deshabilitar CSRF para APIs REST
+            .csrf(csrf -> csrf.disable())
             .addFilterBefore(apiKeyFilter, UsernamePasswordAuthenticationFilter.class) // Agregar el filtro antes de UsernamePasswordAuthenticationFilter
-            .authorizeHttpRequests(auth -> auth
-                .anyRequest().authenticated() // Proteger todos los endpoints
-            );
-
+            .authorizeHttpRequests(auth -> auth.anyRequest().authenticated());
         return http.build();
     }
 }
