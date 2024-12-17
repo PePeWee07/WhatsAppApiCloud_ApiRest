@@ -40,7 +40,6 @@ public class ApiKeyFilter extends OncePerRequestFilter {
     //   Obtener el número de teléfono del usuario
     // ======================================================
     public String getPhoneNumber(String phone) {
-        System.out.println("Phone number: " + phone);
         return PHONE_NUMBER = phone;
     }
 
@@ -65,7 +64,7 @@ public class ApiKeyFilter extends OncePerRequestFilter {
 
             filterChain.doFilter(request, response);
         } catch (Exception e) {
-            logger.error("Error durante la validación de la clave API", e);
+            logger.error("Error durante la validacion de la clave API", e);
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             MessageBody messageBody = new MessageBody(PHONE_NUMBER, "Lo sentimos, ocurrió un problema al procesar su solicitud. Por favor, inténtelo más tarde.");
             apiWhatsappService.sendMessage(messageBody);

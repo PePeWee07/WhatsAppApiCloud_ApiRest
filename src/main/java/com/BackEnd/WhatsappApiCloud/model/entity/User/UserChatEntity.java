@@ -50,7 +50,7 @@ public class UserChatEntity {
     @Column(name = "limit_questions")
     private int limitQuestions;
 
-    @Column(name = "limit_questions_used")
+    @Column(name = "firstInteraction")
     private LocalDateTime firstInteraction;
     
     @Column(name = "last_interaction")
@@ -62,6 +62,8 @@ public class UserChatEntity {
     @Column(name = "conversation_state")
     private String conversationState;
 
+    @Column(name = "strike")
+    private int strike;
 
     // Atributos Adicionales
     private String sede;

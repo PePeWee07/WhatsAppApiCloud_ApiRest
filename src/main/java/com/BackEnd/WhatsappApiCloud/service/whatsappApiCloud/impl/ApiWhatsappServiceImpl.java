@@ -62,6 +62,9 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     @Value("${hours.to.wait.after.limit}")
     private int hoursToWaitAfterLimit;
 
+    @Value("${strike.limit}")
+    private int strikeLimit;
+
     @Autowired
     private UserChatRepository userChatRepository;
 
@@ -139,6 +142,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                             user.setCedula(userFromJsonServer.getCedula());
                             user.setRol(userFromJsonServer.getRol());
                             user.setLimitQuestions(limitQuestionsPerDay);
+                            user.setStrike(strikeLimit);
                             user.setLastInteraction(timeNow);
                             user.setConversationState("READY");
                             user.setSede(userFromJsonServer.getSede());
@@ -148,6 +152,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                         }
 
                     } else {
+                        user.setLastInteraction(timeNow);
+                        userChatRepository.save(user);
                         return sendSimpleResponse(waId, "Por favor, introduce tu número de cédula valida para continuar.");
                     }
                 case "READY":
@@ -157,21 +163,26 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                         return sendSimpleResponse(waId, "Lo sentimos, esta funcionalidad no está disponible para tu rol de '" + user.getRol() + "' en este momento.");
                     }
 
-                    //! 2. Verifica si ya pasaron 24 horas para incremetar el límite y restablecer el contador
+                    //! 2. Verificar si el usuario ha sido bloqueado
+                    if (user.getStrike() <= 0) {
+                        return sendSimpleResponse(waId, "Tu cuenta ha sido bloqueada. Por favor, comunícate con soportetic@ucacue.edu.ec.");
+                    }
+
+                    //! 3. Verifica si ya pasaron 24 horas para incremetar el límite y restablecer el contador
                     if (!user.getLastInteraction().toLocalDate().isEqual(LocalDate.now())) {
                         user.setLimitQuestions(limitQuestionsPerDay);
                         user.setNextResetDate(null);
                         userChatRepository.save(user);
                     }
 
-                    //! 3. Si ya pasó la fecha de reseteo, restablece el límite
+                    //! 4. Si ya pasó la fecha de reseteo, restablece el límite
                     if (user.getNextResetDate() != null && timeNow.isAfter(user.getNextResetDate())) {
                         user.setLimitQuestions(limitQuestionsPerDay);
                         user.setNextResetDate(null);
                         userChatRepository.save(user);
                     }
 
-                    //! 4. Si hay una fecha de reseteo definida y aún no ha pasado, no puede realizar la acción
+                    //! 5. Si hay una fecha de reseteo definida y aún no ha pasado, no puede realizar la acción
                     if (user.getNextResetDate() != null && timeNow.isBefore(user.getNextResetDate())) {
                         Duration remainingTime = Duration.between(timeNow, user.getNextResetDate());
                         long hours = remainingTime.toHours();
@@ -184,14 +195,14 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                         ));
                     }
 
-                    //! 5. Si el límite de interacciones es 0, bloquear por 24 horas
+                    //! 6. Si el límite de interacciones es 0, bloquear por 24 horas
                     if (user.getLimitQuestions() <= 0) {
                         user.setNextResetDate(timeNow.plusHours(hoursToWaitAfterLimit));
                         userChatRepository.save(user);
                         return sendSimpleResponse(waId, "Tu límite de interacciones ha sido alcanzado, vuelve mañana.");
                     }
 
-                    //! 6. Obtener respuesta de IA y Actualizar datos del usuario
+                    //! 7. Obtener respuesta de IA y Actualizar datos del usuario
                     AnswersOpenIa data = getAnswerIA(messageText, user.getNombres(), user.getThreadId());
                     UserChatEntity userFromJsonServer = fetchUserFromJsonServer(user.getCedula());
                     user.setNombres(userFromJsonServer.getNombres());
@@ -211,6 +222,11 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             }
 
         } catch (ApiInfoException e) {
+            if (e.getModeration() != null) {
+                UserChatEntity user = userChatRepository.findByPhone(waId).orElse(null);
+                user.setStrike(user.getStrike() - 1);
+                userChatRepository.save(user);
+            }
             logger.warn("Mensaje informativo recibido: " + e.getInfoMessage());
             return sendSimpleResponse(waId, e.getInfoMessage());
         } catch (Exception e) {
@@ -310,7 +326,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 .retrieve()
                 .body(new ParameterizedTypeReference<List<UserChatEntity>>() {});
 
-            System.out.println("Users: " + localRestClient.get().uri(url).retrieve().body(String.class));
+                System.out.println("Users: " + localRestClient.get().uri(url).retrieve().body(String.class)); //! Debug
             
             UserChatEntity nonStudentRole = users.stream()
                 .filter(user -> !user.getRol().equalsIgnoreCase("Estudiante"))
@@ -327,6 +343,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     // ======================================================
     //   Consulta a IA
     // ======================================================
+    private String moderationValue;
     private AnswersOpenIa getAnswerIA(String ask, String name, String thread_id) throws JsonMappingException, JsonProcessingException {
         try {
             RestClient openAi = RestClient.builder()
@@ -352,7 +369,11 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             JsonNode rootNode = objectMapper.readTree(responseBody);
             if (rootNode.has("info")) {
                 String infoMessage = rootNode.get("info").asText();
-                throw new ApiInfoException(infoMessage);
+                    if (rootNode.has("moderation")) {
+                        moderationValue = rootNode.get("moderation").asText();
+                        throw new ApiInfoException(infoMessage, moderationValue);
+                    }
+                throw new ApiInfoException(infoMessage, null);
             } else {
                 logger.error("Bad Request al obtener respuesta de IA: " + e.getMessage());
                 throw new RuntimeException(e);
@@ -361,8 +382,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             logger.error("Error al obtener respuesta de IA: " + e.getMessage());
             throw new RuntimeException(e);
         }
-    }    
-
+    }
 
     // ======================================================
     //   Constructor de mensajes de respuesta
