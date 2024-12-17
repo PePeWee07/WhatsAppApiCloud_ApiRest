@@ -142,9 +142,10 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                             user.setCedula(userFromJsonServer.getCedula());
                             user.setRol(userFromJsonServer.getRol());
                             user.setLimitQuestions(limitQuestionsPerDay);
-                            user.setStrike(strikeLimit);
                             user.setLastInteraction(timeNow);
                             user.setConversationState("READY");
+                            user.setStrike(strikeLimit);
+                            user.setEmail(userFromJsonServer.getEmail());
                             user.setSede(userFromJsonServer.getSede());
                             user.setCarrera(userFromJsonServer.getCarrera());
                             userChatRepository.save(user);
@@ -158,6 +159,11 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     }
                 case "READY":
 
+                    //! 0. Verificar si el usuario ha sido bloqueado
+                    if (user.isBlock()) {
+                        return null;
+                    }
+
                     //! 1. Verificar si el rol del usuario está denegado
                     if (isRoleDenied(user.getRol())) {
                         return sendSimpleResponse(waId, "Lo sentimos, esta funcionalidad no está disponible para tu rol de '" + user.getRol() + "' en este momento.");
@@ -165,6 +171,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
                     //! 2. Verificar si el usuario ha sido bloqueado
                     if (user.getStrike() <= 0) {
+                        user.setBlock(true);
+                        userChatRepository.save(user);
                         return sendSimpleResponse(waId, "Tu cuenta ha sido bloqueada. Por favor, comunícate con soportetic@ucacue.edu.ec.");
                     }
 
@@ -210,6 +218,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     user.setThreadId(data.thread_id());
                     user.setLimitQuestions(user.getLimitQuestions()- 1);
                     user.setLastInteraction(timeNow);
+                    user.setEmail(userFromJsonServer.getEmail());
                     user.setSede(userFromJsonServer.getSede());
                     user.setCarrera(userFromJsonServer.getCarrera());
                     userChatRepository.save(user);
@@ -225,6 +234,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             if (e.getModeration() != null) {
                 UserChatEntity user = userChatRepository.findByPhone(waId).orElse(null);
                 user.setStrike(user.getStrike() - 1);
+                user.setBlockingReason("Moderacion");
                 userChatRepository.save(user);
             }
             logger.warn("Mensaje informativo recibido: " + e.getInfoMessage());

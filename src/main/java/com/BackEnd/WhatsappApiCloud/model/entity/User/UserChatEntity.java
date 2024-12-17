@@ -65,6 +65,15 @@ public class UserChatEntity {
     @Column(name = "strike")
     private int strike;
 
+    @Column(name = "block")
+    private boolean block;
+
+    @Column(name = "blocking_reason")
+    private String blockingReason;
+
+    @Column(name = "email")
+    private String email;
+
     // Atributos Adicionales
     private String sede;
 
