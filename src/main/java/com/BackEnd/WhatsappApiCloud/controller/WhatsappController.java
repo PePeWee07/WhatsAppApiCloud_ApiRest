@@ -1,6 +1,7 @@
 package com.BackEnd.WhatsappApiCloud.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -40,6 +41,11 @@ public class WhatsappController {
             return apiWhatsappService.handleUserMessage(message);
         }
         return null;
+    }
+
+    @GetMapping("/test")
+    public String test() {
+        return "API de WhatsApp funcionando correctamente";
     }
 
 }
