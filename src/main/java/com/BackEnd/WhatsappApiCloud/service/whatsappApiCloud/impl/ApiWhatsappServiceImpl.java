@@ -116,7 +116,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         var messageOptionalText = message.entry().get(0).changes().get(0).value().messages().get(0).text();
         if (messageOptionalText.isEmpty() || !messageType.equals("text")) {
             logger.warn("El mensaje no contiene texto válido.");
-            System.out.println("El mensaje no contiene texto válido."); //! Debug
             return null;
         }
         String messageText = messageOptionalText.get().body();
