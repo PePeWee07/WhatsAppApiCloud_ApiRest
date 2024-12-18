@@ -18,6 +18,7 @@ import com.BackEnd.WhatsappApiCloud.exception.ApiInfoException;
 import com.BackEnd.WhatsappApiCloud.exception.CustomJsonServerException;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestMessage;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestMessageText;
+import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestWhatsappAsRead;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppData;
 import com.BackEnd.WhatsappApiCloud.model.entity.OpenIA.AnswersOpenIa;
@@ -105,13 +106,20 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     @Override
     public ResponseWhatsapp handleUserMessage(WhatsAppData.WhatsAppMessage message) {
         LocalDateTime timeNow = LocalDateTime.now();
-        String messageType = message.entry().get(0).changes().get(0).value().messages().get(0).type();
-        String waId = message.entry().get(0).changes().get(0).value().contacts().get(0).wa_id();
-        String messageText = message.entry().get(0).changes().get(0).value().messages().get(0).text().get().body();
 
-        if (!messageType.equals("text") || messageText == null || messageText.isEmpty()) {
-            return sendSimpleResponse(waId, "Lo sentimos, no es posible procesar este tipo de mensaje. Por favor, verifica el formato o el contenido e inténtalo nuevamente.");
+        String wamid = message.entry().get(0).changes().get(0).value().messages().get(0).id();
+        markAsRead(new RequestWhatsappAsRead("whatsapp", "read", wamid));
+
+        var messageType = message.entry().get(0).changes().get(0).value().messages().get(0).type();
+        var waId = message.entry().get(0).changes().get(0).value().contacts().get(0).wa_id();
+
+        var messageOptionalText = message.entry().get(0).changes().get(0).value().messages().get(0).text();
+        if (messageOptionalText.isEmpty() || !messageType.equals("text")) {
+            logger.warn("El mensaje no contiene texto válido.");
+            System.out.println("El mensaje no contiene texto válido."); //! Debug
+            return null;
         }
+        String messageText = messageOptionalText.get().body();
 
         try {
             UserChatEntity user = userChatRepository.findByPhone(waId)
@@ -245,6 +253,19 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
+    
+    // ======================================================
+    //   Mensaje leído
+    // ======================================================
+    public void markAsRead(RequestWhatsappAsRead request) {
+        restClient.post().
+            uri("/messages")
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(request)
+            .retrieve()
+            .body(String.class);
+    }
+
 
     // ======================================================
     //   Verificar si el rol del usuario está denegado
@@ -353,7 +374,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     // ======================================================
     //   Consulta a IA
     // ======================================================
-    private String moderationValue;
     private AnswersOpenIa getAnswerIA(String ask, String name, String thread_id) throws JsonMappingException, JsonProcessingException {
         try {
             RestClient openAi = RestClient.builder()
@@ -380,7 +400,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             if (rootNode.has("info")) {
                 String infoMessage = rootNode.get("info").asText();
                     if (rootNode.has("moderation")) {
-                        moderationValue = rootNode.get("moderation").asText();
+                        String moderationValue = rootNode.get("moderation").asText();
                         throw new ApiInfoException(infoMessage, moderationValue);
                     }
                 throw new ApiInfoException(infoMessage, null);
@@ -393,6 +413,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             throw new RuntimeException(e);
         }
     }
+
 
     // ======================================================
     //   Constructor de mensajes de respuesta
