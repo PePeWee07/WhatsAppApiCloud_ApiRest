@@ -140,6 +140,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                         //! Si NO encuentro la cédula dentro de ERP
                         if (userFromJsonServer == null) {
                             user.setLastInteraction(timeNow);
+                            user.setBlock(true);
                             userChatRepository.save(user);
                             return sendSimpleResponse(waId, "Actualmente no perteneces a la universidad.");
                         } 
