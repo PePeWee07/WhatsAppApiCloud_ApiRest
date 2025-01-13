@@ -129,6 +129,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     newUser.setPhone(waId);
                     newUser.setFirstInteraction(timeNow);
                     newUser.setConversationState("WAITING_FOR_CEDULA");
+                    newUser.setLimitQuestions(5);
                     return userChatRepository.save(newUser);
                 });
 
@@ -161,7 +162,22 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                         }
 
                     } else {
+                        //! Si ya pasó la fecha de reseteo, restablece el límite
+                        if (user.getNextResetDate() != null && timeNow.isAfter(user.getNextResetDate())) {
+                            user.setLimitQuestions(5);
+                            user.setNextResetDate(null);
+                            userChatRepository.save(user);
+                        }
+
+                        //! Si el límite de interacciones es 0, bloquear por 24 horas
+                        if (user.getLimitQuestions() <= 0) {
+                            user.setNextResetDate(timeNow.plusHours(24));
+                            userChatRepository.save(user);
+                            return null;
+                        }
+
                         user.setLastInteraction(timeNow);
+                        user.setLimitQuestions(user.getLimitQuestions()- 1);
                         userChatRepository.save(user);
                         return sendSimpleResponse(waId, "Por favor, introduce tu número de cédula valida para continuar.");
                     }
@@ -211,7 +227,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                         ));
                     }
 
-                    //! 6. Si el límite de interacciones es 0, bloquear por 24 horas
+                    //! 6. Si el límite de interacciones es 0, bloquear por 'hoursToWaitAfterLimit'
                     if (user.getLimitQuestions() <= 0) {
                         user.setNextResetDate(timeNow.plusHours(hoursToWaitAfterLimit));
                         userChatRepository.save(user);
