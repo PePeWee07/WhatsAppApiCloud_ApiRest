@@ -129,7 +129,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     newUser.setPhone(waId);
                     newUser.setFirstInteraction(timeNow);
                     newUser.setConversationState("WAITING_FOR_CEDULA");
-                    newUser.setLimitQuestions(5);
+                    newUser.setLimitQuestions(3);
                     return userChatRepository.save(newUser);
                 });
 
@@ -157,6 +157,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                             user.setEmail(userFromJsonServer.getEmail());
                             user.setSede(userFromJsonServer.getSede());
                             user.setCarrera(userFromJsonServer.getCarrera());
+                            user.setNextResetDate(null);
                             userChatRepository.save(user);
                             return sendSimpleResponse(waId, "Hola " + user.getNombres() + ", bienvenido al Asistente Tecnológico de TICs. ¿En qué puedo ayudarte hoy?");
                         }
@@ -164,7 +165,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     } else {
                         //! Si ya pasó la fecha de reseteo, restablece el límite
                         if (user.getNextResetDate() != null && timeNow.isAfter(user.getNextResetDate())) {
-                            user.setLimitQuestions(5);
+                            user.setLimitQuestions(3);
                             user.setNextResetDate(null);
                             userChatRepository.save(user);
                         }

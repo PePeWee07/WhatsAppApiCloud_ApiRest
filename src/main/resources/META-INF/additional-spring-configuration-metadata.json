@@ -43,5 +43,30 @@
     "name": "uri.aiserver",
     "type": "java.lang.String",
     "description": "A description for 'uri.aiserver'"
+  },
+  {
+    "name": "limit.questions.per.day",
+    "type": "java.lang.String",
+    "description": "A description for 'limit.questions.per.day'"
+  },
+  {
+    "name": "hours.to.wait.after.limit",
+    "type": "java.lang.String",
+    "description": "A description for 'hours.to.wait.after.limit'"
+  },
+  {
+    "name": "strike.limit",
+    "type": "java.lang.String",
+    "description": "A description for 'strike.limit'"
+  },
+  {
+    "name": "api.key.header",
+    "type": "java.lang.String",
+    "description": "A description for 'api.key.header'"
+  },
+  {
+    "name": "api.key",
+    "type": "java.lang.String",
+    "description": "A description for 'api.key'"
   }
 ]}
