@@ -68,5 +68,10 @@
     "name": "api.key",
     "type": "java.lang.String",
     "description": "A description for 'api.key'"
+  },
+  {
+    "name": "service.api.key.openai",
+    "type": "java.lang.String",
+    "description": "A description for 'service.api.key.openai'"
   }
 ]}

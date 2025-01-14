@@ -57,6 +57,9 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     @Value("${uri.aiserver}")
     private String uriAIServer;
 
+    @Value("${service.api.key.openai}")
+    private String apiKeyOpenAI;
+
     @Value("${limit.questions.per.day}")
     private int limitQuestionsPerDay;
 
@@ -405,6 +408,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 .uri(url)
                 .body(question)
                 .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + apiKeyOpenAI)
                 .retrieve()
                 .body(AnswersOpenIa.class);
     
