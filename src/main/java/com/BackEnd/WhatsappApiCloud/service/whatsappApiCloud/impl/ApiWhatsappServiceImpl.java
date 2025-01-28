@@ -1,7 +1,6 @@
 package com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.impl;
 
 import java.time.Duration;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
@@ -166,14 +165,14 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                         }
 
                     } else {
-                        //! Si ya pasó la fecha de reseteo, restablece el límite
+                        //! Restablece el límite de respuestas despues de 24 horas 
                         if (user.getNextResetDate() != null && timeNow.isAfter(user.getNextResetDate())) {
                             user.setLimitQuestions(3);
                             user.setNextResetDate(null);
                             userChatRepository.save(user);
                         }
 
-                        //! Si el límite de interacciones es 0, bloquear por 24 horas
+                        //! Si 'limitQuestionsPerDay' = 0, no responder por 24 horas
                         if (user.getLimitQuestions() <= 0) {
                             user.setNextResetDate(timeNow.plusHours(24));
                             userChatRepository.save(user);
@@ -187,7 +186,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     }
                 case "READY":
 
-                    //! 0. Verificar si el usuario ha sido bloqueado
+                    //! 0. Verificar si el usuario esta bloqueado
                     if (user.isBlock()) {
                         return null;
                     }
@@ -197,28 +196,28 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                         return sendSimpleResponse(waId, "Lo sentimos, esta funcionalidad no está disponible para tu rol de '" + user.getRol() + "' en este momento.");
                     }
 
-                    //! 2. Verificar si el usuario ha sido bloqueado
+                    //! 2. Verificar Strikes
                     if (user.getStrike() <= 0) {
                         user.setBlock(true);
                         userChatRepository.save(user);
                         return sendSimpleResponse(waId, "Tu cuenta ha sido bloqueada. Por favor, comunícate con soportetic@ucacue.edu.ec.");
                     }
 
-                    //! 3. Verifica si ya pasaron 24 horas para incremetar el límite y restablecer el contador
-                    if (!user.getLastInteraction().toLocalDate().isEqual(LocalDate.now())) {
+                    //! 3. Restablece el límite de preguntas diarias
+                    if (Duration.between(user.getLastInteraction(), LocalDateTime.now()).toHours() >= 24) {
                         user.setLimitQuestions(limitQuestionsPerDay);
                         user.setNextResetDate(null);
                         userChatRepository.save(user);
-                    }
+                    }                   
 
-                    //! 4. Si ya pasó la fecha de reseteo, restablece el límite
+                    //! 4. Restablece el límite de preguntas despues de 24 horas 
                     if (user.getNextResetDate() != null && timeNow.isAfter(user.getNextResetDate())) {
                         user.setLimitQuestions(limitQuestionsPerDay);
                         user.setNextResetDate(null);
                         userChatRepository.save(user);
                     }
 
-                    //! 5. Si hay una fecha de reseteo definida y aún no ha pasado, no puede realizar la acción
+                    //! 5. Verifica si esta dentro del tiempo de espera de 'hours.to.wait.after.limit'
                     if (user.getNextResetDate() != null && timeNow.isBefore(user.getNextResetDate())) {
                         Duration remainingTime = Duration.between(timeNow, user.getNextResetDate());
                         long hours = remainingTime.toHours();
@@ -231,7 +230,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                         ));
                     }
 
-                    //! 6. Si el límite de interacciones es 0, bloquear por 'hoursToWaitAfterLimit'
+                    //! 6. Si 'limitQuestionsPerDay' = 0, restringir por 'hoursToWaitAfterLimit'
                     if (user.getLimitQuestions() <= 0) {
                         user.setNextResetDate(timeNow.plusHours(hoursToWaitAfterLimit));
                         userChatRepository.save(user);
