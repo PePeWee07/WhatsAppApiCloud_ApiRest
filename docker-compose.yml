@@ -1,0 +1,40 @@
+version: '3.9'
+
+services:
+  backend:
+    container_name: whatsapp_api_cloud
+    image: pepewee/whatsapp-api-cloud:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8082"
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: always
+
+  db:
+    container_name: whatsapp_api_cloud_db
+    image: postgres:13.3
+    ports:
+      - "5433:5432"
+    environment:
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_DATABASE}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
+      interval: 10s
+      retries: 5
+      start_period: 30s
+
+
+volumes:
+  postgres_data:
+    driver: local
