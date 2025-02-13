@@ -36,7 +36,7 @@ whatsapp.token=your-token-here
 ```
 
 #### **ERP Simulator**
-Repositorio: [ERP-Simulator](#)
+Repositorio: [ERP-Simulator](https://github.com/PePeWee07/ERP_simulator.git)
 ```properties
 baseurl.jsonserver=http://host.docker.internal:3000
 uri.jsonserver=/data?cedula=
