@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
   backend:
-    container_name: whatsapp_api_cloud
+    container_name: whatsapp-api-cloud-app
     image: pepewee/whatsapp-api-cloud:latest
     build:
       context: .
@@ -14,13 +14,19 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    restart: always
+    # restart: always
+    volumes:
+      - whatsappapicould_logs:/backend/var/log
+    networks:
+      - virtual_assistant_network
 
   db:
-    container_name: whatsapp_api_cloud_db
+    container_name: whatsapp-api-cloud-db
     image: postgres:13.3
     ports:
       - "5433:5432"
+    networks:
+      - virtual_assistant_network
     environment:
       POSTGRES_USER: ${DB_USERNAME}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
@@ -34,7 +40,10 @@ services:
       retries: 5
       start_period: 30s
 
-
 volumes:
   postgres_data:
-    driver: local
+  whatsappapicould_logs:
+
+networks:
+  virtual_assistant_network:
+    external: true
