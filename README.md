@@ -112,5 +112,3 @@ DB_PASSWORD=PASSWORD
    ```sh
    docker-compose up -d
    ```
-
-

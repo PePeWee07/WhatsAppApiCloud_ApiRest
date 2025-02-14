@@ -62,8 +62,8 @@ public class UserChatEntity {
     @Column(name = "conversation_state")
     private String conversationState;
 
-    @Column(name = "strike")
-    private int strike;
+    @Column(name = "limit_strike")
+    private int limitStrike;
 
     @Column(name = "block")
     private boolean block;

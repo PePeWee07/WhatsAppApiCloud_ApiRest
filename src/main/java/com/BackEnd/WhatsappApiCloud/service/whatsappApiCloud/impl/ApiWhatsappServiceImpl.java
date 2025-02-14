@@ -139,13 +139,19 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 case "WAITING_FOR_CEDULA":
                     if (isValidCedula(messageText)) {
                         UserChatEntity userFromJsonServer = fetchUserFromJsonServer(messageText);
+
+                        //! Verificar si el usuario esta bloqueado
+                        if (user.isBlock()) {
+                            return null;
+                        }
     
                         //! Si NO encuentro la cédula dentro de ERP
                         if (userFromJsonServer == null) {
                             user.setLastInteraction(timeNow);
                             user.setBlock(true);
+                            user.setBlockingReason("No pertenece a la universidad");
                             userChatRepository.save(user);
-                            return sendSimpleResponse(waId, "Actualmente no perteneces a la universidad.");
+                            return sendSimpleResponse(waId, "Actualmente no perteneces a la Universidad Católica de Cuenca. Este servicio es exclusivo para miembros de la universidad.");
                         } 
                         //! Si encuentro la cédula dentro de ERP
                         else {
@@ -155,7 +161,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                             user.setLimitQuestions(limitQuestionsPerDay);
                             user.setLastInteraction(timeNow);
                             user.setConversationState("READY");
-                            user.setStrike(strikeLimit);
+                            user.setLimitStrike(strikeLimit);
                             user.setEmail(userFromJsonServer.getEmail());
                             user.setSede(userFromJsonServer.getSede());
                             user.setCarrera(userFromJsonServer.getCarrera());
@@ -165,20 +171,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                         }
 
                     } else {
-                        //! Restablece el límite de respuestas despues de 24 horas 
-                        if (user.getNextResetDate() != null && timeNow.isAfter(user.getNextResetDate())) {
-                            user.setLimitQuestions(3);
-                            user.setNextResetDate(null);
-                            userChatRepository.save(user);
-                        }
-
-                        //! Si 'limitQuestionsPerDay' = 0, no responder por 24 horas
-                        if (user.getLimitQuestions() <= 0) {
-                            user.setNextResetDate(timeNow.plusHours(24));
-                            userChatRepository.save(user);
-                            return null;
-                        }
-
                         user.setLastInteraction(timeNow);
                         user.setLimitQuestions(user.getLimitQuestions()- 1);
                         userChatRepository.save(user);
@@ -197,20 +189,29 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     }
 
                     //! 2. Verificar Strikes
-                    if (user.getStrike() <= 0) {
+                    if (user.getLimitStrike() <= 0) {
                         user.setBlock(true);
+                        user.setBlockingReason("Moderacion");
                         userChatRepository.save(user);
                         return sendSimpleResponse(waId, "Tu cuenta ha sido bloqueada. Por favor, comunícate con soportetic@ucacue.edu.ec.");
                     }
 
-                    //! 3. Restablece el límite de preguntas diarias
+                    // Se reinicia si la fecha de la última interacción es anterior a la fecha actual (se reinicia a las 00:00)
+                    // Se debera ajusta el 'hours.to.wait.after.limit' a 12 horas
+                    // if (!user.getLastInteraction().toLocalDate().equals(LocalDate.now())) {
+                    //     user.setLimitQuestions(limitQuestionsPerDay);
+                    //     user.setNextResetDate(null);
+                    //     userChatRepository.save(user);
+                    // }
+
+                    //! 3. Restablece el límite de preguntas diarias si han pasado 24 horas
                     if (Duration.between(user.getLastInteraction(), LocalDateTime.now()).toHours() >= 24) {
                         user.setLimitQuestions(limitQuestionsPerDay);
                         user.setNextResetDate(null);
                         userChatRepository.save(user);
                     }                   
 
-                    //! 4. Restablece el límite de preguntas despues de 24 horas 
+                    //! 4. Restablece el límite de preguntas segun 'hours.to.wait.after.limit'
                     if (user.getNextResetDate() != null && timeNow.isAfter(user.getNextResetDate())) {
                         user.setLimitQuestions(limitQuestionsPerDay);
                         user.setNextResetDate(null);
@@ -230,7 +231,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                         ));
                     }
 
-                    //! 6. Si 'limitQuestionsPerDay' = 0, restringir por 'hoursToWaitAfterLimit'
+                    //! 6. Si llego al limite de preguntas, restringir por 'hoursToWaitAfterLimit'
                     if (user.getLimitQuestions() <= 0) {
                         user.setNextResetDate(timeNow.plusHours(hoursToWaitAfterLimit));
                         userChatRepository.save(user);
@@ -260,8 +261,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         } catch (ApiInfoException e) {
             if (e.getModeration() != null) {
                 UserChatEntity user = userChatRepository.findByPhone(waId).orElse(null);
-                user.setStrike(user.getStrike() - 1);
-                user.setBlockingReason("Moderacion");
+                user.setLimitStrike(user.getLimitStrike() - 1);
                 userChatRepository.save(user);
             }
             logger.warn("Mensaje informativo recibido: " + e.getInfoMessage());
@@ -369,25 +369,34 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             RestClient localRestClient = RestClient.builder()
                 .baseUrl(baseUrlJsonServer)
                 .build();
-
+    
             String url = uriJsonServer + cedula;
             List<UserChatEntity> users = localRestClient.get()
                 .uri(url)
                 .retrieve()
                 .body(new ParameterizedTypeReference<List<UserChatEntity>>() {});
-
-                //System.out.println("Users: " + localRestClient.get().uri(url).retrieve().body(String.class)); //! Debug
-            
+    
+            //System.out.println("Users: " + localRestClient.get().uri(url).retrieve().body(String.class)); //! Debug
+    
+            // Verifica si la lista es nula o está vacía
+            if (users == null || users.isEmpty()) {
+                logger.warn("No se encontraron usuarios en el servidor JSON para la cedula " + cedula);
+                return null;
+            }
+    
+            // Filtra para obtener el primer usuario que no sea "Estudiante", si no existe, retorna el primer elemento
             UserChatEntity nonStudentRole = users.stream()
                 .filter(user -> !user.getRol().equalsIgnoreCase("Estudiante"))
-                .findFirst().orElse(users.get(0));
-
+                .findFirst()
+                .orElse(users.get(0));
+    
             return nonStudentRole;
         } catch (Exception e) {
-            logger.error("Error al obtener datos del usuario desde ERP " + e.getMessage());
+            logger.error("Error al obtener datos del usuario desde ERP: " + e.getMessage());
             throw new CustomJsonServerException("Error al obtener datos del usuario desde ERP", e.getCause());
         }
-    }  
+    }
+    
     
 
     // ======================================================
