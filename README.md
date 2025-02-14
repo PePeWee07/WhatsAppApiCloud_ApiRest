@@ -21,6 +21,14 @@ Este proyecto implementa la API de WhatsApp Cloud y OpenAI para crear un chatbot
 - **Uso de OpenAI**: Proporciona respuestas inteligentes y contextuales.
 - **Soporte TIC**: Responde preguntas relacionadas con soporte técnico en tecnologías de la información y comunicación en `application.properties`.
 
+## Repositorios Necesarios
+#### **Webhook**
+Repositorio: [Webhook](https://github.com/PePeWee07/TicAI-Support.git)
+#### **AI Server**
+Repositorio: [TicAI-Support](https://github.com/PePeWee07/TicAI-Support.git)
+#### **ERP Simulator**
+Repositorio: [ERP-Simulator](https://github.com/PePeWee07/ERP_simulator.git)
+
 ## Requisitos
 
 Para ejecutar este proyecto, asegúrate de contar con los siguientes entornos y configuraciones:
