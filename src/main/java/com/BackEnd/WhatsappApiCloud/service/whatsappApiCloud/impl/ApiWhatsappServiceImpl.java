@@ -376,7 +376,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 .retrieve()
                 .body(new ParameterizedTypeReference<List<UserChatEntity>>() {});
 
-                System.out.println("Users: " + localRestClient.get().uri(url).retrieve().body(String.class)); //! Debug
+                //System.out.println("Users: " + localRestClient.get().uri(url).retrieve().body(String.class)); //! Debug
             
             UserChatEntity nonStudentRole = users.stream()
                 .filter(user -> !user.getRol().equalsIgnoreCase("Estudiante"))
