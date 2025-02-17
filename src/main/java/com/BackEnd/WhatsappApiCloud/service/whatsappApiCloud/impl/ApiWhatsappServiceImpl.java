@@ -103,19 +103,20 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
 
     // ======================================================
-    //   Recibir y enviar respuesta automatica
+    //   Recibir y enviar respuesta automática
     // ======================================================
     @Override
     public ResponseWhatsapp handleUserMessage(WhatsAppData.WhatsAppMessage message) {
         LocalDateTime timeNow = LocalDateTime.now();
 
+        // Extraer identificadores y datos básicos del mensaje
         String wamid = message.entry().get(0).changes().get(0).value().messages().get(0).id();
         markAsRead(new RequestWhatsappAsRead("whatsapp", "read", wamid));
 
         var messageType = message.entry().get(0).changes().get(0).value().messages().get(0).type();
         var waId = message.entry().get(0).changes().get(0).value().contacts().get(0).wa_id();
-
         var messageOptionalText = message.entry().get(0).changes().get(0).value().messages().get(0).text();
+
         if (messageOptionalText.isEmpty() || !messageType.equals("text")) {
             logger.warn("El mensaje no contiene texto válido.");
             return null;
@@ -123,153 +124,176 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         String messageText = messageOptionalText.get().body();
 
         try {
+            //! Buscar el usuario o crearlo si no existe
             UserChatEntity user = userChatRepository.findByPhone(waId)
-                .orElseGet(() -> {
-                    //! Si no existe el usuario en mi BD, lo creo
-                    UserChatEntity newUser = new UserChatEntity();
-                    newUser.setNombres("Anonymus");
-                    newUser.setPhone(waId);
-                    newUser.setFirstInteraction(timeNow);
-                    newUser.setConversationState("WAITING_FOR_CEDULA");
-                    newUser.setLimitQuestions(3);
-                    return userChatRepository.save(newUser);
-                });
+                    .orElseGet(() -> createNewUser(waId, timeNow));
 
             switch (user.getConversationState()) {
                 case "WAITING_FOR_CEDULA":
-                    if (isValidCedula(messageText)) {
-                        UserChatEntity userFromJsonServer = fetchUserFromJsonServer(messageText);
-
-                        //! Verificar si el usuario esta bloqueado
-                        if (user.isBlock()) {
-                            return null;
-                        }
-    
-                        //! Si NO encuentro la cédula dentro de ERP
-                        if (userFromJsonServer == null) {
-                            user.setLastInteraction(timeNow);
-                            user.setBlock(true);
-                            user.setBlockingReason("No pertenece a la universidad");
-                            userChatRepository.save(user);
-                            return sendSimpleResponse(waId, "Actualmente no perteneces a la Universidad Católica de Cuenca. Este servicio es exclusivo para miembros de la universidad.");
-                        } 
-                        //! Si encuentro la cédula dentro de ERP
-                        else {
-                            user.setNombres(userFromJsonServer.getNombres());
-                            user.setCedula(userFromJsonServer.getCedula());
-                            user.setRol(userFromJsonServer.getRol());
-                            user.setLimitQuestions(limitQuestionsPerDay);
-                            user.setLastInteraction(timeNow);
-                            user.setConversationState("READY");
-                            user.setLimitStrike(strikeLimit);
-                            user.setEmail(userFromJsonServer.getEmail());
-                            user.setSede(userFromJsonServer.getSede());
-                            user.setCarrera(userFromJsonServer.getCarrera());
-                            user.setNextResetDate(null);
-                            userChatRepository.save(user);
-                            return sendSimpleResponse(waId, "Hola " + user.getNombres() + ", bienvenido al Asistente Tecnológico de TICs. ¿En qué puedo ayudarte hoy?");
-                        }
-
-                    } else {
-                        user.setLastInteraction(timeNow);
-                        user.setLimitQuestions(user.getLimitQuestions()- 1);
-                        userChatRepository.save(user);
-                        return sendSimpleResponse(waId, "Por favor, introduce tu número de cédula valida para continuar.");
-                    }
+                    return handleWaitingForCedula(user, messageText, waId, timeNow);
                 case "READY":
-
-                    //! 0. Verificar si el usuario esta bloqueado
-                    if (user.isBlock()) {
-                        return null;
-                    }
-
-                    //! 1. Verificar si el rol del usuario está denegado
-                    if (isRoleDenied(user.getRol())) {
-                        return sendSimpleResponse(waId, "Lo sentimos, esta funcionalidad no está disponible para tu rol de '" + user.getRol() + "' en este momento.");
-                    }
-
-                    //! 2. Verificar Strikes
-                    if (user.getLimitStrike() <= 0) {
-                        user.setBlock(true);
-                        user.setBlockingReason("Moderacion");
-                        userChatRepository.save(user);
-                        return sendSimpleResponse(waId, "Tu cuenta ha sido bloqueada. Por favor, comunícate con soportetic@ucacue.edu.ec.");
-                    }
-
-                    // Se reinicia si la fecha de la última interacción es anterior a la fecha actual (se reinicia a las 00:00)
-                    // Se debera ajusta el 'hours.to.wait.after.limit' a 12 horas
-                    // if (!user.getLastInteraction().toLocalDate().equals(LocalDate.now())) {
-                    //     user.setLimitQuestions(limitQuestionsPerDay);
-                    //     user.setNextResetDate(null);
-                    //     userChatRepository.save(user);
-                    // }
-
-                    //! 3. Restablece el límite de preguntas diarias si han pasado 24 horas
-                    if (Duration.between(user.getLastInteraction(), LocalDateTime.now()).toHours() >= 24) {
-                        user.setLimitQuestions(limitQuestionsPerDay);
-                        user.setNextResetDate(null);
-                        userChatRepository.save(user);
-                    }                   
-
-                    //! 4. Restablece el límite de preguntas segun 'hours.to.wait.after.limit'
-                    if (user.getNextResetDate() != null && timeNow.isAfter(user.getNextResetDate())) {
-                        user.setLimitQuestions(limitQuestionsPerDay);
-                        user.setNextResetDate(null);
-                        userChatRepository.save(user);
-                    }
-
-                    //! 5. Verifica si esta dentro del tiempo de espera de 'hours.to.wait.after.limit'
-                    if (user.getNextResetDate() != null && timeNow.isBefore(user.getNextResetDate())) {
-                        Duration remainingTime = Duration.between(timeNow, user.getNextResetDate());
-                        long hours = remainingTime.toHours();
-                        long minutes = remainingTime.toMinutes() % 60;
-                        long seconds = remainingTime.toSeconds() % 60;
-                    
-                        return sendSimpleResponse(waId, String.format(
-                            "Tu límite de interacciones ha sido alcanzado, tiempo faltante: %02d:%02d:%02d.", 
-                            hours, minutes, seconds
-                        ));
-                    }
-
-                    //! 6. Si llego al limite de preguntas, restringir por 'hoursToWaitAfterLimit'
-                    if (user.getLimitQuestions() <= 0) {
-                        user.setNextResetDate(timeNow.plusHours(hoursToWaitAfterLimit));
-                        userChatRepository.save(user);
-                        return sendSimpleResponse(waId, "Tu límite de interacciones ha sido alcanzado, vuelve mañana.");
-                    }
-
-                    //! 7. Obtener respuesta de IA y Actualizar datos del usuario
-                    AnswersOpenIa data = getAnswerIA(messageText, user.getNombres(), user.getThreadId());
-                    UserChatEntity userFromJsonServer = fetchUserFromJsonServer(user.getCedula());
-                    user.setNombres(userFromJsonServer.getNombres());
-                    user.setRol(userFromJsonServer.getRol());
-                    user.setThreadId(data.thread_id());
-                    user.setLimitQuestions(user.getLimitQuestions()- 1);
-                    user.setLastInteraction(timeNow);
-                    user.setEmail(userFromJsonServer.getEmail());
-                    user.setSede(userFromJsonServer.getSede());
-                    user.setCarrera(userFromJsonServer.getCarrera());
-                    userChatRepository.save(user);
-
-                    return sendSimpleResponse(waId, data.answer());
+                    return handleReadyState(user, messageText, waId, timeNow);
                 default:
                     user.setConversationState("WAITING_FOR_CEDULA");
                     userChatRepository.save(user);
                     return sendSimpleResponse(waId, "No hemos podido procesar tu solicitud. Por favor, introduce tu número de cédula nuevamente para continuar.");
             }
-
         } catch (ApiInfoException e) {
-            if (e.getModeration() != null) {
-                UserChatEntity user = userChatRepository.findByPhone(waId).orElse(null);
-                user.setLimitStrike(user.getLimitStrike() - 1);
-                userChatRepository.save(user);
-            }
-            logger.warn("Mensaje informativo recibido: " + e.getInfoMessage());
-            return sendSimpleResponse(waId, e.getInfoMessage());
+            return handleApiInfoException(e, waId);
         } catch (Exception e) {
             logger.error("Error al procesar mensaje de usuario: " + e);
             return sendSimpleResponse(waId, "Ha ocurrido un error inesperado. Por favor, inténtalo nuevamente más tarde.");
         }
+    }
+    // Método auxiliar para crear un nuevo usuario
+    private UserChatEntity createNewUser(String waId, LocalDateTime timeNow) {
+        UserChatEntity newUser = new UserChatEntity();
+        newUser.setNombres("Anonymus");
+        newUser.setPhone(waId);
+        newUser.setFirstInteraction(timeNow);
+        newUser.setConversationState("WAITING_FOR_CEDULA");
+        newUser.setLimitQuestions(3);
+        return userChatRepository.save(newUser);
+    }
+    // Manejo del estado "WAITING_FOR_CEDULA"
+    private ResponseWhatsapp handleWaitingForCedula(UserChatEntity user, String messageText, String waId, LocalDateTime timeNow) {
+        if (isValidCedula(messageText)) {
+            //! Verificar si el usuario ya está bloqueado
+            if (user.isBlock()) {
+                return null;
+            }
+
+            //! Si NO encuentro la cédula dentro de ERP
+            UserChatEntity userFromJsonServer = fetchUserFromJsonServer(messageText);
+            if (userFromJsonServer == null) {
+                user.setLastInteraction(timeNow);
+                user.setBlock(true);
+                user.setBlockingReason("No pertenece a la universidad");
+                userChatRepository.save(user);
+                return sendSimpleResponse(waId, "Actualmente no perteneces a la Universidad Católica de Cuenca. Este servicio es exclusivo para miembros de la universidad.");
+            }
+            
+            //! Si encuentro la cédula dentro de ERP
+            else {
+                updateUserWithJsonServerData(user, userFromJsonServer, timeNow);
+                userChatRepository.save(user);
+                return sendSimpleResponse(waId, "Hola " + user.getNombres() + ", bienvenido al Asistente Tecnológico de TICs. ¿En qué puedo ayudarte hoy?");
+            }
+        } else {
+            //! Si ya se han agotado los intentos
+            if (user.getLimitQuestions() <= 0) {
+                return null;
+            }
+
+            user.setLastInteraction(timeNow);
+            user.setLimitQuestions(user.getLimitQuestions() - 1);
+            userChatRepository.save(user);
+            return sendSimpleResponse(waId, "Por favor, introduce tu número de cédula valida para continuar.");
+        }
+    }
+    // Manejo del estado "READY"
+    private ResponseWhatsapp handleReadyState(UserChatEntity user, String messageText, String waId, LocalDateTime timeNow) throws JsonProcessingException {
+        //! 0. Verificar si el usuario esta bloqueado
+        if (user.isBlock()) {
+            return null;
+        }
+
+        //! 1. Verificar si el rol del usuario está denegado
+        if (isRoleDenied(user.getRol())) {
+            if (user.getLimitQuestions() <= -1) {
+                return null;
+            }
+            user.setLimitQuestions(-1);
+            userChatRepository.save(user);
+            return sendSimpleResponse(waId, "Lo sentimos, esta funcionalidad no está disponible para tu rol de " + user.getRol() + " en este momento.");
+        }
+            
+        //! 2. Verificar strikes
+        if (user.getLimitStrike() <= 0) {
+            user.setBlock(true);
+            user.setBlockingReason("Moderacion");
+            userChatRepository.save(user);
+            return sendSimpleResponse(waId, "Tu cuenta ha sido bloqueada. Por favor, comunícate con soportetic@ucacue.edu.ec.");
+        }
+
+        // Se reinicia si la fecha de la última interacción es anterior a la fecha actual (se reinicia a las 00:00)
+        // Se debera ajusta el 'hours.to.wait.after.limit' a 12 horas
+        // if (!user.getLastInteraction().toLocalDate().equals(LocalDate.now())) {
+        //     user.setLimitQuestions(limitQuestionsPerDay);
+        //     user.setNextResetDate(null);
+        //     userChatRepository.save(user);
+        // }
+
+        //! 3. Restablece el límite de preguntas diarias si han pasado 24 horas
+        if (Duration.between(user.getLastInteraction(), timeNow).toHours() >= 24) {
+            user.setLimitQuestions(limitQuestionsPerDay);
+            user.setNextResetDate(null);
+            userChatRepository.save(user);
+        }
+
+        //! 4. Restablece el límite de preguntas y verifica si esta dentro del tiempo de espera segun 'hours.to.wait.after.limit'
+        if (user.getNextResetDate() != null) {
+            if (timeNow.isAfter(user.getNextResetDate())) {
+                user.setLimitQuestions(limitQuestionsPerDay);
+                user.setNextResetDate(null);
+                userChatRepository.save(user);
+            } else if (timeNow.isBefore(user.getNextResetDate())) {
+                Duration remainingTime = Duration.between(timeNow, user.getNextResetDate());
+                long hours = remainingTime.toHours();
+                long minutes = remainingTime.toMinutes() % 60;
+                long seconds = remainingTime.toSeconds() % 60;
+                return sendSimpleResponse(waId, String.format(
+                        "Tu límite de interacciones ha sido alcanzado, tiempo faltante: %02d:%02d:%02d.",
+                        hours, minutes, seconds));
+            }
+        }
+
+        //! 5. Si llego al limite de preguntas, restringir por 'hoursToWaitAfterLimit'
+        if (user.getLimitQuestions() <= 0) {
+            user.setNextResetDate(timeNow.plusHours(hoursToWaitAfterLimit));
+            userChatRepository.save(user);
+            return sendSimpleResponse(waId, "Tu límite de interacciones ha sido alcanzado, vuelve mañana.");
+        }
+
+        //! 6. Obtener respuesta de IA y Actualizar datos del usuario
+        AnswersOpenIa data = getAnswerIA(messageText, user.getNombres(), user.getThreadId());
+        UserChatEntity userFromJsonServer = fetchUserFromJsonServer(user.getCedula());
+        user.setNombres(userFromJsonServer.getNombres());
+        user.setRol(userFromJsonServer.getRol());
+        user.setThreadId(data.thread_id());
+        user.setLimitQuestions(user.getLimitQuestions() - 1);
+        user.setLastInteraction(timeNow);
+        user.setEmail(userFromJsonServer.getEmail());
+        user.setSede(userFromJsonServer.getSede());
+        user.setCarrera(userFromJsonServer.getCarrera());
+        userChatRepository.save(user);
+
+        return sendSimpleResponse(waId, data.answer());
+    }
+    // Actualiza la información del usuario con los datos del servidor JSON
+    private void updateUserWithJsonServerData(UserChatEntity user, UserChatEntity userFromJsonServer, LocalDateTime timeNow) {
+        user.setNombres(userFromJsonServer.getNombres());
+        user.setCedula(userFromJsonServer.getCedula());
+        user.setRol(userFromJsonServer.getRol());
+        user.setLimitQuestions(limitQuestionsPerDay);
+        user.setLastInteraction(timeNow);
+        user.setConversationState("READY");
+        user.setLimitStrike(strikeLimit);
+        user.setEmail(userFromJsonServer.getEmail());
+        user.setSede(userFromJsonServer.getSede());
+        user.setCarrera(userFromJsonServer.getCarrera());
+        user.setNextResetDate(null);
+    }
+    // Manejo centralizado de ApiInfoException
+    private ResponseWhatsapp handleApiInfoException(ApiInfoException e, String waId) {
+        userChatRepository.findByPhone(waId).ifPresent(user -> {
+            if (e.getModeration() != null) {
+                user.setLimitStrike(user.getLimitStrike() - 1);
+                userChatRepository.save(user);
+            }
+        });
+        logger.warn("Mensaje informativo recibido: " + e.getInfoMessage());
+        return sendSimpleResponse(waId, e.getInfoMessage());
     }
 
     
