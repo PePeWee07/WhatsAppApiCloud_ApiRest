@@ -237,7 +237,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 user.setLimitQuestions(limitQuestionsPerDay);
                 user.setNextResetDate(null);
                 userChatRepository.save(user);
-            } else if (timeNow.isBefore(user.getNextResetDate())) {
+            } else {
                 Duration remainingTime = Duration.between(timeNow, user.getNextResetDate());
                 long hours = remainingTime.toHours();
                 long minutes = remainingTime.toMinutes() % 60;
