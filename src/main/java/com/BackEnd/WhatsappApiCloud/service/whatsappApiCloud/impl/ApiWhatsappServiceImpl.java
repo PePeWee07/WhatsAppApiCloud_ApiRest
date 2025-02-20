@@ -204,6 +204,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 return null;
             }
             user.setLimitQuestions(-1);
+            user.setBlockingReason("Rol denegado" + user.getRol());
             userChatRepository.save(user);
             return sendSimpleResponse(waId, "Lo sentimos, esta funcionalidad no está disponible para tu rol de " + user.getRol() + " en este momento.");
         }
