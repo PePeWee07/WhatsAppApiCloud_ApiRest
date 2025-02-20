@@ -1,0 +1,18 @@
+# Usar una imagen base de Maven con JDK 17
+FROM maven:3.8.4-openjdk-17-slim
+
+WORKDIR /app
+
+# Copiar los archivos necesarios
+COPY pom.xml .
+COPY .mvn .mvn
+COPY src ./src
+
+# Instalar las dependencias necesarias
+RUN mvn dependency:go-offline
+
+# Exponer el puerto en el que corre tu aplicación
+EXPOSE 8080
+
+# Comando para ejecutar tu aplicación en modo desarrollo con DevTools
+CMD ["mvn", "spring-boot:run"]

@@ -1,0 +1,27 @@
+# Ignorar archivos de configuración de entorno (por seguridad)
+.env
+*.env
+
+# Ignorar carpetas de dependencias locales de Maven
+.mvn/
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+release.properties
+
+# Ignorar IDEs y configuraciones del sistema
+.idea/
+.vscode/
+*.iml
+
+# Ignorar logs
+logs/
+*.log
+backend/var/log/
+
+# Ignorar archivos temporales del sistema
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
