@@ -15,7 +15,8 @@ services:
         condition: service_healthy
     # restart: always
     volumes:
-      - whatsappapicould_logs:/backend/var/log
+      - .:/app
+      - whatsappapicould_logs_dev:/backend/var/log
     networks:
       - virtual_assistant_network
 
@@ -41,7 +42,7 @@ services:
 
 volumes:
   postgres_data:
-  whatsappapicould_logs:
+  whatsappapicould_logs_dev:
 
 networks:
   virtual_assistant_network:

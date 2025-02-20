@@ -12,7 +12,7 @@ COPY src ./src
 RUN mvn dependency:go-offline
 
 # Exponer el puerto en el que corre tu aplicación
-EXPOSE 8080
+EXPOSE 8082
 
 # Comando para ejecutar tu aplicación en modo desarrollo con DevTools
 CMD ["mvn", "spring-boot:run"]

@@ -3,7 +3,7 @@
 *.env
 
 # Ignorar carpetas de dependencias locales de Maven
-.mvn/
+# .mvn/
 target/
 pom.xml.tag
 pom.xml.releaseBackup
