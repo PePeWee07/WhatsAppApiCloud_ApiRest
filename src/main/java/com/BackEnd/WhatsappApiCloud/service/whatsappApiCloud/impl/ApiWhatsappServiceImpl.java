@@ -128,6 +128,11 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             UserChatEntity user = userChatRepository.findByPhone(waId)
                     .orElseGet(() -> createNewUser(waId, timeNow));
 
+            //! Verificar si el usuario ya está bloqueado
+            if (user.isBlock()) {
+                return null;
+            }
+
             switch (user.getConversationState()) {
                 case "WAITING_FOR_CEDULA":
                     return handleWaitingForCedula(user, messageText, waId, timeNow);
@@ -136,13 +141,13 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 default:
                     user.setConversationState("WAITING_FOR_CEDULA");
                     userChatRepository.save(user);
-                    return sendSimpleResponse(waId, "No hemos podido procesar tu solicitud. Por favor, introduce tu número de cédula nuevamente para continuar.");
+                    return sendSimpleResponse(waId, "No hemos podido procesar tu solicitud 😕. Por favor, introduce tu número de cédula nuevamente para continuar.");
             }
         } catch (ApiInfoException e) {
             return handleApiInfoException(e, waId);
         } catch (Exception e) {
             logger.error("Error al procesar mensaje de usuario: " + e);
-            return sendSimpleResponse(waId, "Ha ocurrido un error inesperado. Por favor, inténtalo nuevamente más tarde.");
+            return sendSimpleResponse(waId, "Ha ocurrido un error inesperado 😕. Por favor, inténtalo nuevamente más tarde .");
         }
     }
     // Método auxiliar para crear un nuevo usuario
@@ -153,31 +158,40 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         newUser.setFirstInteraction(timeNow);
         newUser.setConversationState("WAITING_FOR_CEDULA");
         newUser.setLimitQuestions(3);
+
+        String welcomeMessage = """
+            ¡Bienvenido a un nuevo nivel de soporte académico! 🚀
+            
+        Soy la herramienta impulsada por inteligencia artificial 🤖 para la *Universidad Católica de Cuenca* 🦅.
+        Diseñada para brindarte asistencia rápida y precisa a través de WhatsApp.
+            
+        Aquí *podrás resolver exclusivamente consultas académicas* 📚.
+        
+        ¡Gracias por confiar en nosotros! Te acompañamos en cada paso de tu camino educativo. 🛤️
+        """;
+        sendSimpleResponse(waId, welcomeMessage);
+
         return userChatRepository.save(newUser);
     }
     // Manejo del estado "WAITING_FOR_CEDULA"
     private ResponseWhatsapp handleWaitingForCedula(UserChatEntity user, String messageText, String waId, LocalDateTime timeNow) {
         if (isValidCedula(messageText)) {
-            //! Verificar si el usuario ya está bloqueado
-            if (user.isBlock()) {
-                return null;
-            }
 
             //! Si NO encuentro la cédula dentro de ERP
             UserChatEntity userFromJsonServer = fetchUserFromJsonServer(messageText);
             if (userFromJsonServer == null) {
                 user.setLastInteraction(timeNow);
                 user.setBlock(true);
-                user.setBlockingReason("No pertenece a la universidad");
+                user.setBlockingReason("No pertenece a la Universidad");
                 userChatRepository.save(user);
-                return sendSimpleResponse(waId, "Actualmente no perteneces a la Universidad Católica de Cuenca. Este servicio es exclusivo para miembros de la universidad.");
+                return sendSimpleResponse(waId, "Actualmente no perteneces a la Universidad Católica de Cuenca ❌. Este servicio es exclusivo para miembros de la universidad.");
             }
             
             //! Si encuentro la cédula dentro de ERP
             else {
                 updateUserWithJsonServerData(user, userFromJsonServer, timeNow);
                 userChatRepository.save(user);
-                return sendSimpleResponse(waId, "Hola " + user.getNombres() + ", bienvenido al Asistente Tecnológico de TICs. ¿En qué puedo ayudarte hoy?");
+                return sendSimpleResponse(waId, "¡Hola, " + user.getNombres() + "!👋, ¿Qué consulta académica te gustaría realizar?");
             }
         } else {
             //! Si ya se han agotado los intentos
@@ -188,15 +202,11 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             user.setLastInteraction(timeNow);
             user.setLimitQuestions(user.getLimitQuestions() - 1);
             userChatRepository.save(user);
-            return sendSimpleResponse(waId, "Por favor, introduce tu número de cédula valida para continuar.");
+            return sendSimpleResponse(waId, "Para proseguir con el proceso, necesitamos verificar que perteneces a la universidad, por lo que *te pedimos ingresar el número de cédula valida* 🔒.");
         }
     }
     // Manejo del estado "READY"
     private ResponseWhatsapp handleReadyState(UserChatEntity user, String messageText, String waId, LocalDateTime timeNow) throws JsonProcessingException {
-        //! 0. Verificar si el usuario esta bloqueado
-        if (user.isBlock()) {
-            return null;
-        }
 
         //! 1. Verificar si el rol del usuario está denegado
         if (isRoleDenied(user.getRol())) {
@@ -206,7 +216,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             user.setLimitQuestions(-1);
             user.setBlockingReason("Rol denegado" + user.getRol());
             userChatRepository.save(user);
-            return sendSimpleResponse(waId, "Lo sentimos, esta funcionalidad no está disponible para tu rol de " + user.getRol() + " en este momento.");
+            return sendSimpleResponse(waId, "Lo sentimos, esta funcionalidad no está disponible para tu rol de *" + user.getRol() + "* en este momento 🚫.");
         }
             
         //! 2. Verificar strikes
@@ -214,7 +224,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             user.setBlock(true);
             user.setBlockingReason("Moderacion");
             userChatRepository.save(user);
-            return sendSimpleResponse(waId, "Tu cuenta ha sido bloqueada. Por favor, comunícate con soportetic@ucacue.edu.ec.");
+            return sendSimpleResponse(waId, "Tu cuenta ha sido bloqueada 🚫. Por favor, comunícate con *soportetic@ucacue.edu.ec* ✉️.");
         }
 
         // Se reinicia si la fecha de la última interacción es anterior a la fecha actual (se reinicia a las 00:00)
@@ -244,7 +254,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 long minutes = remainingTime.toMinutes() % 60;
                 long seconds = remainingTime.toSeconds() % 60;
                 return sendSimpleResponse(waId, String.format(
-                        "Tu límite de interacciones ha sido alcanzado, tiempo faltante: %02d:%02d:%02d.",
+                        "Tu límite de interacciones ha sido alcanzado, tiempo faltante: %02d:%02d:%02d. ⏳",
                         hours, minutes, seconds));
             }
         }
@@ -253,7 +263,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         if (user.getLimitQuestions() <= 0) {
             user.setNextResetDate(timeNow.plusHours(hoursToWaitAfterLimit));
             userChatRepository.save(user);
-            return sendSimpleResponse(waId, "Tu límite de interacciones ha sido alcanzado, vuelve mañana.");
+            return sendSimpleResponse(waId, "Tu límite de interacciones ha sido alcanzado, vuelve mañana ⏳.");
         }
 
         //! 6. Obtener respuesta de IA y Actualizar datos del usuario
@@ -315,6 +325,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     //   Verificar si el rol del usuario está denegado
     // ======================================================
     public boolean isRoleDenied(String role) {
+        System.out.println("Rol: " + role);
         return Arrays.asList(restrictedRol.split(",")).contains(role);
     }
 
