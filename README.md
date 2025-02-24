@@ -11,15 +11,11 @@ Este proyecto implementa la API de WhatsApp Cloud y OpenAI para crear un chat in
 - **Soporte TIC**: Responde preguntas relacionadas con soporte técnico en tecnologías de la información y comunicación.
 # WhatsApp API Cloud Chatbot
 
-## Descripción
-
-Este proyecto implementa la API de WhatsApp Cloud y OpenAI para crear un chatbot inteligente que responde preguntas sobre soporte TIC.
-
 ## Características
 
 - **Integración con WhatsApp Cloud API**: Permite la comunicación a través de WhatsApp.
 - **Uso de OpenAI**: Proporciona respuestas inteligentes y contextuales.
-- **Soporte TIC**: Responde preguntas relacionadas con soporte técnico en tecnologías de la información y comunicación en `application.properties`.
+- **Soporte TIC**: Responde preguntas relacionadas con soporte técnico en tecnologías de la información y comunicación.
 
 ## Repositorios Necesarios
 #### **Webhook**
@@ -90,12 +86,7 @@ spring.jackson.time-zone=America/Guayaquil
 ```properties
 server.port=8082
 ```
-### Variables de entorno necesarias en `.env`
-```properties
-DB_DATABASE=DATABASENAME
-DB_USERNAME=USERNAME
-DB_PASSWORD=PASSWORD
-```
+### Las Variables de entorno son necesarias en `.env`
 
 ## Instalación y Ejecución
 
