@@ -147,7 +147,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             return handleApiInfoException(e, waId);
         } catch (Exception e) {
             logger.error("Error al procesar mensaje de usuario: " + e);
-            return sendSimpleResponse(waId, "Ha ocurrido un error inesperado 😕. Por favor, inténtalo nuevamente más tarde .");
+            return sendSimpleResponse(waId, "Ha ocurrido un error inesperado 😕. Por favor, inténtalo nuevamente más tarde.");
         }
     }
     // Método auxiliar para crear un nuevo usuario
