@@ -5,87 +5,165 @@ config:
   look: neo
 ---
 flowchart TD
+ subgraph one["Desconocido"]
+        I["guardarmos estado como WAITING_FOR_CEDULA"]
+        I1["Ha ocurrido un error inesperado 😕. Por favor, inténtalo nuevamente más tarde."]
+        I1A(["Fin del proceso"])
+  end
+ subgraph try["try"]
+        TRY1["Si ocurre una excepción"]
+        TRY2{"¿Es de Moderacion?"}
+        TRY2A["Decrementar Limite de srtikes (-1)"]
+        TRY2B["Ha ocurrido un error inesperado 😕. Por favor, inténtalo nuevamente más tarde."]
+  end
+ subgraph waiting_for_cedula["Waiting_for_cedula"]
+        G["handleWaitingForCedula"]
+        G1{"Cédula válida?"}
+        G3["Obtener datos del ERP"]
+        G7{"Limite de pregutnas es &lt;= 0?"}
+        G9["limitQuestions = 3"]
+        G7A(["Fin del proceso"])
+        G9A["Decrementar Limite de pregutnas (-1)"]
+        G10["Para proseguir con el proceso, necesitamos verificar que perteneces a la universidad, por lo que *te pedimos ingresar el número de cédula valida* 🔒."]
+        G10A(["Fin del proceso"])
+        G4{"Cédula encontrada?"}
+        G5A@{ label: "Bloquear contacto, por motivo 'No pertenece a la universidad'" }
+        G5B["Actualmente no perteneces a la Universidad Católica de Cuenca ❌. Este servicio es exclusivo para miembros de la universidad."]
+        G5B1(["Fin del proceso"])
+        G4A["limitQuestions = 50"]
+        G4A1["strikeLimit = 3"]
+        G6["Actualizar datos usuario (Estado = READY)"]
+        G6A@{ label: "¡Hola,  'userName'!👋, ¿Qué consulta académica te gustaría realizar?" }
+        G6A1(["Fin del proceso"])
+  end
+ subgraph ready["Ready"]
+        H["handleReadyState"]
+        H3{"Rol denegado?"}
+        H4{"Limite de pregutnas es == -1?"}
+        H5(["Fin del proceso"])
+        H6["Limite de preguntas establecido a: (-1)"]
+        H61@{ label: "Lo sentimos, esta funcionalidad no está disponible para tu rol de *'userRol' * en este momento 🚫." }
+        H61A(["Fin del proceso"])
+        H7{"Limite de Strikes &lt;= 0?"}
+        H8@{ label: "Bloquear usuario por motivo de 'Moderación'" }
+        H81@{ label: "Tu cuenta ha sido bloqueada. Por favor, comunícate con <a href='mailto:soportetic@ucacue.edu.ec'>soportetic@ucacue.edu.ec</a> ✉️." }
+        H81A(["Fin del proceso"])
+        H9{"Han pasado 24 horas?"}
+        H10["Resetear limite depreguntas y fecha de reinicio"]
+        H11{"Existe fecha de reinicio?"}
+        H15{"Limite de pregutnas es &lt;= 0?"}
+        H11a{"¿Ya pasó la fecha de reinicio?"}
+        H12["Resetear límite de preguntas y fecha de reinicio"]
+        H17["Obtener respuesta IA"]
+        H13["Tu límite de interacciones ha sido alcanzado, tiempo faltante: %02d:%02d:%02d. ⏳"]
+        H13A(["Fin del proceso"])
+        H16["Agregamos tiempo de espera"]
+        H16A["Tu límite de interacciones ha sido alcanzado, vuelve mañana ⏳."]
+        H16A1(["Fin del proceso"])
+        H18["Obtener datos del ERP"]
+        H19A["Decrementar Limite de pregutnas (-1)"]
+        H19["Actualizar usuario"]
+        H20["Enviar Respuesta"]
+  end
+ subgraph principal["Manejo de Respuestas"]
+        one
+        try
+        waiting_for_cedula
+        ready
+        A2["handleUserMessage"]
+        B["Extraer identificadores y datos básicos del mensaje"]
+        B2["Marcar mensaje como leído"]
+        C{"Texto válido?"}
+        D(["Fin del proceso"])
+        TRY["Inicio: try"]
+        EU["Buscar usuario"]
+        EU1{"¿Usuario existe?"}
+        EU3["Devolver datos del usuario"]
+        EU2["Crear usuario"]
+        EU2A["Mensaje de Bienvenida"]
+        EU4["Devolver datos del usuario"]
+        E1{"Usuario bloqueado?"}
+        E1A(["Fin del proceso"])
+        F{"Estado de conversación"}
+        FinTry["Fin del try"]
+  end
+    FinTry --> n2(["FIN"])
     A(["Inicio"]) --> Wm["Mensjae del Usuario"]
     Wm --> W["Webhook"]
     W --> A1["Notificacion de webhook"]
-    A1 --> A2["handleUserMessage"]
-    A2 --> B["Extraer identificadores y datos básicos del mensaje"]
-    B --> B2["Marcar mensaje como leído"]
-    B2 --> C{"Texto válido?"}
-    C -- No --> D(["Fin del proceso"])
-    C -- Sí --> TRY["Inicio: try"]
-    TRY -.-> TRY1["Si ocurre una excepción"]
-    TRY1 --> TRY2{"¿Es de Moderacion?"}
-    TRY2 -- Sí --> TRY2A["Decrementar Limite de srtikes (-1)"]
-    TRY2 -- No --> TRY2B["Ha ocurrido un error inesperado 😕. Por favor, inténtalo nuevamente más tarde."]
-    TRY --> EU["Buscar usuario"]
-    EU --> EU1{"¿Usuario existe?"}
-    EU1 -- Sí --> EU3["Devolver datos del usuario"]
-    EU1 -- No --> EU2["Crear usuario"]
-    EU2 --> EU2A["Mensaje de Bienvenida"]
-    EU2A --> EU4["Devolver datos del usuario"]
-    EU3 --> E1{"Usuario bloqueado?"}
+    A1 --> A2
+    A2 --> B
+    B --> B2
+    B2 --> C
+    C -- No --> D
+    C -- Sí --> TRY
+    TRY -.-> TRY1
+    TRY1 --> TRY2
+    TRY2 -- Sí --> TRY2A
+    TRY2 -- No --> TRY2B
+    TRY --> EU
+    EU --> EU1
+    EU1 -- Sí --> EU3
+    EU1 -- No --> EU2
+    EU2 --> EU2A
+    EU2A --> EU4
+    EU3 --> E1
     EU4 --> E1
-    E1 -- Si --> E1A(["Fin del proceso"])
-    E1 -- No --> F{"Estado de conversación"}
-    F -- WAITING_FOR_CEDULA --> G["handleWaitingForCedula"]
-    F -- READY --> H["handleReadyState"]
-    F -- Desconocido --> I["guardarmos estado como WAITING_FOR_CEDULA"]
-    I --> I1["Ha ocurrido un error inesperado 😕. Por favor, inténtalo nuevamente más tarde."]
-    I1 --> I1A(["Fin del proceso"])
-    G --> G1{"Cédula válida?"}
-    G1 -- Sí --> G3["Obtener datos del ERP"]
-    G1 -- No --> G7{"Limite de pregutnas es &lt;= 0?"}
-    G7 -- No --> G9["limitQuestions = 3"]
-    G7 -- SI --> G7A(["Fin del proceso"])
-    G9 --> G9A["Decrementar Limite de pregutnas (-1)"]
-    G9A --> G10["Para proseguir con el proceso, necesitamos verificar que perteneces a la universidad, por lo que *te pedimos ingresar el número de cédula valida* 🔒."]
-    G10 --> G10A(["Fin del proceso"])
-    G3 --> G4{"Cédula encontrada?"}
-    G4 -- No --> G5A@{ label: "Bloquear contacto, por motivo 'No pertenece a la universidad'" }
-    G5A --> G5B["Actualmente no perteneces a la Universidad Católica de Cuenca ❌. Este servicio es exclusivo para miembros de la universidad."]
-    G5B --> G5B1(["Fin del proceso"])
-    G4 -- Sí --> G4A["limitQuestions = 50"]
-    G4A --> G4A1["strikeLimit = 3"]
-    G4A1 --> G6["Actualizar datos usuario (Estado = READY)"]
-    G6 --> G6A@{ label: "¡Hola,  'userName'!👋, ¿Qué consulta académica te gustaría realizar?" }
-    G6A --> G6A1(["Fin del proceso"])
-    H --> H3{"Rol denegado?"}
-    H3 -- Sí --> H4{"Limite de pregutnas es == -1?"}
-    H4 -- Sí --> H5(["Fin del proceso"])
-    H4 -- No --> H6["Limite de preguntas establecido a: (-1)"]
-    H6 --> H61@{ label: "Lo sentimos, esta funcionalidad no está disponible para tu rol de *'userRol' * en este momento 🚫." }
-    H61 --> H61A(["Fin del proceso"])
-    H3 -- No --> H7{"Limite de Strikes &lt;= 0?"}
-    H7 -- Sí --> H8@{ label: "Bloquear usuario por motivo de 'Moderación'" }
-    H8 --> H81@{ label: "Tu cuenta ha sido bloqueada. Por favor, comunícate con <a href='mailto:soportetic@ucacue.edu.ec'>soportetic@ucacue.edu.ec</a> ✉️." }
-    H81 --> H81A(["Fin del proceso"])
-    H7 -- No --> H9{"Han pasado 24 horas?"}
-    H9 -- Sí --> H10["Resetear limite depreguntas y fecha de reinicio"]
-    H9 -- No --> H11{"Existe fecha de reinicio?"}
-    H11 -- No --> H15{"Limite de pregutnas es &lt;= 0?"}
-    H11 -- Sí --> H11a{"¿Ya pasó la fecha de reinicio?"}
-    H11a -- Sí --> H12["Resetear límite de preguntas y fecha de reinicio"]
-    H12 -- CONINUAR --> H17["Obtener respuesta IA"]
-    H11a -- No --> H13["Tu límite de interacciones ha sido alcanzado, tiempo faltante: %02d:%02d:%02d. ⏳"]
-    H13 --> H13A(["Fin del proceso"])
-    H15 -- Sí --> H16["Agregamos tiempo de espera"]
-    H16 --> H16A["Tu límite de interacciones ha sido alcanzado, vuelve mañana ⏳."]
-    H16A --> H16A1(["Fin del proceso"])
+    E1 -- Si --> E1A
+    E1 -- No --> F
+    F -- WAITING_FOR_CEDULA --> G
+    F -- READY --> H
+    F -- Desconocido --> I
+    I --> I1
+    I1 --> I1A
+    G --> G1
+    G1 -- Sí --> G3
+    G1 -- No --> G7
+    G7 -- No --> G9
+    G7 -- SI --> G7A
+    G9 --> G9A
+    G9A --> G10
+    G10 --> G10A
+    G3 --> G4
+    G4 -- No --> G5A
+    G5A --> G5B
+    G5B --> G5B1
+    G4 -- Sí --> G4A
+    G4A --> G4A1
+    G4A1 --> G6
+    G6 --> G6A
+    G6A --> G6A1
+    H --> H3
+    H3 -- Sí --> H4
+    H4 -- Sí --> H5
+    H4 -- No --> H6
+    H6 --> H61
+    H61 --> H61A
+    H3 -- No --> H7
+    H7 -- Sí --> H8
+    H8 --> H81
+    H81 --> H81A
+    H7 -- No --> H9
+    H9 -- Sí --> H10
+    H9 -- No --> H11
+    H11 -- No --> H15
+    H11 -- Sí --> H11a
+    H11a -- Sí --> H12
+    H12 -- CONINUAR --> H17
+    H11a -- No --> H13
+    H13 --> H13A
+    H15 -- Sí --> H16
+    H16 --> H16A
+    H16A --> H16A1
     H15 -- No --> H17
     H10 --> H17
-    H17 --> H18["Obtener datos del ERP"]
-    H18 --> H19A["Decrementar Limite de pregutnas (-1)"]
-    H19A --> H19["Actualizar usuario"]
-    H19 --> H20["Enviar Respuesta"]
-    H20 --> FinTry["Fin del try"]
-    FinTry --> n2(["FIN"])
-    Wm@{ shape: manual-input}
-    W@{ shape: processes}
-    A1@{ shape: manual-input}
-    TRY2B@{ shape: curv-trap}
-    EU2A@{ shape: curv-trap}
+    H17 --> H18
+    H18 --> H19A
+    H19A --> H19
+    H19 --> H20
+    H20 --> FinTry
     I1@{ shape: curv-trap}
+    TRY2B@{ shape: curv-trap}
     G3@{ shape: processes}
     G9@{ shape: notch-rect}
     G10@{ shape: curv-trap}
@@ -102,15 +180,12 @@ flowchart TD
     H16A@{ shape: curv-trap}
     H18@{ shape: processes}
     H20@{ shape: curv-trap}
-     Wm:::Class_01
-     W:::Class_04
-     A1:::Aqua
-     A1:::Rose
-     A1:::Sky
-     A1:::Class_01
-     TRY2B:::Aqua
-     EU2A:::Aqua
+    EU2A@{ shape: curv-trap}
+    Wm@{ shape: manual-input}
+    W@{ shape: processes}
+    A1@{ shape: manual-input}
      I1:::Aqua
+     TRY2B:::Aqua
      G3:::Class_04
      G9:::Class_03
      G10:::Aqua
@@ -125,21 +200,34 @@ flowchart TD
      H16A:::Aqua
      H18:::Class_04
      H20:::Aqua
-    classDef Class_04 fill:#BBDEFB
-    classDef Class_03 fill:#FFE0B2
+     EU2A:::Aqua
+     Wm:::Class_01
+     W:::Class_04
+     A1:::Aqua
+     A1:::Rose
+     A1:::Sky
+     A1:::Class_01
+     A1:::Class_01
+    classDef Class_04 fill:#A9DEF9
+    classDef Class_03 fill:#E4C1F9
     classDef Aqua stroke-width:1px, stroke-dasharray:none, stroke:#46EDC8, fill:#DEFFF8, color:#378E7A
     classDef Class_01 fill:#FFF9C4, stroke:#000000
-    style I1A fill:#ff0633,stroke:#333,stroke-width:3px,color:#fff
-    style G7A fill:#ff0633,stroke:#333,stroke-width:3px,color:#fff
-    style G10A fill:#ff0633,stroke:#333,stroke-width:3px,color:#fff
-    style G5B1 fill:#ff0633,stroke:#333,stroke-width:3px,color:#fff
-    style G6A1 fill:#6fe893,stroke:#333,stroke-width:3px,color:#000000
-    style H5 fill:#ff0633,stroke:#333,stroke-width:3px,color:#fff
-    style H61A fill:#ff0633,stroke:#333,stroke-width:3px,color:#fff
-    style H81A fill:#ff0633,stroke:#333,stroke-width:3px,color:#fff
-    style H13A fill:#ff0633,stroke:#333,stroke-width:3px,color:#fff
-    style H16A1 fill:#ff0633,stroke:#333,stroke-width:3px,color:#fff
-    style n2 fill:#6fe893,stroke:#333, color:#000000
-    style A fill:#6fe893,stroke:#333, color:#000000
-    style D fill:#ff0633,stroke:#333,stroke-width:3px,color:#fff
-    style E1A fill:#ff0633,stroke:#333,stroke-width:3px,color:#fff
+    style I1A fill:#FF99C8,stroke:#333,stroke-width:3px,color:#fff
+    style G7A fill:#FF99C8,stroke:#333,stroke-width:3px,color:#fff
+    style G10A fill:#FF99C8,stroke:#333,stroke-width:3px,color:#fff
+    style G5B1 fill:#FF99C8,stroke:#333,stroke-width:3px,color:#fff
+    style G6A1 fill:#D0F4DE,stroke:#333,stroke-width:3px,color:#000000
+    style H5 fill:#FF99C8,stroke:#333,stroke-width:3px,color:#fff
+    style H61A fill:#FF99C8,stroke:#333,stroke-width:3px,color:#fff
+    style H81A fill:#FF99C8,stroke:#333,stroke-width:3px,color:#fff
+    style H13A fill:#FF99C8,stroke:#333,stroke-width:3px,color:#fff
+    style H16A1 fill:#FF99C8,stroke:#333,stroke-width:3px,color:#fff
+    style one fill:#FCF6BD
+    style try fill:#FCF6BD
+    style waiting_for_cedula fill:#FCF6BD
+    style ready fill:#FCF6BD
+    style D fill:#FF99C8,stroke:#333,stroke-width:3px,color:#fff
+    style E1A fill:#FF99C8,stroke:#333,stroke-width:3px,color:#fff
+    style n2 fill:#D0F4DE,stroke:#333, color:#000000
+    style A fill:#D0F4DE,stroke:#333, color:#000000
+    style principal fill:#f9dcc4
