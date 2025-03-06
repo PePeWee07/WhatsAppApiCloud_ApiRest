@@ -74,6 +74,9 @@ public class UserChatEntity {
     @Column(name = "email")
     private String email;
 
+    @Column (name = "valid_question_count")
+    private int validQuestionCount;
+
     // Atributos Adicionales
     private String sede;
 

@@ -277,6 +277,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         user.setEmail(userFromJsonServer.getEmail());
         user.setSede(userFromJsonServer.getSede());
         user.setCarrera(userFromJsonServer.getCarrera());
+        user.setValidQuestionCount(user.getValidQuestionCount() + 1);
         userChatRepository.save(user);
 
         return sendSimpleResponse(waId, data.answer());
