@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
   backend:
-    container_name: whatsapp-api-cloud-app
+    container_name: whatsapp-api-cloud-app-dev
     build:
       context: .
       dockerfile: Dockerfile.dev
@@ -13,7 +13,7 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    # restart: always
+    restart: always
     volumes:
       - .:/app
       - whatsappapicould_logs_dev:/backend/var/log
