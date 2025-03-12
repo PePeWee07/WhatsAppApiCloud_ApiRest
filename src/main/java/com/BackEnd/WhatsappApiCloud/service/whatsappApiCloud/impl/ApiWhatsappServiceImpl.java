@@ -19,9 +19,9 @@ import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.Reques
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestMessageText;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestWhatsappAsRead;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
-import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppData;
-import com.BackEnd.WhatsappApiCloud.model.entity.OpenIA.AnswersOpenIa;
-import com.BackEnd.WhatsappApiCloud.model.entity.OpenIA.QuestionOpenIa;
+import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppDataDto;
+import com.BackEnd.WhatsappApiCloud.model.dto.openIA.AnswersOpenIADto;
+import com.BackEnd.WhatsappApiCloud.model.dto.openIA.QuestionOpenIADto;
 import com.BackEnd.WhatsappApiCloud.model.entity.User.UserChatEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
 import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
@@ -106,7 +106,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     //   Recibir y enviar respuesta automática
     // ======================================================
     @Override
-    public ResponseWhatsapp handleUserMessage(WhatsAppData.WhatsAppMessage message) {
+    public ResponseWhatsapp handleUserMessage(WhatsAppDataDto.WhatsAppMessage message) {
         LocalDateTime timeNow = LocalDateTime.now();
 
         // Extraer identificadores y datos básicos del mensaje
@@ -141,13 +141,13 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 default:
                     user.setConversationState("WAITING_FOR_CEDULA");
                     userChatRepository.save(user);
-                    return sendSimpleResponse(waId, "No hemos podido procesar tu solicitud 😕. Por favor, introduce tu número de cédula nuevamente para continuar.");
+                    return sendMessage(new MessageBody(waId, "No hemos podido procesar tu solicitud 😕. Por favor, introduce tu número de cédula nuevamente para continuar."));
             }
         } catch (ApiInfoException e) {
             return handleApiInfoException(e, waId);
         } catch (Exception e) {
             logger.error("Error al procesar mensaje de usuario: " + e);
-            return sendSimpleResponse(waId, "Ha ocurrido un error inesperado 😕. Por favor, inténtalo nuevamente más tarde.");
+            return sendMessage(new MessageBody(waId, "Ha ocurrido un error inesperado 😕. Por favor, inténtalo nuevamente más tarde."));
         }
     }
     // Método auxiliar para crear un nuevo usuario
@@ -169,7 +169,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         
         ¡Gracias por confiar en nosotros! Te acompañamos en cada paso de tu camino educativo. 🛤️
         """;
-        sendSimpleResponse(waId, welcomeMessage);
+        sendMessage(new MessageBody(waId, welcomeMessage));
 
         return userChatRepository.save(newUser);
     }
@@ -184,14 +184,14 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 user.setBlock(true);
                 user.setBlockingReason("No pertenece a la Universidad");
                 userChatRepository.save(user);
-                return sendSimpleResponse(waId, "Actualmente no perteneces a la Universidad Católica de Cuenca ❌. Este servicio es exclusivo para miembros de la universidad.");
+                return sendMessage(new MessageBody(waId, "Actualmente no perteneces a la Universidad Católica de Cuenca ❌. Este servicio es exclusivo para miembros de la universidad."));
             }
             
             //! Si encuentro la cédula dentro de ERP
             else {
                 updateUserWithJsonServerData(user, userFromJsonServer, timeNow);
                 userChatRepository.save(user);
-                return sendSimpleResponse(waId, "¡Hola, " + user.getNombres() + "!👋, ¿Qué consulta académica te gustaría realizar?");
+                return sendMessage(new MessageBody(waId, "¡Hola, " + user.getNombres() + "!👋, ¿Qué consulta académica te gustaría realizar?"));
             }
         } else {
             //! Si ya se han agotado los intentos
@@ -202,7 +202,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             user.setLastInteraction(timeNow);
             user.setLimitQuestions(user.getLimitQuestions() - 1);
             userChatRepository.save(user);
-            return sendSimpleResponse(waId, "Para proseguir con el proceso, necesitamos verificar que perteneces a la universidad, por lo que *te pedimos ingresar el número de cédula valida* 🔒.");
+            return sendMessage(new MessageBody(waId, "Para proseguir con el proceso, necesitamos verificar que perteneces a la universidad, por lo que *te pedimos ingresar el número de cédula valida* 🔒."));
         }
     }
     // Manejo del estado "READY"
@@ -216,7 +216,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             user.setLimitQuestions(-1);
             user.setBlockingReason("Rol denegado" + user.getRol());
             userChatRepository.save(user);
-            return sendSimpleResponse(waId, "Lo sentimos, esta funcionalidad no está disponible para tu rol de *" + user.getRol() + "* en este momento 🚫.");
+            return sendMessage(new MessageBody(waId, "Lo sentimos, esta funcionalidad no está disponible para tu rol de *" + user.getRol() + "* en este momento 🚫."));
         }
             
         //! 2. Verificar strikes
@@ -224,7 +224,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             user.setBlock(true);
             user.setBlockingReason("Moderacion");
             userChatRepository.save(user);
-            return sendSimpleResponse(waId, "Tu cuenta ha sido bloqueada 🚫. Por favor, comunícate con *soportetic@ucacue.edu.ec* ✉️.");
+            return sendMessage(new MessageBody(waId, "Tu cuenta ha sido bloqueada 🚫. Por favor, comunícate con *soportetic@ucacue.edu.ec* ✉️."));
         }
 
         // Se reinicia si la fecha de la última interacción es anterior a la fecha actual (se reinicia a las 00:00)
@@ -253,9 +253,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 long hours = remainingTime.toHours();
                 long minutes = remainingTime.toMinutes() % 60;
                 long seconds = remainingTime.toSeconds() % 60;
-                return sendSimpleResponse(waId, String.format(
-                        "Tu límite de interacciones ha sido alcanzado, tiempo faltante: %02d:%02d:%02d. ⏳",
-                        hours, minutes, seconds));
+                return sendMessage(new MessageBody(waId, String.format("Tu límite de interacciones ha sido alcanzado, tiempo faltante: %02d:%02d:%02d. ⏳", hours, minutes, seconds)));
             }
         }
 
@@ -263,11 +261,11 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         if (user.getLimitQuestions() <= 0) {
             user.setNextResetDate(timeNow.plusHours(hoursToWaitAfterLimit));
             userChatRepository.save(user);
-            return sendSimpleResponse(waId, "Tu límite de interacciones ha sido alcanzado, vuelve mañana ⏳.");
+            return sendMessage(new MessageBody(waId, "Tu límite de interacciones ha sido alcanzado, vuelve mañana ⏳."));
         }
 
         //! 6. Obtener respuesta de IA y Actualizar datos del usuario
-        AnswersOpenIa data = getAnswerIA(messageText, user.getNombres(), user.getThreadId());
+        AnswersOpenIADto data = getAnswerIA( new QuestionOpenIADto(messageText, user.getNombres(), waId, user.getThreadId()));
         UserChatEntity userFromJsonServer = fetchUserFromJsonServer(user.getCedula());
         user.setNombres(userFromJsonServer.getNombres());
         user.setRol(userFromJsonServer.getRol());
@@ -280,7 +278,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         user.setValidQuestionCount(user.getValidQuestionCount() + 1);
         userChatRepository.save(user);
 
-        return sendSimpleResponse(waId, data.answer());
+        return sendMessage(new MessageBody(waId, data.answer()));
     }
     // Actualiza la información del usuario con los datos del servidor JSON
     private void updateUserWithJsonServerData(UserChatEntity user, UserChatEntity userFromJsonServer, LocalDateTime timeNow) {
@@ -296,7 +294,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         user.setCarrera(userFromJsonServer.getCarrera());
         user.setNextResetDate(null);
     }
-    // Manejo centralizado de ApiInfoException
+    // Manejo de ApiInfoException
     private ResponseWhatsapp handleApiInfoException(ApiInfoException e, String waId) {
         userChatRepository.findByPhone(waId).ifPresent(user -> {
             if (e.getModeration() != null) {
@@ -305,7 +303,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             }
         });
         logger.warn("Mensaje informativo recibido: " + e.getInfoMessage());
-        return sendSimpleResponse(waId, e.getInfoMessage());
+        return sendMessage(new MessageBody(waId, e.getInfoMessage()));
     }
 
     
@@ -326,7 +324,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     //   Verificar si el rol del usuario está denegado
     // ======================================================
     public boolean isRoleDenied(String role) {
-        System.out.println("Rol: " + role);
         return Arrays.asList(restrictedRol.split(",")).contains(role);
     }
 
@@ -388,15 +385,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         return (valor > 9) ? (valor - 9) : valor;
     }
 
-    
-    // ======================================================
-    //   Envíos de mensajes simples
-    // ======================================================
-    private ResponseWhatsapp sendSimpleResponse(String waId, String message) {
-        RequestMessage request = RequestBuilder(waId, "text", message);
-        return ResponseBuilder(request, "/messages");
-    }
-
 
     // ======================================================
     //   Simulación de ERP
@@ -413,9 +401,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 .retrieve()
                 .body(new ParameterizedTypeReference<List<UserChatEntity>>() {});
     
-            //System.out.println("Users: " + localRestClient.get().uri(url).retrieve().body(String.class)); //! Debug
-    
-            // Verifica si la lista es nula o está vacía
             if (users == null || users.isEmpty()) {
                 logger.warn("No se encontraron usuarios en el servidor JSON para la cedula " + cedula);
                 return null;
@@ -432,30 +417,27 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             logger.error("Error al obtener datos del usuario desde ERP: " + e.getMessage());
             throw new CustomJsonServerException("Error al obtener datos del usuario desde ERP", e.getCause());
         }
-    }
-    
-    
+    }    
+
 
     // ======================================================
     //   Consulta a IA
     // ======================================================
-    private AnswersOpenIa getAnswerIA(String ask, String name, String thread_id) throws JsonMappingException, JsonProcessingException {
+    private AnswersOpenIADto getAnswerIA(QuestionOpenIADto question) throws JsonMappingException, JsonProcessingException {
         try {
             RestClient openAi = RestClient.builder()
                 .baseUrl(baseAIServer)
                 .build();
     
             String url = uriAIServer;
-            
-            QuestionOpenIa question = new QuestionOpenIa(ask, name, thread_id);
 
-            AnswersOpenIa answer = openAi.post()
+            AnswersOpenIADto answer = openAi.post()
                 .uri(url)
                 .body(question)
                 .header("Content-Type", "application/json")
                 .header("Authorization", "Bearer " + apiKeyOpenAI)
                 .retrieve()
-                .body(AnswersOpenIa.class);
+                .body(AnswersOpenIADto.class);
     
             return answer;
     
@@ -484,11 +466,11 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     // ======================================================
     //   Constructor de mensajes de respuesta
     // ======================================================
-    private ResponseWhatsapp ResponseBuilder(RequestMessage request, String uri) {
+    private ResponseWhatsapp ResponseBuilder(RequestMessage responseType, String uri) {
         String response = restClient.post()
                     .uri(uri)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .body(request)
+                    .body(responseType)
                     .retrieve()
                     .body(String.class);
         ObjectMapper obj = new ObjectMapper();
@@ -504,13 +486,13 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     // ======================================================
     //   Constructor de mensajes de petición
     // ======================================================
-    public RequestMessage RequestBuilder(String toPhone, String responseType, String responseMessage) {
+    public RequestMessage RequestBuilder(String toPhone, String request, String responseMessage) {
         try {
             return new RequestMessage(
                     "whatsapp",
                     "individual",
                     toPhone,
-                    responseType,
+                    request,
                     new RequestMessageText(false, responseMessage));
         } catch (Exception e) {
             logger.error("Error al construir mensaje de petición: " + e);

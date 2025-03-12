@@ -3,7 +3,7 @@ package com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents;
 import java.util.List;
 import java.util.Optional;
 
-public class WhatsAppData {
+public class WhatsAppDataDto {
 
     public record WhatsAppMessage(
         String object,
