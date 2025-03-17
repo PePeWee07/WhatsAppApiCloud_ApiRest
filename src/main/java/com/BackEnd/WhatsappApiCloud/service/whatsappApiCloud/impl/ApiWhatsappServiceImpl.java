@@ -1,5 +1,8 @@
 package com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.impl;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -8,8 +11,11 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
@@ -499,5 +505,46 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             return null;
         }
     }
- 
+
+
+    // ======================================================
+    //  Cargar imagen a la API de WhatsApp
+    // ======================================================
+    @Override
+    public String uploadImage(File imageFile) {
+        try {
+            // Detectar el tipo MIME de la imagen
+            String contentType = Files.probeContentType(imageFile.toPath());
+
+            if (contentType == null) {
+                System.err.println("No se pudo detectar el tipo MIME de la imagen. Usando image/jpeg por defecto."); //! Debug
+                return null;
+            }
+
+            // Construir el cuerpo de la petición multipart
+            MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+            body.add("file", new FileSystemResource(imageFile));
+            body.add("type", contentType);
+            body.add("messaging_product", "whatsapp");
+
+            // Enviar la solicitud usando restClient configurado en el constructor
+            String response = restClient.post()
+                    .uri("/media")
+                    .contentType(MediaType.MULTIPART_FORM_DATA)
+                    .body(body)
+                    .retrieve()
+                    .body(String.class);
+
+            return response;
+
+
+        } catch (IOException e) {
+            logger.error("❌ Error al leer el archivo de imagen: ", e);
+            return null;
+        } catch (Exception e) {
+            logger.error("❌ Error inesperado al subir la imagen: ", e);
+            return null;
+        }
+    }
+
 }

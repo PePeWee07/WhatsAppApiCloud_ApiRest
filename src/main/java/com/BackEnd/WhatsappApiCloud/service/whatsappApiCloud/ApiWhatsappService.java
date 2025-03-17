@@ -1,5 +1,8 @@
 package com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud;
 
+import java.io.File;
+import java.io.IOException;
+
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppDataDto;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
@@ -13,5 +16,6 @@ public interface ApiWhatsappService {
      // ======================================================
      ResponseWhatsapp sendMessage(MessageBody payload) throws JsonProcessingException;
      ResponseWhatsapp handleUserMessage(WhatsAppDataDto.WhatsAppMessage message) throws JsonMappingException, JsonProcessingException;
+     String uploadImage(File imageFile) throws IOException;
 
 }
