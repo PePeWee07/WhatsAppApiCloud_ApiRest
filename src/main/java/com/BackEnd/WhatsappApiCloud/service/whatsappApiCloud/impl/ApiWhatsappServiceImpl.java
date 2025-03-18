@@ -220,7 +220,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 return null;
             }
             user.setLimitQuestions(-1);
-            user.setBlockingReason("Rol denegado" + user.getRol());
+            user.setBlockingReason("Rol denegado " + user.getRol());
             userChatRepository.save(user);
             return sendMessage(new MessageBody(waId, "Lo sentimos, esta funcionalidad no está disponible para tu rol de *" + user.getRol() + "* en este momento 🚫."));
         }
@@ -271,7 +271,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
 
         //! 6. Obtener respuesta de IA y Actualizar datos del usuario
-        AnswersOpenIADto data = getAnswerIA( new QuestionOpenIADto(messageText, user.getNombres(), waId, user.getThreadId()));
+        AnswersOpenIADto data = getAnswerIA( new QuestionOpenIADto(messageText, user.getNombres(), waId, user.getRol(),user.getThreadId()));
         UserChatEntity userFromJsonServer = fetchUserFromJsonServer(user.getCedula());
         user.setNombres(userFromJsonServer.getNombres());
         user.setRol(userFromJsonServer.getRol());
