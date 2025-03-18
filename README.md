@@ -103,3 +103,7 @@ server.port=8082
    ```sh
    docker-compose up -d
    ```
+
+## Concideraciones:
+   - Usar Mapper para datos del usuario
+   - Actualmente se concidera que existe multiples registro de usuarios con diferentes roles, se debera cambiar si un usuario trae una lista de roles

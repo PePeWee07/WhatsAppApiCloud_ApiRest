@@ -413,8 +413,9 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             }
     
             // Filtra para obtener el primer usuario que no sea "Estudiante", si no existe, retorna el primer elemento
+            // Filtra para excluir los roles restringidos. Si todos son restringidos, toma el primero
             UserChatEntity nonStudentRole = users.stream()
-                .filter(user -> !user.getRol().equalsIgnoreCase("Estudiante"))
+                .filter(user -> !isRoleDenied(user.getRol()))
                 .findFirst()
                 .orElse(users.get(0));
     
