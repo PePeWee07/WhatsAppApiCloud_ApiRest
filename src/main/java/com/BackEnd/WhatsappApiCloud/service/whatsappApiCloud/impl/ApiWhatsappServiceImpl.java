@@ -552,4 +552,68 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
+    // ======================================================
+    //  Enviar una imagen por URL como mensaje
+    // ======================================================
+    public ResponseWhatsapp sendImageMessageByUrl(String toPhoneNumber, String imageUrl) {
+        try {
+            // Construcción del cuerpo del mensaje
+            com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.requestImage.RequestMessage request = new com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.requestImage.RequestMessage(
+                    "whatsapp",
+                    "individual",
+                    toPhoneNumber,
+                    "image",
+                    new com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.requestImage.RequestMessageImageUrl(imageUrl)
+            );
+
+            // Envío de la solicitud
+            String response = restClient.post()
+                    .uri("/messages")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .retrieve()
+                    .body(String.class);
+
+            // Procesamiento de la respuesta
+            ObjectMapper objectMapper = new ObjectMapper();
+            return objectMapper.readValue(response, ResponseWhatsapp.class);
+
+        } catch (Exception e) {
+            logger.error("❌ Error al enviar la imagen: ", e);
+            return null;
+        }
+    }
+
+    // ======================================================
+    //  Enviar una video por URL como mensaje
+    // ======================================================
+    public ResponseWhatsapp sendVideoMessageByUrl(String toPhoneNumber, String videoUrl, String caption) {
+        try {
+            // Construcción del cuerpo del mensaje
+            com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.requestVideo.RequestMessage request = new com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.requestVideo.RequestMessage(
+                    "whatsapp",
+                    "individual",
+                    toPhoneNumber,
+                    "video",
+                    new com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.requestVideo.RequestMessageVideoUrl(videoUrl, caption)
+            );
+
+            // Envío de la solicitud
+            String response = restClient.post()
+                    .uri("/messages")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .retrieve()
+                    .body(String.class);
+
+            // Procesamiento de la respuesta
+            ObjectMapper objectMapper = new ObjectMapper();
+            return objectMapper.readValue(response, ResponseWhatsapp.class);
+
+        } catch (Exception e) {
+            logger.error("❌ Error al enviar el video: ", e);
+            return null;
+        }
+    }
+
 }
