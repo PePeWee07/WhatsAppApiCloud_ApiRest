@@ -166,14 +166,18 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         newUser.setLimitQuestions(3);
 
         String welcomeMessage = """
-            ¡Bienvenido a un nuevo nivel de soporte académico! 🚀
-            
-        Soy la herramienta impulsada por inteligencia artificial 🤖 para la *Universidad Católica de Cuenca* 🦅.
-        Diseñada para brindarte asistencia rápida y precisa a través de WhatsApp.
-            
-        Aquí *podrás resolver exclusivamente consultas académicas* 📚.
-        
-        ¡Gracias por confiar en nosotros! Te acompañamos en cada paso de tu camino educativo. 🛤️
+        🌟 ¡Bienvenido a Dahlia UC, tu asistente de soporte tecnológico! 🚀
+
+        Soy *Dahlia UC*, un asistente especializado en brindar soporte tecnológico dentro de la Universidad Católica de Cuenca. Estoy aquí para ayudarte con información y asistencia en temas tecnológicos y operativos de la universidad.
+
+        📌 ¿Cómo puedo asistirte?
+        🔹 Brindo información sobre procesos y servicios tecnológicos.
+        🔹 Respondo consultas relacionadas con soporte técnico y orientación operativa.
+        🔹 Proporciono información sobre herramientas y recursos tecnológicos disponibles para la comunidad universitaria.
+
+        📌 Importante:
+        🔸 Solo proporciono respuestas verificadas, basadas en mi conocimiento actual.
+        🔸 No tengo acceso a información externa ni puedo gestionar trámites administrativos o cambios en los sistemas.
         """;
         sendMessage(new MessageBody(waId, welcomeMessage));
 
@@ -197,7 +201,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             else {
                 updateUserWithJsonServerData(user, userFromJsonServer, timeNow);
                 userChatRepository.save(user);
-                return sendMessage(new MessageBody(waId, "¡Hola, " + user.getNombres() + "!👋, ¿Qué consulta académica te gustaría realizar?"));
+                return sendMessage(new MessageBody(waId, "¡Hola, " + user.getNombres() + "!👋, ¿Qué consulta te gustaría realizar?"));
             }
         } else {
             //! Si ya se han agotado los intentos
@@ -208,7 +212,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             user.setLastInteraction(timeNow);
             user.setLimitQuestions(user.getLimitQuestions() - 1);
             userChatRepository.save(user);
-            return sendMessage(new MessageBody(waId, "Para proseguir con el proceso, necesitamos verificar que perteneces a la universidad, por lo que *te pedimos ingresar el número de cédula valida* 🔒."));
+            return sendMessage(new MessageBody(waId, "Verifiquemos tu identidad como miembro de la universidad. *Ingresa tu número de cédula.* 🔒"));
         }
     }
     // Manejo del estado "READY"
