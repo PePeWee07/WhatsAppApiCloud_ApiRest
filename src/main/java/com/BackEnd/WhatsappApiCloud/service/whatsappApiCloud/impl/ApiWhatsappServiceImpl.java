@@ -179,6 +179,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         🔸 Solo proporciono respuestas verificadas, basadas en mi conocimiento actual.
         🔸 No tengo acceso a información externa ni puedo gestionar trámites administrativos o cambios en los sistemas.
         """;
+        sendStickerMessageByUrl(waId, "https://almacenamiento.ucacue.edu.ec/videos/Dahlia.webp");
         sendMessage(new MessageBody(waId, welcomeMessage));
 
         return userChatRepository.save(newUser);
@@ -612,6 +613,38 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
         } catch (Exception e) {
             logger.error("❌ Error al enviar el video: ", e);
+            return null;
+        }
+    }
+
+    // ======================================================
+    //  Enviar una Sticker statico/animado por URL como mensaje
+    // ======================================================
+    public ResponseWhatsapp sendStickerMessageByUrl(String toPhoneNumber, String stickerUrl) {
+        try {
+            // Construcción del cuerpo del mensaje
+            com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.requestSticker.RequestMessage request = new com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.requestSticker.RequestMessage(
+                    "whatsapp",
+                    "individual",
+                    toPhoneNumber,
+                    "sticker",
+                    new com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.requestSticker.RequestMessageStickerUrl(stickerUrl)
+            );
+
+            // Envío de la solicitud
+            String response = restClient.post()
+                    .uri("/messages")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .retrieve()
+                    .body(String.class);
+
+            // Procesamiento de la respuesta
+            ObjectMapper objectMapper = new ObjectMapper();
+            return objectMapper.readValue(response, ResponseWhatsapp.class);
+
+        } catch (Exception e) {
+            logger.error("❌ Error al enviar el sticker: ", e);
             return null;
         }
     }
