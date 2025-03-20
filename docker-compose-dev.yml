@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
   backend:
-    container_name: whatsapp-api-cloud-app-dev
+    container_name: whatsapp-api-cloud-app
     build:
       context: .
       dockerfile: Dockerfile.dev
@@ -17,6 +17,7 @@ services:
     volumes:
       - .:/app
       - whatsappapicould_logs_dev:/backend/var/log
+      - ./doc/welcome_message.txt:/app/doc/welcome_message.txt
     networks:
       - virtual_assistant_network
 

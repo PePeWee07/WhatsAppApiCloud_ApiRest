@@ -2,6 +2,7 @@ package com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.impl;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -36,6 +37,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.nio.file.Paths;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -73,6 +76,9 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
     @Value("${strike.limit}")
     private int strikeLimit;
+
+    @Value("${WELCOME_MESSAGE_FILE}")
+    private String welcomeMessageFile;
 
     @Autowired
     private UserChatRepository userChatRepository;
@@ -165,20 +171,15 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         newUser.setConversationState("WAITING_FOR_CEDULA");
         newUser.setLimitQuestions(3);
 
-        String welcomeMessage = """
-        🌟 ¡Bienvenido a Dahlia UC, tu asistente de soporte tecnológico! 🚀
+        String welcomeMessage = "";
+        try {
+            byte[] bytes = Files.readAllBytes(Paths.get(welcomeMessageFile));
+            welcomeMessage = new String(bytes, StandardCharsets.UTF_8).trim();
+        } catch (Exception e) {
+            logger.error("Error al leer el archivo de bienvenida: ", e);
+            welcomeMessage = "Error.";
+        }
 
-        Soy *Dahlia UC*, un asistente especializado en brindar soporte tecnológico dentro de la Universidad Católica de Cuenca. Estoy aquí para ayudarte con información y asistencia en temas tecnológicos y operativos de la universidad.
-
-        📌 ¿Cómo puedo asistirte?
-        🔹 Brindo información sobre procesos y servicios tecnológicos.
-        🔹 Respondo consultas relacionadas con soporte técnico y orientación operativa.
-        🔹 Proporciono información sobre herramientas y recursos tecnológicos disponibles para la comunidad universitaria.
-
-        📌 Importante:
-        🔸 Solo proporciono respuestas verificadas, basadas en mi conocimiento actual.
-        🔸 No tengo acceso a información externa ni puedo gestionar trámites administrativos o cambios en los sistemas.
-        """;
         sendStickerMessageByUrl(waId, "https://almacenamiento.ucacue.edu.ec/videos/Dahlia.webp");
         sendMessage(new MessageBody(waId, welcomeMessage));
 
