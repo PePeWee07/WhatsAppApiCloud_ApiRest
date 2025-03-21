@@ -29,9 +29,6 @@ public class ChatSession {
     @Column(name = "phone", nullable = false)
     private String phone;
 
-    @Column(name = "thread_id")
-    private String threadId;
-
     @Column(name = "start_time", nullable = false)
     private LocalDateTime startTime;
 

@@ -40,7 +40,6 @@ public class ChatSessionServiceImpl implements ChatSessionService {
         } else {
             ChatSession newSession = new ChatSession();
             newSession.setPhone(phone);
-            newSession.setThreadId(threadId);
             newSession.setStartTime(now);
             newSession.setEndTime(now.plusHours(sessionDurationHours));
             return chatSessionRepository.save(newSession);
