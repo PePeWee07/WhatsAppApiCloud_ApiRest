@@ -1,12 +1,16 @@
 package com.BackEnd.WhatsappApiCloud.model.entity.User;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -38,7 +42,7 @@ public class UserChatEntity {
     @Column(name = "cedula")
     private String cedula;
 
-    @Column(name = "phone", nullable = false)
+    @Column(name = "phone", unique = true, nullable = false)
     private String phone;
 
     @Column(name = "rol")
@@ -81,5 +85,8 @@ public class UserChatEntity {
     private String sede;
 
     private String carrera;
+
+    @OneToMany(mappedBy = "userChat", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<ChatSession> chatSessions;
 
 }

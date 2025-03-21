@@ -32,6 +32,7 @@ import com.BackEnd.WhatsappApiCloud.model.dto.openIA.QuestionOpenIADto;
 import com.BackEnd.WhatsappApiCloud.model.entity.User.UserChatEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
 import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
+import com.BackEnd.WhatsappApiCloud.service.chatSession.ChatSessionService;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -83,6 +84,9 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     @Autowired
     private UserChatRepository userChatRepository;
 
+    @Autowired
+    private ChatSessionService chatSessionService;
+
 
     // ======================================================
     //   Constructor para inicializar el cliente REST
@@ -106,7 +110,13 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     public ResponseWhatsapp sendMessage(MessageBody payload) {
         try {
             RequestMessage request = RequestBuilder(payload.number(), "text", payload.message());
-            return ResponseBuilder(request, "/messages");
+            ResponseWhatsapp response = ResponseBuilder(request, "/messages");
+
+            if(response != null && response.messages() != null && !response.messages().isEmpty()) {
+                chatSessionService.createSessionIfNotExists(payload.number(), null);
+            }
+        
+            return response;
         } catch (Exception e) {
             logger.error("Error al enviar mensaje: " + e);
             return null;
@@ -170,6 +180,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         newUser.setFirstInteraction(timeNow);
         newUser.setConversationState("WAITING_FOR_CEDULA");
         newUser.setLimitQuestions(3);
+        UserChatEntity savedUser = userChatRepository.save(newUser);
 
         String welcomeMessage = "";
         try {
@@ -183,7 +194,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         sendStickerMessageByUrl(waId, "https://almacenamiento.ucacue.edu.ec/videos/Dahlia.webp");
         sendMessage(new MessageBody(waId, welcomeMessage));
 
-        return userChatRepository.save(newUser);
+        return savedUser;
     }
     // Manejo del estado "WAITING_FOR_CEDULA"
     private ResponseWhatsapp handleWaitingForCedula(UserChatEntity user, String messageText, String waId, LocalDateTime timeNow) {
