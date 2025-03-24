@@ -18,14 +18,13 @@ public class ChatSessionServiceImpl implements ChatSessionService {
      * Si no existe, crea y guarda una nueva sesión.
      *
      * @param phone    Número de teléfono del usuario
-     * @param threadId Identificador del hilo (si es necesario)
      * @return La sesión de chat activa (nueva o existente)
      */
 
     @Autowired
     private ChatSessionRepository chatSessionRepository;
     
-     public ChatSession createSessionIfNotExists(String phone, String threadId) {
+     public ChatSession createSessionIfNotExists(String phone) {
 
         int sessionDurationHours  = 24;
 
@@ -36,12 +35,15 @@ public class ChatSessionServiceImpl implements ChatSessionService {
         List<ChatSession> activeSessions = chatSessionRepository.findByPhoneAndStartTimeBetween(phone, threshold, now);
         
         if (!activeSessions.isEmpty()) {
-            return null;
+            ChatSession activeSession = activeSessions.get(0);
+            activeSession.setMessageCount(activeSession.getMessageCount() + 1);
+            return chatSessionRepository.save(activeSession);
         } else {
             ChatSession newSession = new ChatSession();
             newSession.setPhone(phone);
             newSession.setStartTime(now);
             newSession.setEndTime(now.plusHours(sessionDurationHours));
+            newSession.setMessageCount(0);
             return chatSessionRepository.save(newSession);
         }
     }

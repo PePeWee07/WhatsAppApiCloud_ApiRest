@@ -29,6 +29,9 @@ public class ChatSession {
     @Column(name = "phone", nullable = false)
     private String phone;
 
+    @Column(name = "message_count", nullable = false)
+    private int messageCount = 0;
+
     @Column(name = "start_time", nullable = false)
     private LocalDateTime startTime;
 

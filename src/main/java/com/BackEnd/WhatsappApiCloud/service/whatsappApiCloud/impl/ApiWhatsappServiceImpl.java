@@ -113,7 +113,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             ResponseWhatsapp response = ResponseBuilder(request, "/messages");
 
             if(response != null && response.messages() != null && !response.messages().isEmpty()) {
-                chatSessionService.createSessionIfNotExists(payload.number(), null);
+                chatSessionService.createSessionIfNotExists(payload.number());
             }
         
             return response;
@@ -225,7 +225,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             user.setLastInteraction(timeNow);
             user.setLimitQuestions(user.getLimitQuestions() - 1);
             userChatRepository.save(user);
-            return sendMessage(new MessageBody(waId, "Verifiquemos tu identidad como miembro de la universidad. *Ingresa tu número de cédula.* 🔒"));
+            return sendMessage(new MessageBody(waId, "Verifiquemos tu identidad como miembro de la Universidad. *Ingresa tu número de cédula.* 🔒"));
         }
     }
     // Manejo del estado "READY"
