@@ -522,7 +522,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
             if (contentType == null) {
                 logger.error("No se pudo detectar el tipo MIME de la imagen.");
-                return null;
+                throw new RuntimeException("No se pudo detectar el tipo MIME de la imagen.");
             }
 
             // Construir el cuerpo de la petición multipart
@@ -542,11 +542,11 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             return response;
 
         } catch (IOException e) {
-            logger.error("❌ Error al leer el archivo de imagen: ", e);
-            return null;
+            logger.error("Error al leer el archivo: ", e);
+            throw new RuntimeException("Error al leer el archivo: ", e);
         } catch (Exception e) {
-            logger.error("❌ Error inesperado al subir la imagen: ", e);
-            return null;
+            logger.error("Error inesperado al subir el archivo: ", e);
+            throw new RuntimeException("Error inesperado al subir el archivo: ", e);
         }
     }
 
@@ -562,7 +562,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             return respuesta;
 
         } catch (Exception e) {
-            logger.error("❌ Error al enviar la imagen: ", e);
+            logger.error("Error al enviar la imagen: ", e);
             return null;
         }
     }
@@ -579,7 +579,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             return respuesta;
 
         } catch (Exception e) {
-            logger.error("❌ Error al enviar el video: ", e);
+            logger.error("Error al enviar el video: ", e);
             return null;
         }
     }
@@ -596,7 +596,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             return respuesta;
 
         } catch (Exception e) {
-            logger.error("❌ Error al enviar el sticker: ", e);
+            logger.error("Error al enviar el sticker: ", e);
             return null;
         }
     }
