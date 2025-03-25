@@ -17,7 +17,7 @@ services:
     volumes:
       - .:/app
       - whatsappapicould_logs_dev:/backend/var/log
-      - ./doc/welcome_message.txt:/app/doc/welcome_message.txt
+      - ./welcome_message.txt:/app/doc/welcome_message.txt
     networks:
       - virtual_assistant_network
 

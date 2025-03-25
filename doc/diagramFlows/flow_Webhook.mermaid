@@ -1,0 +1,38 @@
+---
+config:
+  theme: mc
+  look: classic
+  layout: elk
+---
+flowchart TD
+    n1(["Inicio"]) --> n2[/"Enviar status 200 OK"/]
+    n2 --> n2a{{"Try principal"}}
+    n2a --> n3{"¿Tiene algún contacto?"}
+    n2a -.-> err1["Error en el procesamiento del webhook: error"]
+    n3 -- No --> n3a["Ignorar: No hay contacto"]
+    n3 -- Sí --> n3b[/"Extraer: wa_id, name, messageId, timestamp, content, type"/]
+    n3b --> logStep["Guardar en logs"]
+    logStep --> dbStep[("Guardar en Base de Datos")]
+    dbStep --> n4["¿Mensaje anterior al inicio del servidor?"]
+    n4 --> n4a{"¿Es anterior?"}
+    n4a -- Sí --> descartar["Descartar mensaje"]
+    n4a -- No --> n5{"¿Existe URL_BACKEND?"}
+    n5 -- No --> n5a["Error: enviroment URL_BACKEND is not defined"]
+    n5 -- Sí --> sendTrap(["Enviar a servidor Back-end"])
+    sendTrap -.- fallo["fallo"]
+    fallo -.-> err2["Error al enviar los datos: error"]
+    sendTrap --> n23(["FIN"])
+     logStep:::log
+     logStep:::log
+     dbStep:::db
+     dbStep:::db
+    classDef db fill:#c5f4ff,stroke:#333,stroke-width:2
+    classDef log fill:#ffe0b2,stroke:#333,stroke-width:2
+    style n1 fill:lightgreen,stroke:#333,stroke-width:2
+    style n2 fill:#d0f0fd,stroke:#333
+    style err1 fill:#fdd
+    style n3b fill:#fef9c3
+    style n4a fill:#fff9c4
+    style sendTrap fill:#e1bee7,stroke:#333,stroke-width:2
+    style err2 fill:#fdd
+    style n23 fill:lightgreen,stroke:#333,stroke-width:2
