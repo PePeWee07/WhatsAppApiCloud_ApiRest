@@ -16,6 +16,6 @@ public interface ApiWhatsappService {
      // ======================================================
      ResponseWhatsapp sendMessage(MessageBody payload) throws JsonProcessingException;
      ResponseWhatsapp handleUserMessage(WhatsAppDataDto.WhatsAppMessage message) throws JsonMappingException, JsonProcessingException;
-     String uploadImage(File imageFile) throws IOException;
+     String uploadMedia(File mediaFile) throws IOException;
 
 }

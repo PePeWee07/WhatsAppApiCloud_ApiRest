@@ -61,13 +61,13 @@ public class WhatsappController {
         return null;
     }
 
-    @PostMapping("/upload-image")
-    public ResponseEntity<?> uploadImage(@RequestParam("file") MultipartFile file) {
+    @PostMapping("/upload-media-file")
+    public ResponseEntity<?> uploadMedia(@RequestParam("file") MultipartFile file) {
         try {
             // Guardar temporalmente el archivo en el sistema
             File tempFile = File.createTempFile("upload_", file.getOriginalFilename());
             file.transferTo(tempFile);
-            String mediaId = apiWhatsappService.uploadImage(tempFile);
+            String mediaId = apiWhatsappService.uploadMedia(tempFile);
             tempFile.delete();
 
             if (mediaId != null) {

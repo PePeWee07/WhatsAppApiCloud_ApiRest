@@ -515,19 +515,19 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     //  Cargar imagen a la API de WhatsApp
     // ======================================================
     @Override
-    public String uploadImage(File imageFile) {
+    public String uploadMedia(File mediaFile) {
         try {
             // Detectar el tipo MIME de la imagen
-            String contentType = Files.probeContentType(imageFile.toPath());
+            String contentType = Files.probeContentType(mediaFile.toPath());
 
             if (contentType == null) {
-                System.err.println("No se pudo detectar el tipo MIME de la imagen. Usando image/jpeg por defecto."); //! Debug
+                logger.error("No se pudo detectar el tipo MIME de la imagen.");
                 return null;
             }
 
             // Construir el cuerpo de la petición multipart
             MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-            body.add("file", new FileSystemResource(imageFile));
+            body.add("file", new FileSystemResource(mediaFile));
             body.add("type", contentType);
             body.add("messaging_product", "whatsapp");
 
@@ -540,7 +540,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     .body(String.class);
 
             return response;
-
 
         } catch (IOException e) {
             logger.error("❌ Error al leer el archivo de imagen: ", e);
@@ -568,6 +567,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
+
     // ======================================================
     //  Enviar una video por URL como mensaje
     // ======================================================
@@ -583,6 +583,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             return null;
         }
     }
+
 
     // ======================================================
     //  Enviar una Sticker statico/animado por URL como mensaje
