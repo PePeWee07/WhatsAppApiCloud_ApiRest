@@ -19,13 +19,10 @@ flowchart TD
     n4a -- No --> n5{"¿Existe URL_BACKEND?"}
     n5 -- No --> n5a["Error: enviroment URL_BACKEND is not defined"]
     n5 -- Sí --> sendTrap(["Enviar a servidor Back-end"])
-    sendTrap -.- fallo["fallo"]
-    fallo -.-> err2["Error al enviar los datos: error"]
+    sendTrap -- fallo --> err2["Error al enviar los datos: error"]
     sendTrap --> n23(["FIN"])
-     logStep:::log
-     logStep:::log
-     dbStep:::db
-     dbStep:::db
+    logStep:::log
+    dbStep:::db
     classDef db fill:#c5f4ff,stroke:#333,stroke-width:2
     classDef log fill:#ffe0b2,stroke:#333,stroke-width:2
     style n1 fill:lightgreen,stroke:#333,stroke-width:2

@@ -1,0 +1,59 @@
+---
+config:
+  layout: elk
+---
+flowchart TD
+ subgraph subGraph0["Rutas HTTP"]
+        askRoute["POST /ask"]
+        historyRoute["GET /history"]
+        deleteThread["DELETE /delete-thread-id"]
+        deleteThreads["DELETE /delete-threads-ids"]
+  end
+    start(["Inicio de la API Flask"]) --> loadTools["Cargar herramientas desde /tools"]
+    loadTools --> checkEnv["Verificar claves de entorno (API_KEY, MODERATION_KEY, etc.)"]
+    checkEnv --> verifyAssistant["Verificar o recuperar asistente de OpenAI"]
+    verifyAssistant --> askRoute
+
+    %% Detalle del flujo de POST /ask
+    askRoute --> askStart(["Inicio procesamiento /ask"]):::start
+    askStart --> checkAssistant["¿Existe instancia del assistant?"]
+    checkAssistant -- No --> ifNoAssistant["Responder 500: Assistant no disponible"]
+    checkAssistant -- Sí --> moderationCheck["¿Texto con contenido inapropiado?"]
+    moderationCheck -- Inapropiado --> moderationBlocked["Responder 400: Contenido bloqueado"]
+    moderationCheck -- Aprobado --> tokenCheck["¿Texto excede límite de tokens?"]
+    tokenCheck -- Excede --> tokenBlocked["Responder 400: Texto muy largo"]
+    tokenCheck -- OK --> apiKeyCheck["¿API Key válida?"]
+    apiKeyCheck -- Incorrecta --> apiKeyError["Responder 401: No autorizado"]
+    apiKeyCheck -- Correcta --> validateAsk["Validar campos:\n ask, name, phone, rol"]
+    validateAsk --> createThread["Crear o usar thread existente en OpenAI"]
+    createThread --> sendToOpenAI["Enviar pregunta a OpenAI"]
+    sendToOpenAI --> toolRequired{"¿Requiere ejecución de Tool?"}
+    toolRequired -- No --> assistantResponse["Recibir respuesta del assistant"]
+    toolRequired -- Sí --> restrictedCheck{"¿Rol restringido?"}
+    restrictedCheck -- denegado --> toolResult["Enviar resultados al assistant"]
+    restrictedCheck -- retorno_de_funcion:True/False --> executeTool["Ejecutar función registrada\ne.g. solicitarTecnicoCambioCartucho"]
+    executeTool --> toolResult
+    toolResult --> assistantResponse
+    assistantResponse --> cleanText["Limpiar texto de respuesta"]
+    cleanText --> sendResponse["Responder con JSON:\n respuesta + thread_id"]
+    sendResponse --> endAPI(["Esperando nuevas solicitudes"])
+
+    %% Rutas auxiliares
+    historyRoute --> getHistory["Consultar historial del thread"]
+    getHistory --> endAPI
+    deleteThread --> deleteOne["Eliminar un hilo"]
+    deleteOne --> endAPI
+    deleteThreads --> deleteMany["Eliminar múltiples hilos"]
+    deleteMany --> endAPI
+
+    %% Estilos
+    checkEnv:::check
+    verifyAssistant:::check
+    middleware:::middleware
+    executeTool:::tool,toolResult
+    classDef tool fill:#fff3cd,stroke:#d39e00,stroke-width:2
+    classDef check fill:#cce5ff,stroke:#004085,stroke-width:2
+    classDef middleware fill:#f8d7da,stroke:#721c24,stroke-width:2
+    classDef start fill:#d1e7dd,stroke:#0f5132,stroke-width:2
+    classDef error fill:#f8d7da,stroke:#842029;
+    class ifNoAssistant,moderationBlocked,tokenBlocked,apiKeyError error

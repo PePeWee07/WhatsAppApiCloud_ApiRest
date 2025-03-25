@@ -6,7 +6,7 @@ config:
 ---
 flowchart TD
  subgraph one["Desconocido"]
-        I["guardarmos estado como WAITING_FOR_CEDULA"]
+        I[("guardarmos estado como WAITING_FOR_CEDULA")]
         I1["Ha ocurrido un error inesperado 😕. Por favor, inténtalo nuevamente más tarde."]
         I1A(["Fin del proceso"])
   end
@@ -32,7 +32,7 @@ flowchart TD
         G5B1(["Fin del proceso"])
         G4A["limitQuestions = 50"]
         G4A1["strikeLimit = 3"]
-        G6["Actualizar datos usuario (Estado = READY)"]
+        G6[("Actualizar datos usuario (Estado = READY)")]
         G6A@{ label: "¡Hola,  'userName'!👋, ¿Qué consulta académica te gustaría realizar?" }
         G6A1(["Fin del proceso"])
   end
@@ -62,7 +62,7 @@ flowchart TD
         H16A1(["Fin del proceso"])
         H18["Obtener datos del ERP"]
         H19A["Decrementar Limite de pregutnas (-1)"]
-        H19["Actualizar usuario"]
+        H19[("Actualizar usuario")]
         H20["Enviar Respuesta"]
   end
  subgraph principal["Manejo de Respuestas"]
@@ -79,7 +79,7 @@ flowchart TD
         EU["Buscar usuario"]
         EU1{"¿Usuario existe?"}
         EU3["Devolver datos del usuario"]
-        EU2["Crear usuario"]
+        EU2[("Crear usuario")]
         EU2A["Mensaje de Bienvenida"]
         EU4["Devolver datos del usuario"]
         E1{"Usuario bloqueado?"}
