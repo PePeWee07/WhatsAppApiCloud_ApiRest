@@ -22,8 +22,8 @@ import org.springframework.web.client.RestClient;
 
 import com.BackEnd.WhatsappApiCloud.exception.ApiInfoException;
 import com.BackEnd.WhatsappApiCloud.exception.CustomJsonServerException;
-import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestMessage;
-import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestMessageText;
+import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestMessages;
+import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestMessagesFactory;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestWhatsappAsRead;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppDataDto;
@@ -109,14 +109,15 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     @Override
     public ResponseWhatsapp sendMessage(MessageBody payload) {
         try {
-            RequestMessage request = RequestBuilder(payload.number(), "text", payload.message());
-            ResponseWhatsapp response = ResponseBuilder(request, "/messages");
+            RequestMessages requestBody = RequestMessagesFactory.buildTextMessage(payload.number(), payload.message());
+            ResponseWhatsapp response = NewResponseBuilder(requestBody, "/messages");
 
-            if(response != null && response.messages() != null && !response.messages().isEmpty()) {
+            if (response != null && response.messages() != null && !response.messages().isEmpty()) {
                 chatSessionService.createSessionIfNotExists(payload.number());
             }
-        
+
             return response;
+
         } catch (Exception e) {
             logger.error("Error al enviar mensaje: " + e);
             return null;
@@ -191,6 +192,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             welcomeMessage = "Error.";
         }
 
+        // sendImageMessageByUrl(waId, "https://static.wikia.nocookie.net/pokemon-unite/images/8/84/Holoatuendo_Gengar_Reportero.png/revision/latest?cb=20220928004647&path-prefix=es");
+        // sendVideoMessageByUrl(waId, "https://almacenamiento.ucacue.edu.ec/videos/Dahlia.mp4", "Hola, soy Dahlia, tu asistente virtual. ¿En qué puedo ayudarte?");
         sendStickerMessageByUrl(waId, "https://almacenamiento.ucacue.edu.ec/videos/Dahlia.webp");
         sendMessage(new MessageBody(waId, welcomeMessage));
 
@@ -490,37 +493,20 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     // ======================================================
     //   Constructor de mensajes de respuesta
     // ======================================================
-    private ResponseWhatsapp ResponseBuilder(RequestMessage responseType, String uri) {
+    private ResponseWhatsapp NewResponseBuilder(RequestMessages requestBody, String uri) {
         String response = restClient.post()
-                    .uri(uri)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(responseType)
-                    .retrieve()
-                    .body(String.class);
+                .uri(uri)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(requestBody)
+                .retrieve()
+                .body(String.class);
+    
         ObjectMapper obj = new ObjectMapper();
         try {
             return obj.readValue(response, ResponseWhatsapp.class);
         } catch (JsonProcessingException e) {
-            logger.error("Error al procesar JSON: " + e);
+            logger.error("Error al procesar JSON: " + e.getMessage());
             throw new RuntimeException("Error processing JSON", e);
-        }
-    }
-
-
-    // ======================================================
-    //   Constructor de mensajes de petición
-    // ======================================================
-    public RequestMessage RequestBuilder(String toPhone, String request, String responseMessage) {
-        try {
-            return new RequestMessage(
-                    "whatsapp",
-                    "individual",
-                    toPhone,
-                    request,
-                    new RequestMessageText(false, responseMessage));
-        } catch (Exception e) {
-            logger.error("Error al construir mensaje de petición: " + e);
-            return null;
         }
     }
 
@@ -565,31 +551,16 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
+
     // ======================================================
     //  Enviar una imagen por URL como mensaje
     // ======================================================
     public ResponseWhatsapp sendImageMessageByUrl(String toPhoneNumber, String imageUrl) {
         try {
-            // Construcción del cuerpo del mensaje
-            com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.requestImage.RequestMessage request = new com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.requestImage.RequestMessage(
-                    "whatsapp",
-                    "individual",
-                    toPhoneNumber,
-                    "image",
-                    new com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.requestImage.RequestMessageImageUrl(imageUrl)
-            );
+            RequestMessages mensajeImage = RequestMessagesFactory.buildImageByUrl(toPhoneNumber, imageUrl);
 
-            // Envío de la solicitud
-            String response = restClient.post()
-                    .uri("/messages")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(request)
-                    .retrieve()
-                    .body(String.class);
-
-            // Procesamiento de la respuesta
-            ObjectMapper objectMapper = new ObjectMapper();
-            return objectMapper.readValue(response, ResponseWhatsapp.class);
+            ResponseWhatsapp respuesta = NewResponseBuilder(mensajeImage, "/messages");
+            return respuesta;
 
         } catch (Exception e) {
             logger.error("❌ Error al enviar la imagen: ", e);
@@ -602,26 +573,10 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     // ======================================================
     public ResponseWhatsapp sendVideoMessageByUrl(String toPhoneNumber, String videoUrl, String caption) {
         try {
-            // Construcción del cuerpo del mensaje
-            com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.requestVideo.RequestMessage request = new com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.requestVideo.RequestMessage(
-                    "whatsapp",
-                    "individual",
-                    toPhoneNumber,
-                    "video",
-                    new com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.requestVideo.RequestMessageVideoUrl(videoUrl, caption)
-            );
+            RequestMessages mensajeVideo = RequestMessagesFactory.buildVideoByUrl(toPhoneNumber, videoUrl, caption);
 
-            // Envío de la solicitud
-            String response = restClient.post()
-                    .uri("/messages")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(request)
-                    .retrieve()
-                    .body(String.class);
-
-            // Procesamiento de la respuesta
-            ObjectMapper objectMapper = new ObjectMapper();
-            return objectMapper.readValue(response, ResponseWhatsapp.class);
+            ResponseWhatsapp respuesta = NewResponseBuilder(mensajeVideo, "/messages");
+            return respuesta;
 
         } catch (Exception e) {
             logger.error("❌ Error al enviar el video: ", e);
@@ -634,26 +589,10 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     // ======================================================
     public ResponseWhatsapp sendStickerMessageByUrl(String toPhoneNumber, String stickerUrl) {
         try {
-            // Construcción del cuerpo del mensaje
-            com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.requestSticker.RequestMessage request = new com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.requestSticker.RequestMessage(
-                    "whatsapp",
-                    "individual",
-                    toPhoneNumber,
-                    "sticker",
-                    new com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.requestSticker.RequestMessageStickerUrl(stickerUrl)
-            );
+            RequestMessages mensajeSticker = RequestMessagesFactory.buildStickerByUrl(toPhoneNumber, stickerUrl);
 
-            // Envío de la solicitud
-            String response = restClient.post()
-                    .uri("/messages")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(request)
-                    .retrieve()
-                    .body(String.class);
-
-            // Procesamiento de la respuesta
-            ObjectMapper objectMapper = new ObjectMapper();
-            return objectMapper.readValue(response, ResponseWhatsapp.class);
+            ResponseWhatsapp respuesta = NewResponseBuilder(mensajeSticker, "/messages");
+            return respuesta;
 
         } catch (Exception e) {
             logger.error("❌ Error al enviar el sticker: ", e);
