@@ -3,7 +3,7 @@ version: '3.9'
 services:
   backend:
     container_name: whatsapp-api-cloud-app
-    image: pepewee/whatsapp-api-cloud:latest
+    image: pepewee/whatsapp-api-cloud:1.1.0-beta
     ports:
       - "8082:8082"
     env_file:
