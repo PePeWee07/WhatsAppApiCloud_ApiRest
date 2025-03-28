@@ -49,12 +49,19 @@ public class ApiKeyFilter extends OncePerRequestFilter {
     // ======================================================
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+
+        String path = request.getRequestURI();
+        if ("/health".equals(path) || "/health/".equals(path)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+        
         try {
             String receivedApiKey = request.getHeader(API_KEY_HEADER);
 
             if (receivedApiKey == null || !receivedApiKey.equals(apiKey)) {
-                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                response.getWriter().write("{Prohibido: Clave API no valida}");
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                response.getWriter().write("{\"error\": \"Prohibido: Clave API no valida\"}");
                 return;
             }
 

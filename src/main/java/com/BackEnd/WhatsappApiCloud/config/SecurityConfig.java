@@ -22,8 +22,12 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             .csrf(csrf -> csrf.disable())
-            .addFilterBefore(apiKeyFilter, UsernamePasswordAuthenticationFilter.class) // Agregar el filtro antes de UsernamePasswordAuthenticationFilter
-            .authorizeHttpRequests(auth -> auth.anyRequest().authenticated());
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/health").permitAll() // permite sin autenticación
+                .anyRequest().authenticated()           // el resto requiere API key
+            )
+            .addFilterBefore(apiKeyFilter, UsernamePasswordAuthenticationFilter.class); // tu filtro de API key
+
         return http.build();
     }
 }
