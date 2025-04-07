@@ -51,7 +51,7 @@ public class ApiKeyFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
 
         String path = request.getRequestURI();
-        if ("/health".equals(path) || "/health/".equals(path)) {
+        if ("/api/health".equals(path) || "/api/health/".equals(path)) {
             filterChain.doFilter(request, response);
             return;
         }

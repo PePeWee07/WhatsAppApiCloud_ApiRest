@@ -23,8 +23,8 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/health").permitAll() // permite sin autenticación
-                .anyRequest().authenticated()           // el resto requiere API key
+                .requestMatchers("/api/health").permitAll()
+                .anyRequest().authenticated()
             )
             .addFilterBefore(apiKeyFilter, UsernamePasswordAuthenticationFilter.class); // tu filtro de API key
 

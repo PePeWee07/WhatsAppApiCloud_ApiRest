@@ -15,7 +15,7 @@ public class HealthController {
     // ======================================================
     //   Health Check
     // ======================================================
-    @GetMapping("/health")
+    @GetMapping("/api/health")
     public ResponseEntity<Map<String, Object>> healthCheck() {
         Map<String, Object> response = new HashMap<>();
         response.put("status", "ok");
