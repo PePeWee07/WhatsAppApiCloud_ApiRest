@@ -20,6 +20,7 @@ import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
+
 @RestController
 @RequestMapping("/api/v1/whatsapp")
 public class WhatsappController {
@@ -61,6 +62,10 @@ public class WhatsappController {
         return null;
     }
 
+
+    // ======================================================
+    //   Cargar archivo multimedia a server de WhatsApp
+    // ======================================================
     @PostMapping("/upload-media-file")
     public ResponseEntity<?> uploadMedia(@RequestParam("file") MultipartFile file) {
         try {
