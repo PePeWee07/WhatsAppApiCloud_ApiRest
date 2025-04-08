@@ -16,7 +16,7 @@ public class HealthController {
     // ======================================================
     //   Health Check
     // ======================================================
-    @CrossOrigin(origins = "*")
+    @CrossOrigin(origins = "https://ia-sp-backoffice.ucatolica.cue.ec")
     @GetMapping("/api/health")
     public ResponseEntity<Map<String, Object>> healthCheck() {
         Map<String, Object> response = new HashMap<>();
