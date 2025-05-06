@@ -27,5 +27,6 @@ pipelines:
                 SSH_KEY:  "$SSH_KEY"
                 COMMAND: |
                   docker pull pepewee/whatsapp-api-cloud:latest
-                  cd /data/sites/…
+                  cd /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end
                   docker-compose down && docker-compose up -d
+                  echo "Deployment complete!"
