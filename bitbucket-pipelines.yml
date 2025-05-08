@@ -28,5 +28,7 @@ pipelines:
                 COMMAND: |
                   docker pull pepewee/whatsapp-api-cloud:latest
                   cd /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end
-                  docker-compose down && docker-compose up -d
+                  docker-compose down --remove-orphans
+                  docker-compose rm -f
+                  docker-compose up -d --force-recreate --remove-orphans
                   echo "Deployment complete!"
