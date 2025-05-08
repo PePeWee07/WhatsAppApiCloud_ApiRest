@@ -194,7 +194,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
         // sendImageMessageByUrl(waId, "https://static.wikia.nocookie.net/pokemon-unite/images/8/84/Holoatuendo_Gengar_Reportero.png/revision/latest?cb=20220928004647&path-prefix=es");
         // sendVideoMessageByUrl(waId, "https://almacenamiento.ucacue.edu.ec/videos/Dahlia.mp4", "Hola, soy Dahlia, tu asistente virtual. ¿En qué puedo ayudarte?");
-        sendStickerMessageByUrl(waId, "https://almacenamiento.ucacue.edu.ec/videos/Dahlia.webp");
+        sendStickerMessageByUrl(waId, "https://almacenamiento.ucacue.edu.ec/videos/VA-with-logo-uc-Photoroom-ezgif.com-png-to-webp-converter.webp");
         sendMessage(new MessageBody(waId, welcomeMessage));
 
         return savedUser;
