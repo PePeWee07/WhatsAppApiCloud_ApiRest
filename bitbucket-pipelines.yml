@@ -26,8 +26,7 @@ pipelines:
                 SERVER:   "$SSH_HOST"
                 SSH_KEY:  "$SSH_KEY"
                 COMMAND: |
+                  echo $DOCKER_HUB_TOKEN | docker login -u $DOCKER_HUB_USER --password-stdin
                   docker pull pepewee/whatsapp-api-cloud:latest
-                  cd /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end
-                  docker-compose down --remove-orphans
-                  docker-compose up -d --remove-orphans
-                  echo "Deployment complete!"
+                  docker-compose -f /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end/docker-compose.yml down
+                  docker-compose -f /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end/docker-compose.yml up -d
