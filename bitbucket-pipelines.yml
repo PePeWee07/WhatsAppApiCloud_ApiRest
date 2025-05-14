@@ -27,8 +27,15 @@ pipelines:
                 SERVER:   "$SSH_HOST"
                 SSH_KEY:  "$SSH_KEY"
                 COMMAND: >
-                  cd /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end &&
+                  cd /data/sites/ia-sp-backoffice.ucacue.ec/html/back-end &&
                   echo "$DOCKER_HUB_TOKEN" | docker login -u "$DOCKER_HUB_USER" --password-stdin &&
                   docker pull pepewee/whatsapp-api-cloud:latest &&
-                  docker-compose down --remove-orphans &&
+
+                  # 1) Forzar eliminación de cualquier contenedor previo con esos nombres
+                  docker rm -f whatsapp-api-cloud-app whatsapp-api-cloud-db || true &&
+
+                  # 2) Bajar servicios gestionados por Compose (y limpiar huérfanos)
+                  docker-compose down --remove-orphans || true &&
+
+                  # 3) Levantar de nuevo en modo detach y recrear siempre
                   docker-compose up -d --force-recreate --remove-orphans
