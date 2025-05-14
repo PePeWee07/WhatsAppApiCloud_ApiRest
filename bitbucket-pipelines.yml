@@ -29,5 +29,7 @@ pipelines:
                   docker container prune -f
                   echo $DOCKER_HUB_TOKEN | docker login -u $DOCKER_HUB_USER --password-stdin
                   docker pull pepewee/whatsapp-api-cloud:latest
-                  docker-compose -f /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end/docker-compose.yml down
+                  docker-compose -f /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end/docker-compose.yml down --remove-orphans
+                  docker rm -f whatsapp-api-cloud-db whatsapp-api-cloud-app || true
+                  docker container prune -f
                   docker-compose -f /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end/docker-compose.yml up -d
