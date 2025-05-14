@@ -2,6 +2,9 @@ package com.BackEnd.WhatsappApiCloud.model.entity.User;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -40,5 +43,6 @@ public class ChatSession {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "phone", referencedColumnName = "phone", insertable = false, updatable = false)
+    @JsonBackReference
     private UserChatEntity userChat;
 }

@@ -16,9 +16,13 @@ import org.springframework.web.multipart.MultipartFile;
 import com.BackEnd.WhatsappApiCloud.config.ApiKeyFilter;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppDataDto;
+import com.BackEnd.WhatsappApiCloud.model.entity.User.UserChatEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
+import com.BackEnd.WhatsappApiCloud.service.userChat.UserchatService;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import org.springframework.web.bind.annotation.GetMapping;
+
 
 
 @RestController
@@ -26,9 +30,11 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 public class WhatsappController {
 
     private final ApiWhatsappService apiWhatsappService;
+    private final UserchatService userchatService;
 
-    public WhatsappController(ApiWhatsappService apiWhatsappService) {
+    public WhatsappController(ApiWhatsappService apiWhatsappService, UserchatService userchatService) {
         this.apiWhatsappService = apiWhatsappService;
+        this.userchatService = userchatService;
     }
 
     @Autowired
@@ -85,5 +91,26 @@ public class WhatsappController {
             return ResponseEntity.status(500).body("Error al procesar el archivo: " + e.getMessage());
         }
     }
+
+    // ======================================================
+    //   Encontrar usuario por cedula o telefono
+    // ======================================================
+    @GetMapping("/user/find")
+    public UserChatEntity findUser(
+            @RequestParam(value = "cedula", required = false) String cedula,
+            @RequestParam(value = "telefono", required = false) String telefono) {
+
+        if (cedula != null) {
+            UserChatEntity dto = userchatService.findByCedula(cedula);
+            return dto;
+        }
+
+        if (telefono != null) {
+            UserChatEntity dto = userchatService.findByPhone(telefono);
+            return dto;
+        }
+        
+        return null;
+    }  
     
 }
