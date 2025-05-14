@@ -27,7 +27,7 @@ pipelines:
                 SERVER:   "$SSH_HOST"
                 SSH_KEY:  "$SSH_KEY"
                 COMMAND: >
-                  cd /data/sites/ia-sp-backoffice.ucacue.ec/html/back-end &&
+                  cd /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end &&
                   echo "$DOCKER_HUB_TOKEN" | docker login -u "$DOCKER_HUB_USER" --password-stdin &&
                   docker pull pepewee/whatsapp-api-cloud:latest &&
                   docker rm -f whatsapp-api-cloud-db whatsapp-api-cloud-app || true &&
