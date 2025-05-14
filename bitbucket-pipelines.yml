@@ -14,22 +14,28 @@ pipelines:
             - echo $DOCKER_HUB_TOKEN | docker login -u $DOCKER_HUB_USER --password-stdin
             - docker push pepewee/whatsapp-api-cloud:$VERSION
             - docker push pepewee/whatsapp-api-cloud:latest
+
       - step:
           name: Deploy to Server
           runs-on:
             - self.hosted
             - linux
           script:
-            - pipe: atlassian/ssh-run:0.4.3
+            - pipe: atlassian/ssh-run:0.7.0
               variables:
                 SSH_USER: "$SSH_USER"
                 SERVER:   "$SSH_HOST"
                 SSH_KEY:  "$SSH_KEY"
                 COMMAND: |
                   set -e
+                  # Nos situamos donde están el docker-compose.yml y el .env
+                  cd /data/sites/ia-sp-backoffice.ucacue.ec/html/back-end
+
+                  # Login, pull y redeploy
                   echo "$DOCKER_HUB_TOKEN" | docker login -u "$DOCKER_HUB_USER" --password-stdin
                   docker pull pepewee/whatsapp-api-cloud:latest
-                  docker-compose -f /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end/docker-compose.yml \
-                  down --remove-orphans
-                  docker-compose -f /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end/docker-compose.yml \
-                  up -d --force-recreate --remove-orphans
+
+                  docker-compose down --remove-orphans
+                  docker-compose up -d --force-recreate --remove-orphans
+                MODE:   "script"
+                DEBUG:  "true"
