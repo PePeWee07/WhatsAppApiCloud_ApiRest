@@ -26,11 +26,8 @@ pipelines:
                 SSH_USER: "$SSH_USER"
                 SERVER:   "$SSH_HOST"
                 SSH_KEY:  "$SSH_KEY"
-                COMMAND: >
-                  cd /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end &&
-                  echo "$DOCKER_HUB_TOKEN" | docker login -u "$DOCKER_HUB_USER" --password-stdin &&
-                  docker-compose down --remove-orphans --timeout 60 || true &&
-                  docker rm -f whatsapp-api-cloud-app whatsapp-api-cloud-db || true &&
-                  sleep 5 &&
-                  docker pull pepewee/whatsapp-api-cloud:latest &&
-                  docker-compose up -d --force-recreate --remove-orphans
+                COMMAND: |
+                  echo $DOCKER_HUB_TOKEN | docker login -u $DOCKER_HUB_USER --password-stdin
+                  docker pull pepewee/whatsapp-api-cloud:latest
+                  docker-compose -f /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end/docker-compose.yml down
+                  docker-compose -f /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end/docker-compose.yml up -d
