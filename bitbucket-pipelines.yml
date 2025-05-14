@@ -29,7 +29,8 @@ pipelines:
                 COMMAND: >
                   cd /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end &&
                   echo "$DOCKER_HUB_TOKEN" | docker login -u "$DOCKER_HUB_USER" --password-stdin &&
-                  docker pull pepewee/whatsapp-api-cloud:latest &&
+                  docker-compose down --remove-orphans --timeout 60 || true &&
                   docker rm -f whatsapp-api-cloud-app whatsapp-api-cloud-db || true &&
-                  docker-compose down --remove-orphans || true &&
+                  sleep 5 &&
+                  docker pull pepewee/whatsapp-api-cloud:latest &&
                   docker-compose up -d --force-recreate --remove-orphans
