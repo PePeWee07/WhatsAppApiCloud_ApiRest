@@ -1,4 +1,4 @@
-package com.BackEnd.WhatsappApiCloud.model.entity.User;
+package com.BackEnd.WhatsappApiCloud.model.entity.user;
 
 import java.time.LocalDateTime;
 import java.util.List;

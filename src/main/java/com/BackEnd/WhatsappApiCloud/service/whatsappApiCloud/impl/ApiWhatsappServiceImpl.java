@@ -29,7 +29,7 @@ import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.Respo
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppDataDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.openIA.AnswersOpenIADto;
 import com.BackEnd.WhatsappApiCloud.model.dto.openIA.QuestionOpenIADto;
-import com.BackEnd.WhatsappApiCloud.model.entity.User.UserChatEntity;
+import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
 import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
 import com.BackEnd.WhatsappApiCloud.service.chatSession.ChatSessionService;

@@ -16,7 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.BackEnd.WhatsappApiCloud.config.ApiKeyFilter;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppDataDto;
-import com.BackEnd.WhatsappApiCloud.model.entity.User.UserChatEntity;
+import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
 import com.BackEnd.WhatsappApiCloud.service.userChat.UserchatService;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;

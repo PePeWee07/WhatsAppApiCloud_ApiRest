@@ -3,7 +3,7 @@ package com.BackEnd.WhatsappApiCloud.service.userChat.impl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.BackEnd.WhatsappApiCloud.model.entity.User.UserChatEntity;
+import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
 import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
 import com.BackEnd.WhatsappApiCloud.service.userChat.UserchatService;
 

@@ -1,9 +1,8 @@
-package com.BackEnd.WhatsappApiCloud.model.entity.User;
+package com.BackEnd.WhatsappApiCloud.model.entity.user;
 
 import java.time.LocalDateTime;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

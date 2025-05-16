@@ -3,7 +3,8 @@ package com.BackEnd.WhatsappApiCloud.repository;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import com.BackEnd.WhatsappApiCloud.model.entity.User.ChatSession;
+import com.BackEnd.WhatsappApiCloud.model.entity.user.ChatSession;
+
 import java.util.List;
 import java.time.LocalDateTime;
 
