@@ -30,4 +30,5 @@ pipelines:
                   echo $DOCKER_HUB_TOKEN | docker login -u $DOCKER_HUB_USER --password-stdin
                   docker pull pepewee/whatsapp-api-cloud:latest
                   docker-compose -f /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end/docker-compose.yml down
+                  sleep 10
                   docker-compose -f /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end/docker-compose.yml up -d
