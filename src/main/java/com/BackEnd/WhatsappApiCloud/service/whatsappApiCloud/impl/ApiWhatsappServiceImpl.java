@@ -180,7 +180,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         newUser.setPhone(waId);
         newUser.setFirstInteraction(timeNow);
         newUser.setConversationState("WAITING_FOR_CEDULA");
-        newUser.setLimitQuestions(3);
+        newUser.setLimitQuestions(4);
         UserChatEntity savedUser = userChatRepository.save(newUser);
 
         String welcomeMessage = "";
@@ -215,7 +215,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 if (intentosRestantes == 2) {
                     return sendMessage(new MessageBody(waId, "Actualmente no perteneces a la Universidad Católica de Cuenca ❌. Este servicio es exclusivo para miembros de la universidad."));
                 } else if (intentosRestantes == 1) {
-                    return sendMessage(new MessageBody(waId, "Volveré a verificar tu cédula."));
+                    return sendMessage(new MessageBody(waId, "Intentémoslo nuevamente. Por favor, ingresa tu número de cédula para verificar tu identidad como miembro de la Universidad."));
                 } else if (intentosRestantes == 0) {
                     return sendMessage(new MessageBody(waId, "No hemos podido verificar tu cédula. Por favor, verifica que la información sea correcta y vuelve a intentarlo más tarde."));
                 } else {
