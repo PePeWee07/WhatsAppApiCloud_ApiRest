@@ -3,6 +3,9 @@ package com.BackEnd.WhatsappApiCloud.model.entity.user;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
+
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.CascadeType;
@@ -88,7 +91,10 @@ public class UserChatEntity {
 
     private String carrera;
 
-    @OneToMany(mappedBy = "userChat", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "userChat",
+           cascade = CascadeType.ALL,
+           fetch = FetchType.LAZY)
+    @Fetch(FetchMode.SUBSELECT)
     @JsonManagedReference
     private List<ChatSession> chatSessions;
 
