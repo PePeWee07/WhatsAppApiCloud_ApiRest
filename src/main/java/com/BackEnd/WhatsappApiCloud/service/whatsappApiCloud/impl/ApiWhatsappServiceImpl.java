@@ -200,49 +200,45 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         return savedUser;
     }
     // Manejo del estado "WAITING_FOR_CEDULA"
-    private ResponseWhatsapp handleWaitingForCedula(UserChatEntity user, String messageText, String waId, LocalDateTime timeNow) {
-        if (isValidCedula(messageText)) {
+private ResponseWhatsapp handleWaitingForCedula(UserChatEntity user,
+                                               String messageText,
+                                               String waId,
+                                               LocalDateTime timeNow) {
+    // 1. Decrementar intentos y guardar
+    user.setLastInteraction(timeNow);
+    user.setLimitQuestions(user.getLimitQuestions() - 1);
+    userChatRepository.save(user);
+    int restantes = user.getLimitQuestions();
 
-            //! Si NO encuentro la cédula dentro de ERP
-            UserChatEntity userFromJsonServer = fetchUserFromJsonServer(messageText);
-            if (userFromJsonServer == null) {
-                user.setLastInteraction(timeNow);
-                user.setLimitQuestions(user.getLimitQuestions() - 1);
-                userChatRepository.save(user);
-
-                int intentosRestantes = user.getLimitQuestions();
-
-                if (intentosRestantes == 2) {
-                    return sendMessage(new MessageBody(waId, "Actualmente no perteneces a la Universidad Católica de Cuenca ❌. Este servicio es exclusivo para miembros de la universidad."));
-                } else if (intentosRestantes == 1) {
-                    return sendMessage(new MessageBody(waId, "Intentémoslo nuevamente. Por favor, ingresa tu número de cédula para verificar tu identidad como miembro de la Universidad."));
-                } else if (intentosRestantes == 0) {
-                    return sendMessage(new MessageBody(waId, "No hemos podido verificar tu cédula. Por favor, verifica que la información sea correcta y vuelve a intentarlo más tarde."));
-                } else {
-                    return null;
-                }
-            }
-            //! Si encuentro la cédula dentro de ERP
-            else {
-                updateUserWithJsonServerData(user, userFromJsonServer, timeNow);
-                userChatRepository.save(user);
-                return sendMessage(new MessageBody(waId, "¡Hola, " + user.getNombres() + "!👋, ¿Qué consulta te gustaría realizar?"));
-            }
-        } else {
-            //! Si ya se han agotado los intentos
-            if (user.getLimitQuestions() <= 0) {
-                user.setBlock(true);
-                user.setBlockingReason("Demasiados intentos de cédula incorrecta");
-                userChatRepository.save(user);
-                return null;
-            }
-
-            user.setLastInteraction(timeNow);
-            user.setLimitQuestions(user.getLimitQuestions() - 1);
-            userChatRepository.save(user);
-            return sendMessage(new MessageBody(waId, "Verifiquemos tu identidad como miembro de la Universidad. *Ingresa tu número de cédula.* 🔒"));
-        }
+    // 2. Si se agotaron
+    if (restantes <= 0) {
+        user.setBlock(true);
+        user.setBlockingReason("Demasiados intentos de cédula incorrecta");
+        userChatRepository.save(user);
+        return sendMessage(new MessageBody(waId,
+            "Has agotado todos tus intentos. Por favor, inténtalo nuevamente más tarde."));
     }
+
+    // 3. Formato inválido
+    if (!isValidCedula(messageText)) {
+        return sendMessage(new MessageBody(waId,
+            String.format("Número de cédula inválido ❌. Te quedan %d intento(s).", restantes)));
+    }
+
+    // 4. Formato válido, pero no existe en ERP
+    UserChatEntity servidor = fetchUserFromJsonServer(messageText);
+    if (servidor == null) {
+        return sendMessage(new MessageBody(waId,
+            String.format("No encontramos tu cédula en nuestro sistema ❌. Te quedan %d intento(s).", restantes)));
+    }
+
+    // 5. Éxito: actualizamos datos y saludamos
+    updateUserWithJsonServerData(user, servidor, timeNow);
+    userChatRepository.save(user);
+    return sendMessage(new MessageBody(waId,
+        "¡Hola, " + user.getNombres() + "! 👋 ¿Qué consulta te gustaría realizar?"));
+}
+
     // Manejo del estado "READY"
     private ResponseWhatsapp handleReadyState(UserChatEntity user, String messageText, String waId, LocalDateTime timeNow) throws JsonProcessingException {
 
