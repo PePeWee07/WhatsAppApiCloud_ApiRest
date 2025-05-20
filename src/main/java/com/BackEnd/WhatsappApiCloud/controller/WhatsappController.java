@@ -120,9 +120,9 @@ public class WhatsappController {
      * Listado paginado de usuarios junto con sus sesiones de chat.
      *
      * Ejemplos de llamada:
-     * GET /api/user/page/users/0
-     * GET /api/user/page/users/0?pageSize=5
-     * GET /api/user/page/users/0?pageSize=5&sortBy=phone&direction=desc
+     * GET /api/v1/whatsapp/page/users/0
+     * GET /api/v1/whatsapp/page/users/0?pageSize=5
+     * GET /api/v1/whatsapp/page/users/0?pageSize=5&sortBy=phone&direction=desc
      *
      * @param page      número de página (0-based)
      * @param pageSize  tamaño de cada página
