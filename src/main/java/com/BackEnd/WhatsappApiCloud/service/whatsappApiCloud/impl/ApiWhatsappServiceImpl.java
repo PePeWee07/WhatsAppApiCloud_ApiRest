@@ -203,18 +203,25 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     private ResponseWhatsapp handleWaitingForCedula(UserChatEntity user, String messageText, String waId, LocalDateTime timeNow) {
         if (isValidCedula(messageText)) {
 
-            //TODO: Aqui procedemos hacer 2 reintento de verificacion de Cedula se deberia bloquear al agotarce los intentos
-
             //! Si NO encuentro la cédula dentro de ERP
             UserChatEntity userFromJsonServer = fetchUserFromJsonServer(messageText);
             if (userFromJsonServer == null) {
                 user.setLastInteraction(timeNow);
-                user.setBlock(true);
-                user.setBlockingReason("No pertenece a la Universidad");
+                user.setLimitQuestions(user.getLimitQuestions() - 1);
                 userChatRepository.save(user);
-                return sendMessage(new MessageBody(waId, "Actualmente no perteneces a la Universidad Católica de Cuenca ❌. Este servicio es exclusivo para miembros de la universidad."));
+
+                int intentosRestantes = user.getLimitQuestions();
+
+                if (intentosRestantes == 2) {
+                    return sendMessage(new MessageBody(waId, "Actualmente no perteneces a la Universidad Católica de Cuenca ❌. Este servicio es exclusivo para miembros de la universidad."));
+                } else if (intentosRestantes == 1) {
+                    return sendMessage(new MessageBody(waId, "Volveré a verificar tu cédula."));
+                } else if (intentosRestantes == 0) {
+                    return sendMessage(new MessageBody(waId, "No hemos podido verificar tu cédula. Por favor, verifica que la información sea correcta y vuelve a intentarlo más tarde."));
+                } else {
+                    return null;
+                }
             }
-            
             //! Si encuentro la cédula dentro de ERP
             else {
                 updateUserWithJsonServerData(user, userFromJsonServer, timeNow);
@@ -224,6 +231,9 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         } else {
             //! Si ya se han agotado los intentos
             if (user.getLimitQuestions() <= 0) {
+                user.setBlock(true);
+                user.setBlockingReason("Demasiados intentos de cédula incorrecta");
+                userChatRepository.save(user);
                 return null;
             }
 
