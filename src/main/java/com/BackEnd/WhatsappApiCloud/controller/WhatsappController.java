@@ -22,8 +22,8 @@ import com.BackEnd.WhatsappApiCloud.service.userChat.UserchatService;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.springframework.web.bind.annotation.GetMapping;
-
-
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.data.domain.Page;
 
 @RestController
 @RequestMapping("/api/v1/whatsapp")
@@ -111,6 +111,33 @@ public class WhatsappController {
         }
         
         return null;
-    }  
-    
+    }
+
+    // ======================================================
+    //   Paginar todos los usuarios
+    // ======================================================
+    /**
+     * Listado paginado de usuarios junto con sus sesiones de chat.
+     *
+     * Ejemplos de llamada:
+     * GET /api/user/page/users/0
+     * GET /api/user/page/users/0?pageSize=5
+     * GET /api/user/page/users/0?pageSize=5&sortBy=phone&direction=desc
+     *
+     * @param page      número de página (0-based)
+     * @param pageSize  tamaño de cada página
+     * @param sortBy    campo por el que ordenar
+     * @param direction dirección de orden (asc o desc)
+     * @return página de UserChatEntity con metadatos de paginación
+     */
+    @GetMapping("/page/users/{page}")
+    public ResponseEntity<Page<UserChatEntity>> listUsers(
+            @PathVariable("page") int page,
+            @RequestParam(value = "pageSize", defaultValue = "10") int pageSize,
+            @RequestParam(value = "sortBy", defaultValue = "nombres") String sortBy,
+            @RequestParam(value = "direction", defaultValue = "asc") String direction) {
+
+        Page<UserChatEntity> usersPage = userchatService.findAll(page, pageSize, sortBy, direction);
+        return ResponseEntity.ok(usersPage);
+    }
 }

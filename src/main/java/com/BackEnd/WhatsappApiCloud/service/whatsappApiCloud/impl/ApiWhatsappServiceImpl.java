@@ -203,6 +203,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     private ResponseWhatsapp handleWaitingForCedula(UserChatEntity user, String messageText, String waId, LocalDateTime timeNow) {
         if (isValidCedula(messageText)) {
 
+            //TODO: Aqui procedemos hacer 2 reintento de verificacion de Cedula se deberia bloquear al agotarce los intentos
+
             //! Si NO encuentro la cédula dentro de ERP
             UserChatEntity userFromJsonServer = fetchUserFromJsonServer(messageText);
             if (userFromJsonServer == null) {
