@@ -1,3 +1,5 @@
+image: atlassian/default-image:2
+
 pipelines:
   branches:
     main:
@@ -6,12 +8,17 @@ pipelines:
           runs-on:
             - self.hosted
             - linux
-          services: [ docker ]
+          services:
+            - docker
+          caches:
+            - docker
           script:
-            - echo "Building image…"
+            - echo "Building Docker image"
             - docker build -t pepewee/whatsapp-api-cloud:$VERSION .
             - docker tag pepewee/whatsapp-api-cloud:$VERSION pepewee/whatsapp-api-cloud:latest
+            - echo "Logging in to Docker Hub"
             - echo $DOCKER_HUB_TOKEN | docker login -u $DOCKER_HUB_USER --password-stdin
+            - echo "Pushing image to Docker Hub"
             - docker push pepewee/whatsapp-api-cloud:$VERSION
             - docker push pepewee/whatsapp-api-cloud:latest
 
@@ -24,11 +31,16 @@ pipelines:
             - pipe: atlassian/ssh-run:0.8.1
               variables:
                 SSH_USER: "$SSH_USER"
-                SERVER:   "$SSH_HOST"
-                SSH_KEY:  "$SSH_KEY"
+                SERVER: "$SSH_HOST"
+                SSH_KEY: "$SSH_KEY"
                 COMMAND: |
                   echo $DOCKER_HUB_TOKEN | docker login -u $DOCKER_HUB_USER --password-stdin
                   docker pull pepewee/whatsapp-api-cloud:latest
                   docker-compose -f /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end/docker-compose.yml down
                   sleep 10
                   docker-compose -f /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end/docker-compose.yml up -d
+
+definitions:
+  services:
+    docker:
+      memory: 2048
