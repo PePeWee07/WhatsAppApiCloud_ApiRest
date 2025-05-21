@@ -39,9 +39,18 @@ pipelines:
                   cat /tmp/token.txt | docker login -u "$DOCKER_HUB_USER" --password-stdin &&
                   docker pull pepewee/whatsapp-api-cloud:latest &&
                   docker-compose -f /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end/docker-compose.yml down &&
+                  sleep 5 &&
                   docker rm -f whatsapp-api-cloud-db || true &&
                   docker rm -f whatsapp-api-cloud-app || true &&
-                  sleep 5 &&
+                  echo "Esperando que los contenedores se eliminen por completo..." &&
+                  for i in {1..10}; do
+                    if docker ps -a | grep whatsapp-api-cloud-db || docker ps -a | grep whatsapp-api-cloud-app; then
+                      echo "Contenedores aún existen, esperando..." && sleep 2;
+                    else
+                      echo "Contenedores eliminados correctamente.";
+                      break;
+                    fi
+                  done &&
                   docker-compose -f /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end/docker-compose.yml up -d --force-recreate --remove-orphans
 
 definitions:
