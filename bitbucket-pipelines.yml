@@ -33,20 +33,23 @@ pipelines:
                 SSH_USER: "$SSH_USER"
                 SERVER: "$SSH_HOST"
                 SSH_KEY: "$SSH_KEY"
-                COMMAND: >
-                  set -e &&
-                  echo "$DOCKER_HUB_TOKEN" > /tmp/token.txt &&
-                  cat /tmp/token.txt | docker login -u "$DOCKER_HUB_USER" --password-stdin &&
-                  docker pull pepewee/whatsapp-api-cloud:latest &&
-                  docker-compose -f /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end/docker-compose.yml down &&
-                  sleep 3 &&
-                  echo "Eliminando contenedor whatsapp-api-cloud-db..." &&
-                  (docker inspect -f '{{.State.Status}}' whatsapp-api-cloud-db && docker rm -f whatsapp-api-cloud-db && docker wait whatsapp-api-cloud-db) || echo "Contenedor db ya no existe o no se puede eliminar." &&
-                  echo "Eliminando contenedor whatsapp-api-cloud-app..." &&
-                  (docker inspect -f '{{.State.Status}}' whatsapp-api-cloud-app && docker rm -f whatsapp-api-cloud-app && docker wait whatsapp-api-cloud-app) || echo "Contenedor app ya no existe o no se puede eliminar." &&
-                  sleep 3 &&
-                  echo "Lanzando servicios nuevamente..." &&
-                  docker-compose -f /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end/docker-compose.yml up -d --force-recreate --remove-orphans
+                COMMAND: |
+                  set -e
+                  echo "$DOCKER_HUB_TOKEN" > /tmp/token.txt
+                  cat /tmp/token.txt | docker login -u "$DOCKER_HUB_USER" --password-stdin
+
+                  echo "Pulling latest Docker image"
+                  docker pull pepewee/whatsapp-api-cloud:latest
+
+                  echo "Stopping and removing old containers"
+                  docker stop whatsapp-api-cloud || true
+                  docker rm whatsapp-api-cloud || true
+                  docker stop whatsapp-api-cloud-db || true
+                  docker rm whatsapp-api-cloud-db || true
+
+                  echo "Running new containers"
+                  cd /data/sites/ia-sp-backoffice.cue.ec/html/back-end
+                  docker-compose up -d --remove-orphans
 
 definitions:
   services:
