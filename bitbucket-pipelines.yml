@@ -39,9 +39,13 @@ pipelines:
                   cat /tmp/token.txt | docker login -u "$DOCKER_HUB_USER" --password-stdin &&
                   docker pull pepewee/whatsapp-api-cloud:latest &&
                   docker-compose -f /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end/docker-compose.yml down &&
-                  sleep 5 &&
-                  docker container ls -a --filter "name=whatsapp-api-cloud-db" --format "{{.ID}}" | xargs -r docker rm -f &&
-                  docker container ls -a --filter "name=whatsapp-api-cloud-app" --format "{{.ID}}" | xargs -r docker rm -f &&
+                  sleep 3 &&
+                  echo "Eliminando contenedor whatsapp-api-cloud-db..." &&
+                  (docker inspect -f '{{.State.Status}}' whatsapp-api-cloud-db && docker rm -f whatsapp-api-cloud-db && docker wait whatsapp-api-cloud-db) || echo "Contenedor db ya no existe o no se puede eliminar." &&
+                  echo "Eliminando contenedor whatsapp-api-cloud-app..." &&
+                  (docker inspect -f '{{.State.Status}}' whatsapp-api-cloud-app && docker rm -f whatsapp-api-cloud-app && docker wait whatsapp-api-cloud-app) || echo "Contenedor app ya no existe o no se puede eliminar." &&
+                  sleep 3 &&
+                  echo "Lanzando servicios nuevamente..." &&
                   docker-compose -f /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end/docker-compose.yml up -d --force-recreate --remove-orphans
 
 definitions:
