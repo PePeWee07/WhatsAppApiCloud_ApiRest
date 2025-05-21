@@ -34,8 +34,9 @@ pipelines:
                 SERVER: "$SSH_HOST"
                 SSH_KEY: "$SSH_KEY"
                 COMMAND: |
-                  echo $DOCKER_HUB_TOKEN | docker login -u $DOCKER_HUB_USER --password-stdin
-                  docker pull pepewee/whatsapp-api-cloud:latest
+                  set -e
+                  echo "$DOCKER_HUB_TOKEN" > /tmp/token.txt
+                  cat /tmp/token.txt | docker login -u "$DOCKER_HUB_USER" --password-stdin
 
 definitions:
   services:
