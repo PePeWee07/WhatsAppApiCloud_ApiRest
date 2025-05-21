@@ -206,17 +206,21 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             //! Si NO encuentro la cédula dentro de ERP
             UserChatEntity userFromJsonServer = fetchUserFromJsonServer(messageText);
             if (userFromJsonServer == null) {
-
-                if (user.getLimitQuestions() <= 0) {
-                    return null;
-                }
-
                 user.setLastInteraction(timeNow);
-                user.setLimitQuestions(0);
+                user.setBlock(true);
+                user.setBlockingReason("Cedula no verificada");
                 userChatRepository.save(user);
-                sendMessage(new MessageBody(waId, "Actualmente no perteneces a la Universidad Católica de Cuenca ❌. Este servicio es exclusivo para miembros de la universidad."));
-                return sendMessage(new MessageBody(waId, "Si realmente eres parte de la universidad, por favor contacta a email@email.com, una vez solucionado vuelve a ingresar tu cédula."));
-                
+                sendMessage(new MessageBody(
+                    waId,
+                    "Lamentamos informarte que no hemos podido validar tu cédula en nuestros registros de la Universidad. " +
+                    "Por seguridad, No responderemos a tus mensajes."));
+
+                return sendMessage(new MessageBody(
+                    waId,
+                    "Si realmente formas parte de la UCACUE, por favor escríbenos a soportetic@ucacue.edu.ec " +
+                    "indicando tu número de cédula y tu teléfono que fue bloqueado, junto con un breve detalle del problema. " +
+                    "Una vez resuelto, recibirás nuevamente la notificación en tu correo institucional.N"));
+
             }
             //! Si encuentro la cédula dentro de ERP
             else {
