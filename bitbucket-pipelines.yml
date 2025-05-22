@@ -48,7 +48,7 @@ pipelines:
                   docker rm whatsapp-api-cloud-db || true
 
                   echo "Running new containers"
-                  cd /data/sites/ia-sp-backoffice.cue.ec/html/back-end
+                  cd /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end
                   docker-compose up -d --remove-orphans
 
 definitions:
