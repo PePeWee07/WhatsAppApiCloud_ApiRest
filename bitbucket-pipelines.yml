@@ -42,13 +42,8 @@ pipelines:
                   docker pull pepewee/whatsapp-api-cloud:latest
 
                   echo "Stopping and removing old containers"
-                  docker stop whatsapp-api-cloud || true
-                  docker rm whatsapp-api-cloud || true
-                  docker stop whatsapp-api-cloud-db || true
-                  docker rm whatsapp-api-cloud-db || true
-
-                  echo "Running new containers"
                   cd /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end
+                  docker compose down
                   docker-compose up -d --remove-orphans
 
 definitions:
