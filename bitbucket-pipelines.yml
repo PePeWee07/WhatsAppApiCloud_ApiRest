@@ -44,7 +44,7 @@ pipelines:
                   echo "Stopping and removing old containers"
                   cd /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end
                   docker compose down
-                  docker-compose up -d --remove-orphans
+                  docker compose up -d --build
 
 definitions:
   services:
