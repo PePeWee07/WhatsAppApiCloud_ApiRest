@@ -2,6 +2,7 @@ package com.BackEnd.WhatsappApiCloud.controller;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -22,6 +23,7 @@ import com.BackEnd.WhatsappApiCloud.service.userChat.UserchatService;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.data.domain.Page;
 
@@ -139,5 +141,17 @@ public class WhatsappController {
 
         Page<UserChatEntity> usersPage = userchatService.findAll(page, pageSize, sortBy, direction);
         return ResponseEntity.ok(usersPage);
+    }
+
+    // ======================================================
+    //   Actualizar datos de un usuario
+    // ======================================================
+    @PatchMapping("/update/user/{id}")
+    public ResponseEntity<UserChatEntity> patchUser(
+            @PathVariable("id") Long id,
+            @RequestBody Map<String, Object> updates) {
+
+        UserChatEntity patched = userchatService.patchUser(id, updates);
+        return ResponseEntity.ok(patched);
     }
 }
