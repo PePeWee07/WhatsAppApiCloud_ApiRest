@@ -35,16 +35,22 @@ pipelines:
                 SSH_KEY: "$SSH_KEY"
                 COMMAND: |
                   set -e
-                  echo "$DOCKER_HUB_TOKEN" > /tmp/token.txt
-                  cat /tmp/token.txt | docker login -u "$DOCKER_HUB_USER" --password-stdin
+                  
+                  # 1. Login a Docker Hub
+                  echo "$DOCKER_HUB_TOKEN" | docker login -u "$DOCKER_HUB_USER" --password-stdin
 
-                  echo "Pulling latest Docker image"
+                  # 2. Trae la última imagen
                   docker pull pepewee/whatsapp-api-cloud:latest
 
-                  echo "Stopping and removing old containers"
+                  # 3. Baja y elimina contenedores antiguos
                   cd /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end
-                  docker compose down
-                  docker compose up -d --build
+                  docker compose down --remove-orphans
+
+                  # 4. Por si queda algún “residuo” que no estuvo en compose
+                  docker rm -f whatsapp-api-cloud-app whatsapp-api-cloud-db || true
+
+                  # 5. Sube el nuevo stack recreando contenedores
+                  docker compose up -d --remove-orphans --force-recreate
 
 definitions:
   services:
