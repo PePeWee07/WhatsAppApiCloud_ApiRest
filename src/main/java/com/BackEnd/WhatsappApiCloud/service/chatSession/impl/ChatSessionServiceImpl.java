@@ -6,7 +6,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.BackEnd.WhatsappApiCloud.model.entity.User.ChatSession;
+import com.BackEnd.WhatsappApiCloud.model.entity.user.ChatSession;
 import com.BackEnd.WhatsappApiCloud.repository.ChatSessionRepository;
 import com.BackEnd.WhatsappApiCloud.service.chatSession.ChatSessionService;
 

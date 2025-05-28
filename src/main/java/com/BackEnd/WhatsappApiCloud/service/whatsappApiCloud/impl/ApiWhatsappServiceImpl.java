@@ -29,7 +29,7 @@ import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.Respo
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppDataDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.openIA.AnswersOpenIADto;
 import com.BackEnd.WhatsappApiCloud.model.dto.openIA.QuestionOpenIADto;
-import com.BackEnd.WhatsappApiCloud.model.entity.User.UserChatEntity;
+import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
 import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
 import com.BackEnd.WhatsappApiCloud.service.chatSession.ChatSessionService;
@@ -180,7 +180,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         newUser.setPhone(waId);
         newUser.setFirstInteraction(timeNow);
         newUser.setConversationState("WAITING_FOR_CEDULA");
-        newUser.setLimitQuestions(3);
+        newUser.setLimitQuestions(4);
         UserChatEntity savedUser = userChatRepository.save(newUser);
 
         String welcomeMessage = "";
@@ -194,7 +194,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
         // sendImageMessageByUrl(waId, "https://static.wikia.nocookie.net/pokemon-unite/images/8/84/Holoatuendo_Gengar_Reportero.png/revision/latest?cb=20220928004647&path-prefix=es");
         // sendVideoMessageByUrl(waId, "https://almacenamiento.ucacue.edu.ec/videos/Dahlia.mp4", "Hola, soy Dahlia, tu asistente virtual. ¿En qué puedo ayudarte?");
-        sendStickerMessageByUrl(waId, "https://almacenamiento.ucacue.edu.ec/videos/Dahlia.webp");
+        sendStickerMessageByUrl(waId, "https://almacenamiento.ucacue.edu.ec/videos/VA-with-logo-uc-Photoroom-ezgif.com-png-to-webp-converter.webp");
         sendMessage(new MessageBody(waId, welcomeMessage));
 
         return savedUser;
@@ -208,11 +208,20 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             if (userFromJsonServer == null) {
                 user.setLastInteraction(timeNow);
                 user.setBlock(true);
-                user.setBlockingReason("No pertenece a la Universidad");
+                user.setBlockingReason("Cedula no verificada");
                 userChatRepository.save(user);
-                return sendMessage(new MessageBody(waId, "Actualmente no perteneces a la Universidad Católica de Cuenca ❌. Este servicio es exclusivo para miembros de la universidad."));
+                sendMessage(new MessageBody(
+                    waId,
+                    "Lamentamos informarte que no hemos podido validar tu cédula en nuestros registros de la Universidad. " +
+                    "Por seguridad, No responderemos a tus mensajes."));
+
+                return sendMessage(new MessageBody(
+                    waId,
+                    "Si realmente formas parte de la UCACUE, por favor escríbenos a soportetic@ucacue.edu.ec " +
+                    "indicando tu número de cédula y tu teléfono que fue bloqueado, junto con un breve detalle del problema. " +
+                    "Una vez resuelto, recibirás nuevamente la notificación en tu correo institucional.N"));
+
             }
-            
             //! Si encuentro la cédula dentro de ERP
             else {
                 updateUserWithJsonServerData(user, userFromJsonServer, timeNow);
@@ -222,6 +231,9 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         } else {
             //! Si ya se han agotado los intentos
             if (user.getLimitQuestions() <= 0) {
+                user.setBlock(true);
+                user.setBlockingReason("Demasiados intentos de cédula incorrecta");
+                userChatRepository.save(user);
                 return null;
             }
 

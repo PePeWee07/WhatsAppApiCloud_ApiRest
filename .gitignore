@@ -7,6 +7,7 @@ var/log/
 *.log
 *.pem
 *.env
+.env.prod
 
 ### STS ###
 .apt_generated

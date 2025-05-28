@@ -13,7 +13,7 @@ services:
         condition: service_healthy
     restart: always
     volumes:
-      - whatsappapicould_logs:/backend/var/log
+      - whatsappapicloud_logs:/backend/var/log
       - ./welcome_message.txt:/app/doc/welcome_message.txt
     networks:
       - virtual_assistant_network
@@ -40,7 +40,7 @@ services:
 
 volumes:
   postgres_data:
-  whatsappapicould_logs:
+  whatsappapicloud_logs:
 
 networks:
   virtual_assistant_network:

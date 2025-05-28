@@ -1,0 +1,58 @@
+image: docker:20.10.24
+
+pipelines:
+  branches:
+    main:
+      - step:
+          name: Build & Push Docker Image
+          runs-on:
+            - self.hosted
+            - linux
+          services:
+            - docker
+          caches:
+            - docker
+          script:
+            - echo "Building Docker image"
+            - docker build -t pepewee/whatsapp-api-cloud:$VERSION .
+            - docker tag pepewee/whatsapp-api-cloud:$VERSION pepewee/whatsapp-api-cloud:latest
+            - echo "Logging in to Docker Hub"
+            - echo $DOCKER_HUB_TOKEN | docker login -u $DOCKER_HUB_USER --password-stdin
+            - echo "Pushing image to Docker Hub"
+            - docker push pepewee/whatsapp-api-cloud:$VERSION
+            - docker push pepewee/whatsapp-api-cloud:latest
+
+      - step:
+          name: Deploy to Server
+          runs-on:
+            - self.hosted
+            - linux
+          script:
+            - pipe: atlassian/ssh-run:0.8.1
+              variables:
+                SSH_USER: "$SSH_USER"
+                SERVER: "$SSH_HOST"
+                SSH_KEY: "$SSH_KEY"
+                COMMAND: |
+                  set -e
+                  
+                  # 1. Login a Docker Hub
+                  echo "$DOCKER_HUB_TOKEN" | docker login -u "$DOCKER_HUB_USER" --password-stdin
+
+                  # 2. Trae la última imagen
+                  docker pull pepewee/whatsapp-api-cloud:latest
+
+                  # 3. Baja y elimina contenedores antiguos
+                  cd /data/sites/ia-sp-backoffice.ucatolica.cue.ec/html/back-end
+                  docker compose down --remove-orphans
+
+                  # 4. Por si queda algún “residuo” que no estuvo en compose
+                  docker rm -f whatsapp-api-cloud-app whatsapp-api-cloud-db || true
+
+                  # 5. Sube el nuevo stack recreando contenedores
+                  docker compose up -d --remove-orphans --force-recreate
+
+definitions:
+  services:
+    docker:
+      memory: 2048
