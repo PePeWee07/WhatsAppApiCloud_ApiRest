@@ -28,8 +28,8 @@ public class ChatSession {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "phone", nullable = false)
-    private String phone;
+    @Column(name = "whatsapp_phone", nullable = false)
+    private String whatsappPhone;
 
     @Column(name = "message_count", nullable = false)
     private int messageCount = 0;
@@ -41,7 +41,12 @@ public class ChatSession {
     private LocalDateTime endTime;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "phone", referencedColumnName = "phone", insertable = false, updatable = false)
+    @JoinColumn(
+        name = "whatsapp_phone",
+        referencedColumnName = "whatsapp_phone",
+        insertable = false,
+        updatable = false
+    )
     @JsonBackReference
     private UserChatEntity userChat;
 }

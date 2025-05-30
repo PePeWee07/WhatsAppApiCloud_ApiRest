@@ -8,10 +8,10 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -21,18 +21,23 @@ import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
 import com.BackEnd.WhatsappApiCloud.exception.ApiInfoException;
-import com.BackEnd.WhatsappApiCloud.exception.CustomJsonServerException;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestMessages;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestMessagesFactory;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestWhatsappAsRead;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppDataDto;
+import com.BackEnd.WhatsappApiCloud.model.dto.erp.ErpRoleDetailDto;
+import com.BackEnd.WhatsappApiCloud.model.dto.erp.ErpUserDto;
+import com.BackEnd.WhatsappApiCloud.model.dto.erp.RolUserDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.openIA.AnswersOpenIADto;
 import com.BackEnd.WhatsappApiCloud.model.dto.openIA.QuestionOpenIADto;
+import com.BackEnd.WhatsappApiCloud.model.entity.user.ErpRoleDetailEntity;
+import com.BackEnd.WhatsappApiCloud.model.entity.user.ErpRoleEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
 import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
 import com.BackEnd.WhatsappApiCloud.service.chatSession.ChatSessionService;
+import com.BackEnd.WhatsappApiCloud.service.erp.ErpJsonServerClient;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -82,20 +87,21 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     private String welcomeMessageFile;
 
     @Autowired
-    private UserChatRepository userChatRepository;
-
+    UserChatRepository userChatRepository;
     @Autowired
-    private ChatSessionService chatSessionService;
-
+    ErpJsonServerClient erpJsonServerClient;
+    @Autowired
+    ChatSessionService chatSessionService;
 
     // ======================================================
     //   Constructor para inicializar el cliente REST
     // ======================================================
     public ApiWhatsappServiceImpl(
-            @Value("${Phone-Number-ID}") String identifier,
-            @Value("${whatsapp.token}") String token,
-            @Value("${whatsapp.urlbase}") String urlBase,
-            @Value("${whatsapp.version}") String version) {
+        @Value("${Phone-Number-ID}") String identifier,
+        @Value("${whatsapp.token}") String token,
+        @Value("${whatsapp.urlbase}") String urlBase,
+        @Value("${whatsapp.version}") String version) {
+
         restClient = RestClient.builder()
                     .baseUrl(urlBase + version + "/" + identifier)
                     .defaultHeader("Authorization", "Bearer " + token)
@@ -104,7 +110,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
 
     // ======================================================
-    //   Envio de mensaje a usaurio especifico
+    //   Envio de mensaje
     // ======================================================
     @Override
     public ResponseWhatsapp sendMessage(MessageBody payload) {
@@ -148,7 +154,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
         try {
             //! Buscar el usuario o crearlo si no existe
-            UserChatEntity user = userChatRepository.findByPhone(waId)
+            UserChatEntity user = userChatRepository.findWithRolesByWhatsappPhone(waId)
                     .orElseGet(() -> createNewUser(waId, timeNow));
 
             //! Verificar si el usuario ya está bloqueado
@@ -156,6 +162,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 return null;
             }
 
+            //! Verificar el estado de la conversación
             switch (user.getConversationState()) {
                 case "WAITING_FOR_CEDULA":
                     return handleWaitingForCedula(user, messageText, waId, timeNow);
@@ -164,6 +171,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 default:
                     user.setConversationState("WAITING_FOR_CEDULA");
                     userChatRepository.save(user);
+                    userChatRepository.flush();
                     return sendMessage(new MessageBody(waId, "No hemos podido procesar tu solicitud 😕. Por favor, introduce tu número de cédula nuevamente para continuar."));
             }
         } catch (ApiInfoException e) {
@@ -173,11 +181,12 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             return sendMessage(new MessageBody(waId, "Ha ocurrido un error inesperado 😕. Por favor, inténtalo nuevamente más tarde."));
         }
     }
-    // Método auxiliar para crear un nuevo usuario
+
+    // Crear Usuario
     private UserChatEntity createNewUser(String waId, LocalDateTime timeNow) {
         UserChatEntity newUser = new UserChatEntity();
         newUser.setNombres("Anonymus");
-        newUser.setPhone(waId);
+        newUser.setWhatsappPhone(waId);
         newUser.setFirstInteraction(timeNow);
         newUser.setConversationState("WAITING_FOR_CEDULA");
         newUser.setLimitQuestions(4);
@@ -189,72 +198,115 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             welcomeMessage = new String(bytes, StandardCharsets.UTF_8).trim();
         } catch (Exception e) {
             logger.error("Error al leer el archivo de bienvenida: ", e);
-            welcomeMessage = "Error.";
+            welcomeMessage = "Mensaje de bienvenidad no econtrado. Por favor, contacta al administrador soportetic@ucaue.edu.ec.";
         }
-
-        // sendImageMessageByUrl(waId, "https://static.wikia.nocookie.net/pokemon-unite/images/8/84/Holoatuendo_Gengar_Reportero.png/revision/latest?cb=20220928004647&path-prefix=es");
-        // sendVideoMessageByUrl(waId, "https://almacenamiento.ucacue.edu.ec/videos/Dahlia.mp4", "Hola, soy Dahlia, tu asistente virtual. ¿En qué puedo ayudarte?");
         sendStickerMessageByUrl(waId, "https://almacenamiento.ucacue.edu.ec/videos/VA-with-logo-uc-Photoroom-ezgif.com-png-to-webp-converter.webp");
         sendMessage(new MessageBody(waId, welcomeMessage));
 
         return savedUser;
     }
+
     // Manejo del estado "WAITING_FOR_CEDULA"
     private ResponseWhatsapp handleWaitingForCedula(UserChatEntity user, String messageText, String waId, LocalDateTime timeNow) {
-        if (isValidCedula(messageText)) {
 
+        ErpUserDto dto = erpJsonServerClient.getUser(messageText);
+        if (dto == null || dto.getIdentificacion() == null) {
             //! Si NO encuentro la cédula dentro de ERP
-            UserChatEntity userFromJsonServer = fetchUserFromJsonServer(messageText);
-            if (userFromJsonServer == null) {
-                user.setLastInteraction(timeNow);
-                user.setBlock(true);
-                user.setBlockingReason("Cedula no verificada");
-                userChatRepository.save(user);
-                sendMessage(new MessageBody(
-                    waId,
-                    "Lamentamos informarte que no hemos podido validar tu cédula en nuestros registros de la Universidad. " +
-                    "Por seguridad, No responderemos a tus mensajes."));
-
-                return sendMessage(new MessageBody(
-                    waId,
-                    "Si realmente formas parte de la UCACUE, por favor escríbenos a soportetic@ucacue.edu.ec " +
-                    "indicando tu número de cédula y tu teléfono que fue bloqueado, junto con un breve detalle del problema. " +
-                    "Una vez resuelto, recibirás nuevamente la notificación en tu correo institucional.N"));
-
-            }
-            //! Si encuentro la cédula dentro de ERP
-            else {
-                updateUserWithJsonServerData(user, userFromJsonServer, timeNow);
-                userChatRepository.save(user);
-                return sendMessage(new MessageBody(waId, "¡Hola, " + user.getNombres() + "!👋, ¿Qué consulta te gustaría realizar?"));
-            }
-        } else {
-            //! Si ya se han agotado los intentos
-            if (user.getLimitQuestions() <= 0) {
-                user.setBlock(true);
-                user.setBlockingReason("Demasiados intentos de cédula incorrecta");
-                userChatRepository.save(user);
-                return null;
-            }
-
             user.setLastInteraction(timeNow);
-            user.setLimitQuestions(user.getLimitQuestions() - 1);
+            user.setBlock(true);
+            user.setBlockingReason("Identificación no encontrada en ERP");
             userChatRepository.save(user);
-            return sendMessage(new MessageBody(waId, "Verifiquemos tu identidad como miembro de la Universidad. *Ingresa tu número de cédula.* 🔒"));
+            sendMessage(new MessageBody(waId,"Lo siento, no encontramos tu registro en la Universidad. Por seguridad, hemos bloqueado tu acceso."));
+            return sendMessage(new MessageBody(
+                        waId,
+                        "Si realmente formas parte de la UCACUE, por favor escríbenos a soportetic@ucacue.edu.ec " +
+                        "indicando la Identificación como cedula o pasaporte y este numero teléfonico bloqueado, junto con un breve detalle del problema."));
         }
+
+        boolean isCedula = "CEDULA".equalsIgnoreCase(dto.getTipoIdentificacion());
+
+        if (isCedula) {
+            if (!isValidCedula(messageText)) {
+                if (user.getLimitQuestions() <= 0) {
+                    user.setBlock(true);
+                    user.setBlockingReason("Demasiados intentos de cédula inválida");
+                    sendMessage(new MessageBody(waId,"Has agotado tus intentos para verificar tu cédula. Por seguridad hemos bloqueado tu acceso. Contacta a soportetic@ucacue.edu.ec."));
+                    return null;
+                } else {
+                    user.setLimitQuestions(user.getLimitQuestions() - 1);
+                    user.setLastInteraction(timeNow);
+                    sendMessage(new MessageBody(waId, "Verifiquemos tu identidad como miembro de la Universidad. *Ingresa tu número de cédula.* 🔒"));
+                }
+                userChatRepository.save(user);
+            } 
+        }
+
+        //! Si encuentro la cédula dentro de ERP
+        // 3)  mapeamos y guardamos:
+        user.setCodigoErp(dto.getCodigoErp());
+        user.setTipoIdentificacion(dto.getTipoIdentificacion());
+        user.setIdentificacion(dto.getIdentificacion());
+        user.setNombres(dto.getNombres());
+        user.setApellidos(dto.getApellidos());
+        user.setNumeroCelular(dto.getNumeroCelular());
+        user.setEmailInstitucional(dto.getEmailInstitucional());
+        user.setEmailPersonal(dto.getEmailPersonal());
+        user.setSexo(dto.getSexo());
+
+        // refrescar lista de roles
+        user.getRolesUsuario().clear();
+        for (RolUserDto rDto : dto.getRolesUsuario()) {
+            ErpRoleEntity role = new ErpRoleEntity();
+            role.setTipoRol(rDto.getTipoRol());
+            role.setUser(user);
+
+            for (ErpRoleDetailDto det : rDto.getDetallesRol()) {
+                ErpRoleDetailEntity detail = new ErpRoleDetailEntity();
+                detail.setRole(role);
+                detail.setIdCarrera(det.getIdCarrera());
+                detail.setNombreCarrera(det.getNombreCarrera());
+                detail.setUltimoSemestreActivo(det.getUltimoSemestreActivo());
+                detail.setUnidadAcademica(det.getUnidadAcademica());
+                detail.setSede(det.getSede());
+                detail.setModalidad(det.getModalidad());
+                detail.setCurso(det.getCurso());
+                detail.setParalelo(det.getParalelo());
+                detail.setNombreRol(det.getNombreRol());
+                detail.setUnidadOrganizativa(det.getUnidadOrganizativa());
+                role.getDetallesRol().add(detail);
+            }
+            user.getRolesUsuario().add(role);
+        }
+
+        // 4) Estado READY
+        user.setLastInteraction(timeNow);
+        user.setConversationState("READY");
+        user.setLimitQuestions(limitQuestionsPerDay);
+        user.setLimitStrike(strikeLimit);
+        user.setNextResetDate(null);
+        userChatRepository.save(user);
+
+        // 5) Saludo
+        return sendMessage(new MessageBody(waId,
+            "¡Hola 👋, " + user.getNombres() + "! ¿En qué puedo ayudarte hoy?"));
     }
+
     // Manejo del estado "READY"
     private ResponseWhatsapp handleReadyState(UserChatEntity user, String messageText, String waId, LocalDateTime timeNow) throws JsonProcessingException {
 
         //! 1. Verificar si el rol del usuario está denegado
-        if (isRoleDenied(user.getRol())) {
-            if (user.getLimitQuestions() <= -1) {
-                return null;
-            }
+        if (isRoleDenied(user)) {
+            // opcional: extraer roles denegados para el mensaje
+            String roles = user.getRolesUsuario().stream()
+                            .map(ErpRoleEntity::getTipoRol)
+                            .filter(r -> Arrays.asList(restrictedRol.split(",")).contains(r))
+                            .collect(Collectors.joining(", "));
+
             user.setLimitQuestions(-1);
-            user.setBlockingReason("Rol denegado " + user.getRol());
+            user.setBlockingReason("Rol denegado: " + roles);
             userChatRepository.save(user);
-            return sendMessage(new MessageBody(waId, "Lo sentimos, esta funcionalidad no está disponible para tu rol de *" + user.getRol() + "* en este momento 🚫."));
+
+            return sendMessage(new MessageBody(waId,"Lo sentimos, esta funcionalidad no está disponible para rol(es): *"+ roles + "*."));
         }
             
         //! 2. Verificar strikes
@@ -264,14 +316,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             userChatRepository.save(user);
             return sendMessage(new MessageBody(waId, "Tu cuenta ha sido bloqueada 🚫. Por favor, comunícate con *soportetic@ucacue.edu.ec* ✉️."));
         }
-
-        // Se reinicia si la fecha de la última interacción es anterior a la fecha actual (se reinicia a las 00:00)
-        // Se debera ajusta el 'hours.to.wait.after.limit' a 12 horas
-        // if (!user.getLastInteraction().toLocalDate().equals(LocalDate.now())) {
-        //     user.setLimitQuestions(limitQuestionsPerDay);
-        //     user.setNextResetDate(null);
-        //     userChatRepository.save(user);
-        // }
 
         //! 3. Restablece el límite de preguntas diarias si han pasado 24 horas
         if (Duration.between(user.getLastInteraction(), timeNow).toHours() >= 24) {
@@ -303,38 +347,20 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
 
         //! 6. Obtener respuesta de IA y Actualizar datos del usuario
-        AnswersOpenIADto data = getAnswerIA( new QuestionOpenIADto(messageText, user.getNombres(), waId, user.getRol(),user.getThreadId()));
-        UserChatEntity userFromJsonServer = fetchUserFromJsonServer(user.getCedula());
-        user.setNombres(userFromJsonServer.getNombres());
-        user.setRol(userFromJsonServer.getRol());
+        //TODO: LOGICA DE VERIFICAR ROL CONSUMIENDO SERICIO DESDE SERVICIO DE IA, ACTAULIZAR CADA VEZ
+        AnswersOpenIADto data = getAnswerIA( new QuestionOpenIADto(messageText, user.getNombres(), waId, "ADMINISTRATIVO", user.getThreadId()));
         user.setThreadId(data.thread_id());
         user.setLimitQuestions(user.getLimitQuestions() - 1);
         user.setLastInteraction(timeNow);
-        user.setEmail(userFromJsonServer.getEmail());
-        user.setSede(userFromJsonServer.getSede());
-        user.setCarrera(userFromJsonServer.getCarrera());
         user.setValidQuestionCount(user.getValidQuestionCount() + 1);
         userChatRepository.save(user);
 
         return sendMessage(new MessageBody(waId, data.answer()));
     }
-    // Actualiza la información del usuario con los datos del servidor JSON
-    private void updateUserWithJsonServerData(UserChatEntity user, UserChatEntity userFromJsonServer, LocalDateTime timeNow) {
-        user.setNombres(userFromJsonServer.getNombres());
-        user.setCedula(userFromJsonServer.getCedula());
-        user.setRol(userFromJsonServer.getRol());
-        user.setLimitQuestions(limitQuestionsPerDay);
-        user.setLastInteraction(timeNow);
-        user.setConversationState("READY");
-        user.setLimitStrike(strikeLimit);
-        user.setEmail(userFromJsonServer.getEmail());
-        user.setSede(userFromJsonServer.getSede());
-        user.setCarrera(userFromJsonServer.getCarrera());
-        user.setNextResetDate(null);
-    }
+
     // Manejo de ApiInfoException
     private ResponseWhatsapp handleApiInfoException(ApiInfoException e, String waId) {
-        userChatRepository.findByPhone(waId).ifPresent(user -> {
+        userChatRepository.findByWhatsappPhone(waId).ifPresent(user -> {
             if (e.getModeration() != null) {
                 user.setLimitStrike(user.getLimitStrike() - 1);
                 userChatRepository.save(user);
@@ -361,8 +387,18 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     // ======================================================
     //   Verificar si el rol del usuario está denegado
     // ======================================================
-    public boolean isRoleDenied(String role) {
-        return Arrays.asList(restrictedRol.split(",")).contains(role);
+    public boolean isRoleDenied(UserChatEntity user) {
+        List<String> restricted = Arrays.stream(restrictedRol.split(","))
+                                        .map(String::trim)
+                                        .collect(Collectors.toList());
+
+        if (user.getRolesUsuario().isEmpty()) {
+            return true;
+        }
+
+        return user.getRolesUsuario().stream()
+                .map(ErpRoleEntity::getTipoRol)
+                .allMatch(restricted::contains);
     }
 
 
@@ -422,42 +458,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         int valor = Integer.parseInt(numero) * 2;
         return (valor > 9) ? (valor - 9) : valor;
     }
-
-
-    // ======================================================
-    //   Simulación de ERP
-    // ======================================================
-    private UserChatEntity fetchUserFromJsonServer(String cedula) {
-        try {
-            RestClient localRestClient = RestClient.builder()
-                .baseUrl(baseUrlJsonServer)
-                .build();
-    
-            String url = uriJsonServer + cedula;
-            List<UserChatEntity> users = localRestClient.get()
-                .uri(url)
-                .retrieve()
-                .body(new ParameterizedTypeReference<List<UserChatEntity>>() {});
-    
-            if (users == null || users.isEmpty()) {
-                logger.warn("No se encontraron usuarios en el servidor JSON para la cedula " + cedula);
-                return null;
-            }
-    
-            // Filtra para obtener el primer usuario que no sea "Estudiante", si no existe, retorna el primer elemento
-            // Filtra para excluir los roles restringidos. Si todos son restringidos, toma el primero
-            UserChatEntity nonStudentRole = users.stream()
-                .filter(user -> !isRoleDenied(user.getRol()))
-                .findFirst()
-                .orElse(users.get(0));
-    
-            return nonStudentRole;
-        } catch (Exception e) {
-            logger.error("Error al obtener datos del usuario desde ERP: " + e.getMessage());
-            throw new CustomJsonServerException("Error al obtener datos del usuario desde ERP", e.getCause());
-        }
-    }    
-
+   
 
     // ======================================================
     //   Consulta a IA

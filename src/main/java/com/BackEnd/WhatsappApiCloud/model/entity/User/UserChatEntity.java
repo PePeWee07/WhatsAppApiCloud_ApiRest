@@ -1,6 +1,7 @@
 package com.BackEnd.WhatsappApiCloud.model.entity.user;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.hibernate.annotations.Fetch;
@@ -17,7 +18,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -33,23 +33,12 @@ import lombok.ToString;
 @Table(name = "user_chat")
 public class UserChatEntity {
 
-    // Atributos Necesarios
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @NotNull
-    @Column(name = "names", length = 100, nullable = false)
-    private String nombres;
-
-    @Column(name = "cedula")
-    private String cedula;
-
-    @Column(name = "phone", unique = true, nullable = false)
-    private String phone;
-
-    @Column(name = "rol")
-    private String rol;
+    @Column(name = "whatsapp_phone", unique = true, nullable = false)
+    private String whatsappPhone;
 
     @Column(name = "thread_id")
     private String threadId;
@@ -57,12 +46,12 @@ public class UserChatEntity {
     @Column(name = "limit_questions")
     private int limitQuestions;
 
-    @Column(name = "firstInteraction")
+    @Column(name = "first_interaction")
     private LocalDateTime firstInteraction;
-    
+
     @Column(name = "last_interaction")
     private LocalDateTime lastInteraction;
-    
+
     @Column(name = "next_reset_date")
     private LocalDateTime nextResetDate;
 
@@ -78,16 +67,8 @@ public class UserChatEntity {
     @Column(name = "blocking_reason")
     private String blockingReason;
 
-    @Column(name = "email")
-    private String email;
-
-    @Column (name = "valid_question_count")
+    @Column(name = "valid_question_count")
     private int validQuestionCount;
-
-    // Atributos Adicionales
-    private String sede;
-
-    private String carrera;
 
     @OneToMany(mappedBy = "userChat",
            cascade = CascadeType.ALL,
@@ -96,4 +77,36 @@ public class UserChatEntity {
     @JsonManagedReference
     private List<ChatSession> chatSessions;
 
+    // ----- Campos ERP básicos -----
+    @Column(name = "codigo_erp")
+    private String codigoErp;
+
+    @Column(name = "tipo_identificacion")
+    private String tipoIdentificacion;
+
+    @Column(name = "identificacion")
+    private String identificacion;
+
+    @Column(name = "nombres")
+    private String nombres;
+
+    @Column(name = "apellidos")
+    private String apellidos;
+
+    @Column(name = "numero_celular_erp")
+    private String numeroCelular;
+
+    @Column(name = "email_institucional")
+    private String emailInstitucional;
+
+    @Column(name = "email_personal")
+    private String emailPersonal;
+
+    @Column(length = 20)
+    private String sexo;
+
+    // Relación con roles ERP
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<ErpRoleEntity> rolesUsuario = new ArrayList<>();
 }

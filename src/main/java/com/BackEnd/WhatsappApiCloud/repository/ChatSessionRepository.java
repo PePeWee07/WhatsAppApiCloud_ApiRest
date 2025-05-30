@@ -12,5 +12,9 @@ import java.time.LocalDateTime;
 public interface ChatSessionRepository extends JpaRepository<ChatSession, Long> {
     
     // Ejemplo de método para obtener sesiones de un usuario en un rango de tiempo
-    List<ChatSession> findByPhoneAndStartTimeBetween(String phone, LocalDateTime start, LocalDateTime end);
+    List<ChatSession>findByWhatsappPhoneAndStartTimeBetween(
+        String whatsappPhone, 
+        LocalDateTime startTime, 
+        LocalDateTime endTime
+    );
 }

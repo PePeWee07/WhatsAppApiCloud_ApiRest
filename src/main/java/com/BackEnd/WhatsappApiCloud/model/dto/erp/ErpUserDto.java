@@ -1,9 +1,17 @@
 package com.BackEnd.WhatsappApiCloud.model.dto.erp;
 
-import lombok.Data;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ErpUserDto {
     private String codigoErp;
     private String tipoIdentificacion;

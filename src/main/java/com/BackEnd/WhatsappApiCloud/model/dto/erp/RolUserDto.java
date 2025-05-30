@@ -1,18 +1,18 @@
 package com.BackEnd.WhatsappApiCloud.model.dto.erp;
 
-import lombok.Data;
-import com.fasterxml.jackson.annotation.JsonFormat;
 import java.util.List;
-import java.util.Map;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class RolUserDto {
     private String tipoRol;
-
-    /**
-     * Permite que Jackson trate un objeto único como lista de un solo elemento.
-     * Cuando reciba un valor que no es un array {...}, lo envuelva automáticamente [{...}]
-     */
-    @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
-    private List<Map<String, Object>> detallesRol;
+    private List<ErpRoleDetailDto> detallesRol;
 }
