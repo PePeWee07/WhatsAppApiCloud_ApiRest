@@ -3,6 +3,9 @@ package com.BackEnd.WhatsappApiCloud.model.entity.user;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.hibernate.annotations.Fetch;
+import org.hibernate.annotations.FetchMode;
+
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
@@ -32,19 +35,25 @@ import lombok.ToString;
 @ToString
 public class ErpRoleEntity {
 
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(name = "tipo_rol", length = 50, nullable = false)
     private String tipoRol;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_chat_id", nullable = false)
+    @JoinColumn(
+        name = "user_chat_id", 
+        referencedColumnName = "id", 
+        insertable = false, 
+        nullable = false
+    )
     @JsonBackReference
     private UserChatEntity user;
 
     @OneToMany(mappedBy = "role", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Fetch(FetchMode.SUBSELECT)
     @JsonManagedReference
     private Set<ErpRoleDetailEntity> detallesRol = new HashSet<>();
 }
-

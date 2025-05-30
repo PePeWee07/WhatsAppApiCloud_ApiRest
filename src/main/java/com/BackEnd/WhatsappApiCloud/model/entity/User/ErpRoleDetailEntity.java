@@ -58,7 +58,12 @@ public class ErpRoleDetailEntity {
     private String unidadOrganizativa;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "erp_role_id", nullable = false)
+    @JoinColumn(
+        name = "erp_role_id",
+        referencedColumnName = "id",
+        insertable = false,
+        nullable = false
+    )
     @JsonBackReference
     private ErpRoleEntity role;
 }

@@ -1,8 +1,9 @@
 package com.BackEnd.WhatsappApiCloud.model.entity.user;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
@@ -109,7 +110,8 @@ public class UserChatEntity {
     private String sexo;
 
     // Relación con roles ERP
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Fetch(FetchMode.SUBSELECT)
     @JsonManagedReference
-    private List<ErpRoleEntity> rolesUsuario = new ArrayList<>();
+    private Set<ErpRoleEntity> rolesUsuario = new HashSet<>();
 }

@@ -27,16 +27,16 @@ public class UserChatImpl implements UserchatService {
     }
 
     @Override
-    public UserChatEntity findByCedula(String cedula) {
-        UserChatEntity resp = repo.findByIdentificacion(cedula)
-                .orElseThrow(() -> new RuntimeException("User not found with cedula: " + cedula));
+    public UserChatEntity findByIdentificacion(String identificacion) {
+        UserChatEntity resp = repo.findByIdentificacion(identificacion)
+                .orElseThrow(() -> new RuntimeException("User not found with identificacion: " + identificacion));
         return resp;
     }
 
     @Override
-    public UserChatEntity findByPhone(String phone) {
-        UserChatEntity resp = repo.findByWhatsappPhone(phone)
-                .orElseThrow(() -> new RuntimeException("User not found with phone: " + phone));
+    public UserChatEntity findByWhatsappPhone(String whatsappPhone) {
+        UserChatEntity resp = repo.findByWhatsappPhone(whatsappPhone)
+                .orElseThrow(() -> new RuntimeException("User not found with whatsappPhone: " + whatsappPhone));
         return resp;
     }
 

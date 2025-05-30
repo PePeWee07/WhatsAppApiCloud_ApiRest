@@ -288,17 +288,13 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     private ResponseWhatsapp handleReadyState(UserChatEntity user, String messageText, String waId, LocalDateTime timeNow) throws JsonProcessingException {
 
         //! 1. Verificar si el rol del usuario está denegado
-        if (isRoleDenied(user)) {
-            String roles = user.getRolesUsuario().stream()
-                            .map(ErpRoleEntity::getTipoRol)
-                            .filter(r -> Arrays.asList(restrictedRol.split(",")).contains(r))
-                            .collect(Collectors.joining(", "));
-
+        if(!isRoleDenied(user)) {
+            if(user.getLimitQuestions() <= -1) {
+                return null;
+            }
             user.setLimitQuestions(-1);
-            user.setBlockingReason("Rol denegado: " + roles);
             userChatRepository.save(user);
-
-            return sendMessage(new MessageBody(waId,"Lo sentimos, esta funcionalidad no está disponible para rol(es): *"+ roles + "*."));
+            return sendMessage(new MessageBody(waId,"Lo sentimos, pero este asistente virtual aún no está disponible para los siguientes rol(es): *"+ restrictedRol + "*."));
         }
             
         //! 2. Verificar strikes
