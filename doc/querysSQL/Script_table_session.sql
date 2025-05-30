@@ -1,6 +1,12 @@
 SELECT * FROM public.chat_sessions
 ORDER BY id ASC 
 
+-- Eliminar Usuario
+DELETE FROM erp_role_detail WHERE id = '3';
+DELETE FROM erp_role WHERE id = '3';
+DELETE FROM chat_sessions WHERE whatsapp_phone = '593983439289';
+DELETE FROM user_chat WHERE whatsapp_phone = '593983439289';
+
 -- buscar sesiones activas por dia y contarlas
 SELECT COUNT(*) 
 FROM chat_sessions

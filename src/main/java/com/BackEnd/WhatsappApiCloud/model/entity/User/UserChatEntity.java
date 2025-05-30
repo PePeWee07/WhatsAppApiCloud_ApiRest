@@ -12,6 +12,8 @@ import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -55,8 +57,9 @@ public class UserChatEntity {
     @Column(name = "next_reset_date")
     private LocalDateTime nextResetDate;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "conversation_state")
-    private String conversationState;
+    private ConversationState conversationState;
 
     @Column(name = "limit_strike")
     private int limitStrike;

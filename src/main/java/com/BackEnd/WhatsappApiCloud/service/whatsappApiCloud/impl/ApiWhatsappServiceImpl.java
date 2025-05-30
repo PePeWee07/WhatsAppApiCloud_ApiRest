@@ -31,6 +31,7 @@ import com.BackEnd.WhatsappApiCloud.model.dto.erp.ErpUserDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.erp.RolUserDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.openIA.AnswersOpenIADto;
 import com.BackEnd.WhatsappApiCloud.model.dto.openIA.QuestionOpenIADto;
+import com.BackEnd.WhatsappApiCloud.model.entity.user.ConversationState;
 import com.BackEnd.WhatsappApiCloud.model.entity.user.ErpRoleDetailEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.user.ErpRoleEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
@@ -108,6 +109,26 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     .build();
     }
 
+    // ======================================================
+    //   Constructor de mensajes de respuesta
+    // ======================================================
+    private ResponseWhatsapp NewResponseBuilder(RequestMessages requestBody, String uri) {
+        String response = restClient.post()
+                .uri(uri)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(requestBody)
+                .retrieve()
+                .body(String.class);
+    
+        ObjectMapper obj = new ObjectMapper();
+        try {
+            return obj.readValue(response, ResponseWhatsapp.class);
+        } catch (JsonProcessingException e) {
+            logger.error("Error al procesar JSON: " + e.getMessage());
+            throw new RuntimeException("Error processing JSON", e);
+        }
+    }
+
 
     // ======================================================
     //   Envio de mensaje
@@ -130,68 +151,40 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
-
+    
     // ======================================================
-    //   Recibir y enviar respuesta automática
+    //   Mensaje leído
     // ======================================================
-    @Override
-    public ResponseWhatsapp handleUserMessage(WhatsAppDataDto.WhatsAppMessage message) {
-        LocalDateTime timeNow = LocalDateTime.now();
-
-        // Extraer identificadores y datos básicos del mensaje
-        String wamid = message.entry().get(0).changes().get(0).value().messages().get(0).id();
-        markAsRead(new RequestWhatsappAsRead("whatsapp", "read", wamid));
-
-        var messageType = message.entry().get(0).changes().get(0).value().messages().get(0).type();
-        var waId = message.entry().get(0).changes().get(0).value().contacts().get(0).wa_id();
-        var messageOptionalText = message.entry().get(0).changes().get(0).value().messages().get(0).text();
-
-        if (messageOptionalText.isEmpty() || !messageType.equals("text")) {
-            logger.warn("El mensaje no contiene texto válido.");
-            return null;
-        }
-        String messageText = messageOptionalText.get().body();
-
-        try {
-            //! Buscar el usuario o crearlo si no existe
-            UserChatEntity user = userChatRepository.findWithRolesByWhatsappPhone(waId)
-                    .orElseGet(() -> createNewUser(waId, timeNow));
-
-            //! Verificar si el usuario ya está bloqueado
-            if (user.isBlock()) {
-                return null;
-            }
-
-            //! Verificar el estado de la conversación
-            switch (user.getConversationState()) {
-                case "WAITING_FOR_CEDULA":
-                    return handleWaitingForCedula(user, messageText, waId, timeNow);
-                case "READY":
-                    return handleReadyState(user, messageText, waId, timeNow);
-                default:
-                    user.setConversationState("WAITING_FOR_CEDULA");
-                    userChatRepository.save(user);
-                    userChatRepository.flush();
-                    return sendMessage(new MessageBody(waId, "No hemos podido procesar tu solicitud 😕. Por favor, introduce tu número de cédula nuevamente para continuar."));
-            }
-        } catch (ApiInfoException e) {
-            return handleApiInfoException(e, waId);
-        } catch (Exception e) {
-            logger.error("Error al procesar mensaje de usuario: " + e);
-            return sendMessage(new MessageBody(waId, "Ha ocurrido un error inesperado 😕. Por favor, inténtalo nuevamente más tarde."));
-        }
+    public void markAsRead(RequestWhatsappAsRead request) {
+        restClient.post().
+            uri("/messages")
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(request)
+            .retrieve()
+            .body(String.class);
     }
 
+
+    // ======================================================
     // Crear Usuario
+    // ======================================================
     private UserChatEntity createNewUser(String waId, LocalDateTime timeNow) {
         UserChatEntity newUser = new UserChatEntity();
         newUser.setNombres("Anonymus");
         newUser.setWhatsappPhone(waId);
         newUser.setFirstInteraction(timeNow);
-        newUser.setConversationState("WAITING_FOR_CEDULA");
-        newUser.setLimitQuestions(4);
+        newUser.setConversationState(ConversationState.NEW);
+        newUser.setLimitQuestions(5);
         UserChatEntity savedUser = userChatRepository.save(newUser);
 
+        return savedUser;
+    }
+
+
+    // ======================================================
+    // Enviar mensaje de bienvenida
+    // ======================================================
+    private ResponseWhatsapp sendWelcomeMessage(UserChatEntity user, String waId) {
         String welcomeMessage = "";
         try {
             byte[] bytes = Files.readAllBytes(Paths.get(welcomeMessageFile));
@@ -202,47 +195,44 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
         sendStickerMessageByUrl(waId, "https://almacenamiento.ucacue.edu.ec/videos/VA-with-logo-uc-Photoroom-ezgif.com-png-to-webp-converter.webp");
         sendMessage(new MessageBody(waId, welcomeMessage));
-
-        return savedUser;
+        user.setConversationState(ConversationState.ASKED_FOR_CEDULA);
+        userChatRepository.save(user);
+        return sendMessage(new MessageBody(waId, "Para comenzar, por favor, *ingresa tu número de cédula o identificación* 🔒."));
     }
 
-    // Manejo del estado "WAITING_FOR_CEDULA"
+
+    // ======================================================
+    // Estado "WAITING_FOR_CEDULA"
+    // ======================================================
     private ResponseWhatsapp handleWaitingForCedula(UserChatEntity user, String messageText, String waId, LocalDateTime timeNow) {
 
         ErpUserDto dto = erpJsonServerClient.getUser(messageText);
+        
+        //! ========= FALLO DE ERP O IDENTIFICACIÓN NO EXISTE =========
         if (dto == null || dto.getIdentificacion() == null) {
-            //! Si NO encuentro la cédula dentro de ERP
             user.setLastInteraction(timeNow);
-            user.setBlock(true);
-            user.setBlockingReason("Identificación no encontrada en ERP");
-            userChatRepository.save(user);
-            sendMessage(new MessageBody(waId,"Lo siento, no encontramos tu registro en la Universidad. Por seguridad, hemos bloqueado tu acceso."));
-            return sendMessage(new MessageBody(
-                        waId,
-                        "Si realmente formas parte de la UCACUE, por favor escríbenos a soportetic@ucacue.edu.ec " +
-                        "indicando la Identificación como cedula o pasaporte y este numero teléfonico bloqueado, junto con un breve detalle del problema."));
-        }
+            user.setLimitQuestions(user.getLimitQuestions() - 1);
 
-        boolean isCedula = "CEDULA".equalsIgnoreCase(dto.getTipoIdentificacion());
-
-        if (isCedula) {
-            if (!isValidCedula(messageText)) {
-                if (user.getLimitQuestions() <= 0) {
-                    user.setBlock(true);
-                    user.setBlockingReason("Demasiados intentos de cédula inválida");
-                    sendMessage(new MessageBody(waId,"Has agotado tus intentos para verificar tu cédula. Por seguridad hemos bloqueado tu acceso. Contacta a soportetic@ucacue.edu.ec."));
-                    return null;
-                } else {
-                    user.setLimitQuestions(user.getLimitQuestions() - 1);
-                    user.setLastInteraction(timeNow);
-                    sendMessage(new MessageBody(waId, "Verifiquemos tu identidad como miembro de la Universidad. *Ingresa tu número de cédula.* 🔒"));
-                }
+            if (user.getLimitQuestions() <= 0) {
+                user.setBlock(true);
+                user.setBlockingReason("Identificación no encontrada en ERP");
                 userChatRepository.save(user);
-            } 
+                return sendMessage(new MessageBody(waId,
+                    "Lo sentimos, no encontramos tu registro tras varios intentos. "
+                + "Por seguridad hemos bloqueado tu acceso. "
+                + "Si crees que es un error, escribe a soportetic@ucacue.edu.ec"
+                ));
+            } else {
+                userChatRepository.save(user);
+                return sendMessage(new MessageBody(waId,
+                    "No encontramos tu número de identificación. "
+                + "Te quedan " + user.getLimitQuestions() + " intentos. "
+                + "Por favor, inténtalo de nuevo."
+                ));
+            }
         }
 
-        //! Si encuentro la cédula dentro de ERP
-        // 3)  mapeamos y guardamos:
+        //! ========= SI LO ENCONTRÓ EN ERP =========
         user.setCodigoErp(dto.getCodigoErp());
         user.setTipoIdentificacion(dto.getTipoIdentificacion());
         user.setIdentificacion(dto.getIdentificacion());
@@ -253,7 +243,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         user.setEmailPersonal(dto.getEmailPersonal());
         user.setSexo(dto.getSexo());
 
-        // refrescar lista de roles
         user.getRolesUsuario().clear();
         for (RolUserDto rDto : dto.getRolesUsuario()) {
             ErpRoleEntity role = new ErpRoleEntity();
@@ -278,25 +267,43 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             user.getRolesUsuario().add(role);
         }
 
-        // 4) Estado READY
         user.setLastInteraction(timeNow);
-        user.setConversationState("READY");
+        user.setConversationState(ConversationState.READY);
         user.setLimitQuestions(limitQuestionsPerDay);
         user.setLimitStrike(strikeLimit);
         user.setNextResetDate(null);
         userChatRepository.save(user);
 
-        // 5) Saludo
         return sendMessage(new MessageBody(waId,
             "¡Hola 👋, " + user.getNombres() + "! ¿En qué puedo ayudarte hoy?"));
     }
 
-    // Manejo del estado "READY"
+
+    // ======================================================
+    //   Verificar si el rol del usuario está denegado
+    // ======================================================
+    public boolean isRoleDenied(UserChatEntity user) {
+        List<String> restricted = Arrays.stream(restrictedRol.split(","))
+                                        .map(String::trim)
+                                        .collect(Collectors.toList());
+
+        if (user.getRolesUsuario().isEmpty()) {
+            return true;
+        }
+
+        return user.getRolesUsuario().stream()
+                .map(ErpRoleEntity::getTipoRol)
+                .allMatch(restricted::contains);
+    }
+
+
+    // ======================================================
+    // Estado "READY"
+    // ======================================================
     private ResponseWhatsapp handleReadyState(UserChatEntity user, String messageText, String waId, LocalDateTime timeNow) throws JsonProcessingException {
 
         //! 1. Verificar si el rol del usuario está denegado
         if (isRoleDenied(user)) {
-            // opcional: extraer roles denegados para el mensaje
             String roles = user.getRolesUsuario().stream()
                             .map(ErpRoleEntity::getTipoRol)
                             .filter(r -> Arrays.asList(restrictedRol.split(",")).contains(r))
@@ -358,7 +365,9 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         return sendMessage(new MessageBody(waId, data.answer()));
     }
 
-    // Manejo de ApiInfoException
+    // ======================================================
+    //  LLegada de Exepeciones Informativas o Moderación de IA
+    // ======================================================
     private ResponseWhatsapp handleApiInfoException(ApiInfoException e, String waId) {
         userChatRepository.findByWhatsappPhone(waId).ifPresent(user -> {
             if (e.getModeration() != null) {
@@ -370,95 +379,71 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         return sendMessage(new MessageBody(waId, e.getInfoMessage()));
     }
 
-    
-    // ======================================================
-    //   Mensaje leído
-    // ======================================================
-    public void markAsRead(RequestWhatsappAsRead request) {
-        restClient.post().
-            uri("/messages")
-            .contentType(MediaType.APPLICATION_JSON)
-            .body(request)
-            .retrieve()
-            .body(String.class);
-    }
-
 
     // ======================================================
-    //   Verificar si el rol del usuario está denegado
+    //   Recibir y enviar respuesta automática
     // ======================================================
-    public boolean isRoleDenied(UserChatEntity user) {
-        List<String> restricted = Arrays.stream(restrictedRol.split(","))
-                                        .map(String::trim)
-                                        .collect(Collectors.toList());
+    @Override
+    public ResponseWhatsapp handleUserMessage(WhatsAppDataDto.WhatsAppMessage message) {
+        LocalDateTime timeNow = LocalDateTime.now();
 
-        if (user.getRolesUsuario().isEmpty()) {
-            return true;
+        // Marcar el mensaje como leído
+        String wamid = message.entry().get(0).changes().get(0).value().messages().get(0).id();
+        markAsRead(new RequestWhatsappAsRead("whatsapp", "read", wamid));
+        
+        // Extraer datos básicos del mensaje
+        var messageType = message.entry().get(0).changes().get(0).value().messages().get(0).type();
+        var waId = message.entry().get(0).changes().get(0).value().contacts().get(0).wa_id();
+        var messageOptionalText = message.entry().get(0).changes().get(0).value().messages().get(0).text();
+
+        if (messageOptionalText.isEmpty() || !messageType.equals("text")) {
+            logger.warn("El mensaje no contiene texto válido.");
+            return null;
         }
 
-        return user.getRolesUsuario().stream()
-                .map(ErpRoleEntity::getTipoRol)
-                .allMatch(restricted::contains);
-    }
+        String messageText = messageOptionalText.get().body();
 
-
-    // ======================================================
-    //   Validar cédula
-    // ======================================================
-    private static boolean isValidCedula(String cedula) {
-        if (cedula == null || cedula.length() != 10) {
-            return false;
-        }
-    
         try {
-            int digitoRegion = Integer.parseInt(cedula.substring(0, 2));
+            //! Buscar el usuario o crearlo si no existe
+            UserChatEntity user = userChatRepository.findWithRolesByWhatsappPhone(waId)
+                    .orElseGet(() -> createNewUser(waId, timeNow));
 
-            if (digitoRegion < 1 || digitoRegion > 24) {
-                return false;
+            //! Verificar si el usuario ya está bloqueado
+            if (user.isBlock()) {
+                return null;
             }
 
-            int ultimoDigito = Integer.parseInt(cedula.substring(9, 10));
+            //! Verificar el estado de la conversación
+            switch (user.getConversationState()) {
 
-            int pares = Integer.parseInt(cedula.substring(1, 2)) +
-                        Integer.parseInt(cedula.substring(3, 4)) +
-                        Integer.parseInt(cedula.substring(5, 6)) +
-                        Integer.parseInt(cedula.substring(7, 8));
+                case NEW: {
+                    return sendWelcomeMessage(user, waId);
+                }
 
-            int impares = sumarImpar(cedula.substring(0, 1)) +
-                          sumarImpar(cedula.substring(2, 3)) +
-                          sumarImpar(cedula.substring(4, 5)) +
-                          sumarImpar(cedula.substring(6, 7)) +
-                          sumarImpar(cedula.substring(8, 9));
+                case ASKED_FOR_CEDULA: {
+                    return handleWaitingForCedula(user, messageText, waId, timeNow);
+                }
 
-            int sumaTotal = pares + impares;
+                case READY: {
+                    return handleReadyState(user, messageText, waId, timeNow);
+                }
 
-            int primerDigitoSuma = Integer.parseInt(String.valueOf(sumaTotal).substring(0, 1));
-
-            int decena = (primerDigitoSuma + 1) * 10;
-
-            int digitoValidador = decena - sumaTotal;
-
-            if (digitoValidador == 10) {
-                digitoValidador = 0;
+                default: {
+                    user.setConversationState(ConversationState.NEW);
+                    userChatRepository.save(user);
+                    return sendMessage(new MessageBody(waId,
+                        "¡Ups! Algo inesperado ocurrió. Reiniciemos. \n"
+                    + "Por favor, Escribe un mensaje para comenzar."));
+                }
             }
-
-            return digitoValidador == ultimoDigito;
-    
-        } catch (NumberFormatException e) {
-            logger.info(cedula + " no es un número válido.");
-            return false;
+        } catch (ApiInfoException e) {
+            return handleApiInfoException(e, waId);
+        } catch (Exception e) {
+            logger.error("Error al procesar mensaje de usuario: " + e);
+            return sendMessage(new MessageBody(waId, "Ha ocurrido un error inesperado 😕. Por favor, inténtalo nuevamente más tarde."));
         }
     }
 
-
-    // ======================================================
-    //   Sumar dígitos impares para validación de cédula
-    // ======================================================
-    private static int sumarImpar(String numero) {
-        int valor = Integer.parseInt(numero) * 2;
-        return (valor > 9) ? (valor - 9) : valor;
-    }
-   
 
     // ======================================================
     //   Consulta a IA
@@ -499,27 +484,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }  catch (Exception e) {
             logger.error("Error al obtener respuesta de IA: " + e.getMessage());
             throw new RuntimeException(e);
-        }
-    }
-
-
-    // ======================================================
-    //   Constructor de mensajes de respuesta
-    // ======================================================
-    private ResponseWhatsapp NewResponseBuilder(RequestMessages requestBody, String uri) {
-        String response = restClient.post()
-                .uri(uri)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(requestBody)
-                .retrieve()
-                .body(String.class);
-    
-        ObjectMapper obj = new ObjectMapper();
-        try {
-            return obj.readValue(response, ResponseWhatsapp.class);
-        } catch (JsonProcessingException e) {
-            logger.error("Error al procesar JSON: " + e.getMessage());
-            throw new RuntimeException("Error processing JSON", e);
         }
     }
 
