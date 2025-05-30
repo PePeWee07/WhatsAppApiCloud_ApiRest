@@ -17,7 +17,6 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
 import com.BackEnd.WhatsappApiCloud.exception.ApiInfoException;
@@ -39,10 +38,9 @@ import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
 import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
 import com.BackEnd.WhatsappApiCloud.service.chatSession.ChatSessionService;
 import com.BackEnd.WhatsappApiCloud.service.erp.ErpJsonServerClient;
+import com.BackEnd.WhatsappApiCloud.service.openAi.openAiServerClient;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.nio.file.Paths;
@@ -60,21 +58,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     @Value("${restricted.roles}")
     private String restrictedRol;
 
-    @Value("${baseurl.jsonserver}")
-    private String baseUrlJsonServer;
-
-    @Value("${uri.jsonserver}")
-    private String uriJsonServer;
-
-    @Value("${baseurl.aiserver}")
-    private String baseAIServer;
-
-    @Value("${uri.aiserver}")
-    private String uriAIServer;
-
-    @Value("${service.api.key.openai}")
-    private String apiKeyOpenAI;
-
     @Value("${limit.questions.per.day}")
     private int limitQuestionsPerDay;
 
@@ -91,6 +74,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     UserChatRepository userChatRepository;
     @Autowired
     ErpJsonServerClient erpJsonServerClient;
+    @Autowired
+    openAiServerClient openAiServerClient;
     @Autowired
     ChatSessionService chatSessionService;
 
@@ -355,7 +340,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
         //! 6. Obtener respuesta de IA y Actualizar datos del usuario
         //TODO: LOGICA DE VERIFICAR ROL CONSUMIENDO SERICIO DESDE SERVICIO DE IA, ACTAULIZAR CADA VEZ
-        AnswersOpenIADto data = getAnswerIA( new QuestionOpenIADto(messageText, user.getNombres(), waId, "ADMINISTRATIVO", user.getThreadId()));
+        AnswersOpenIADto data = openAiServerClient.getOpenAiData(new QuestionOpenIADto(messageText, user.getNombres(), waId, "ADMINISTRATIVO", user.getThreadId()));
+
         user.setThreadId(data.thread_id());
         user.setLimitQuestions(user.getLimitQuestions() - 1);
         user.setLastInteraction(timeNow);
@@ -441,49 +427,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         } catch (Exception e) {
             logger.error("Error al procesar mensaje de usuario: " + e);
             return sendMessage(new MessageBody(waId, "Ha ocurrido un error inesperado 😕. Por favor, inténtalo nuevamente más tarde."));
-        }
-    }
-
-
-    // ======================================================
-    //   Consulta a IA
-    // ======================================================
-    private AnswersOpenIADto getAnswerIA(QuestionOpenIADto question) throws JsonMappingException, JsonProcessingException {
-        try {
-            RestClient openAi = RestClient.builder()
-                .baseUrl(baseAIServer)
-                .build();
-    
-            String url = uriAIServer;
-
-            AnswersOpenIADto answer = openAi.post()
-                .uri(url)
-                .body(question)
-                .header("Content-Type", "application/json")
-                .header("Authorization", "Bearer " + apiKeyOpenAI)
-                .retrieve()
-                .body(AnswersOpenIADto.class);
-    
-            return answer;
-    
-        }  catch (HttpClientErrorException.BadRequest e) {
-            String responseBody = e.getResponseBodyAsString();
-            ObjectMapper objectMapper = new ObjectMapper();
-            JsonNode rootNode = objectMapper.readTree(responseBody);
-            if (rootNode.has("info")) {
-                String infoMessage = rootNode.get("info").asText();
-                    if (rootNode.has("moderation")) {
-                        String moderationValue = rootNode.get("moderation").asText();
-                        throw new ApiInfoException(infoMessage, moderationValue);
-                    }
-                throw new ApiInfoException(infoMessage, null);
-            } else {
-                logger.error("Bad Request al obtener respuesta de IA: " + e.getMessage());
-                throw new RuntimeException(e);
-            }
-        }  catch (Exception e) {
-            logger.error("Error al obtener respuesta de IA: " + e.getMessage());
-            throw new RuntimeException(e);
         }
     }
 

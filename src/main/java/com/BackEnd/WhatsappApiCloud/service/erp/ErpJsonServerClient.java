@@ -27,7 +27,6 @@ public class ErpJsonServerClient {
         this.restClient = RestClient.builder()
             .baseUrl(baseUrlJsonServer)
             .build();
-        System.out.println("URL-base: "+ baseUrlJsonServer);
 
     }
 
@@ -46,7 +45,6 @@ public class ErpJsonServerClient {
                 logger.warn("No se encontró usuario en ERP para cédula {}", identificacion);
                 return null;
             }
-            System.out.println("URL: "+ uriJsonServer + identificacion);
             System.out.println("ERP User: " + users);
             return users.get(0);
             
