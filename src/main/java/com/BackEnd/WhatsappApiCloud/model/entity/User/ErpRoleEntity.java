@@ -45,8 +45,7 @@ public class ErpRoleEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(
         name = "user_chat_id", 
-        referencedColumnName = "id", 
-        insertable = false, 
+        referencedColumnName = "id",
         nullable = false
     )
     @JsonBackReference

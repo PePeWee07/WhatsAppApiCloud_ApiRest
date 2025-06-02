@@ -61,7 +61,6 @@ public class ErpRoleDetailEntity {
     @JoinColumn(
         name = "erp_role_id",
         referencedColumnName = "id",
-        insertable = false,
         nullable = false
     )
     @JsonBackReference

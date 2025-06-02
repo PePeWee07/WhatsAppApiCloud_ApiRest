@@ -288,7 +288,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     private ResponseWhatsapp handleReadyState(UserChatEntity user, String messageText, String waId, LocalDateTime timeNow) throws JsonProcessingException {
 
         //! 1. Verificar si el rol del usuario está denegado
-        if(!isRoleDenied(user)) {
+        System.out.println("ROL DENEGADO?: "+ isRoleDenied(user));
+        if(isRoleDenied(user)) {
             if(user.getLimitQuestions() <= -1) {
                 return null;
             }
@@ -335,8 +336,17 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
 
         //! 6. Obtener respuesta de IA y Actualizar datos del usuario
-        //TODO: LOGICA DE VERIFICAR ROL CONSUMIENDO SERICIO DESDE SERVICIO DE IA, ACTAULIZAR CADA VEZ
-        AnswersOpenIADto data = openAiServerClient.getOpenAiData(new QuestionOpenIADto(messageText, user.getNombres(), waId, "ADMINISTRATIVO", user.getThreadId()));
+        List<String> userRoles = user.getRolesUsuario().stream().map(ErpRoleEntity::getTipoRol).collect(Collectors.toList());
+
+        QuestionOpenIADto question = new QuestionOpenIADto(
+            messageText,
+            user.getNombres(),
+            waId,
+            userRoles,
+            user.getThreadId()
+        );
+
+        AnswersOpenIADto data = openAiServerClient.getOpenAiData(question);
 
         user.setThreadId(data.thread_id());
         user.setLimitQuestions(user.getLimitQuestions() - 1);
