@@ -1,5 +1,6 @@
 package com.BackEnd.WhatsappApiCloud.model.dto.erp;
 
+import java.io.Serializable;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -12,7 +13,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class RolUserDto {
+public class RolUserDto implements Serializable {
     private String tipoRol;
     private List<ErpRoleDetailDto> detallesRol;
 }

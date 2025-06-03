@@ -36,6 +36,7 @@ import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
 import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
 import com.BackEnd.WhatsappApiCloud.service.chatSession.ChatSessionService;
+import com.BackEnd.WhatsappApiCloud.service.erp.ErpCacheService;
 import com.BackEnd.WhatsappApiCloud.service.erp.ErpJsonServerClient;
 import com.BackEnd.WhatsappApiCloud.service.openAi.openAiServerClient;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
@@ -77,6 +78,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     openAiServerClient openAiServerClient;
     @Autowired
     ChatSessionService chatSessionService;
+    @Autowired
+    ErpCacheService erpCacheService;
 
     // ======================================================
     // Constructor para inicializar el cliente REST
@@ -258,7 +261,9 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     @Transactional
     private ResponseWhatsapp handleReadyState(UserChatEntity user, String messageText, String waId, LocalDateTime timeNow) throws JsonProcessingException {
             
-        ErpUserDto userDto = erpJsonServerClient.getUser(user.getIdentificacion());
+        ErpUserDto userDto = erpCacheService.getCachedUser(user.getIdentificacion());
+        System.out.println("User DTO: " + userDto);
+
         if (userDto == null || userDto.getIdentificacion() == null) {
             return sendMessage(new MessageBody(waId, "Hubo un problema al obtner tus datos desde el ERP."));
         }
@@ -313,7 +318,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             return sendMessage(new MessageBody(waId, "Tu límite de interacciones ha sido alcanzado, vuelve mañana ⏳."));
         }
 
-        //! 6. Obtener respuesta de IA y Actualizar datos del usuario
+        //! 6. Obtener respuesta de IA
         List<String> userRoles = userDto.getRolesUsuario().stream().map(RolUserDto::getTipoRol).collect(Collectors.toList());
 
         QuestionOpenIADto question = new QuestionOpenIADto(

@@ -138,6 +138,18 @@
 			<version>${org.mapstruct.version}</version>
 		</dependency>
 
+		<!-- Spring Data Redis + Lettuce -->
+		<dependency>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-data-redis</artifactId>
+		</dependency>
+
+		<!-- Spring Cache Abstraction -->
+		<dependency>
+		<groupId>org.springframework.boot</groupId>
+		<artifactId>spring-boot-starter-cache</artifactId>
+		</dependency>
+
 	</dependencies>
 
 	<build>
