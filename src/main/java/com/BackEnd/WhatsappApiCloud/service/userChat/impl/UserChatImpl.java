@@ -1,5 +1,6 @@
 package com.BackEnd.WhatsappApiCloud.service.userChat.impl;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 import org.springframework.data.domain.Page;
@@ -54,6 +55,22 @@ public class UserChatImpl implements UserchatService {
 
         p.getContent().forEach(u -> u.getChatSessions().size());
 
+        return p;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<UserChatEntity> findByLastInteraction(
+        int page, int size,
+        String sortBy, String direction,
+        LocalDateTime inicio, LocalDateTime fin) {
+
+        Sort sort = Sort.by(sortBy);
+        sort = "desc".equalsIgnoreCase(direction) ? sort.descending() : sort.ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Page<UserChatEntity> p = repo.findByThreadIdIsNotNullAndLastInteractionBetween(inicio, fin, pageable);
+        p.getContent().forEach(u -> u.getChatSessions().size());
         return p;
     }
 

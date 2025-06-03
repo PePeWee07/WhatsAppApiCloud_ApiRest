@@ -2,6 +2,9 @@ package com.BackEnd.WhatsappApiCloud.controller;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +29,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.data.domain.Page;
+import org.springframework.format.annotation.DateTimeFormat;
 
 @RestController
 @RequestMapping("/api/v1/whatsapp")
@@ -141,6 +145,32 @@ public class WhatsappController {
 
         Page<UserChatEntity> usersPage = userchatService.findAll(page, pageSize, sortBy, direction);
         return ResponseEntity.ok(usersPage);
+    }
+
+
+    @GetMapping("/page/users/{page}/byLastInteraction")
+    public ResponseEntity<Page<UserChatEntity>> listByLastInteraction(
+            @PathVariable("page") int page,
+            @RequestParam(value = "pageSize", defaultValue = "10") int pageSize,
+            @RequestParam(value = "sortBy",   defaultValue = "nombres") String sortBy,
+            @RequestParam(value = "direction",defaultValue = "asc")     String direction,
+            @RequestParam("startDate") String startDateStr,
+            @RequestParam("endDate")   String endDateStr) {
+
+        LocalDateTime inicio, fin;
+        try {
+            inicio = LocalDateTime.parse(startDateStr, DateTimeFormatter.ISO_DATE_TIME);
+            fin    = LocalDateTime.parse(endDateStr,   DateTimeFormatter.ISO_DATE_TIME);
+        } catch (DateTimeParseException ex) {
+            return ResponseEntity.badRequest().build();
+        }
+        if (inicio.isAfter(fin)) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        Page<UserChatEntity> usuarios =
+            userchatService.findByLastInteraction(page, pageSize, sortBy, direction, inicio, fin);
+        return ResponseEntity.ok(usuarios);
     }
 
     // ======================================================
