@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
+import com.BackEnd.WhatsappApiCloud.model.dto.user.UserChatFullDto;
 import com.BackEnd.WhatsappApiCloud.service.userChat.UserchatService;
 import org.springframework.web.bind.annotation.RequestMapping;
 
@@ -25,30 +25,26 @@ public class UserChatController {
         this.userchatService = userchatService;
     }
 
-    // ======================================================
-    //   Encontrar usuario por identificacion o whatsappPhone
-    // ======================================================
+    // ========== Encontrar usuario por identificacion o whatsappPhone =============
     @GetMapping("/user/find")
-    public UserChatEntity findUser(
+    public UserChatFullDto findUser(
             @RequestParam(value = "identificacion", required = false) String identificacion,
             @RequestParam(value = "whatsappPhone", required = false) String whatsappPhone) {
 
         if (identificacion != null) {
-            UserChatEntity dto = userchatService.findByIdentificacion(identificacion);
+            UserChatFullDto dto = userchatService.findByIdentificacion(identificacion);
             return dto;
         }
 
         if (whatsappPhone != null) {
-            UserChatEntity dto = userchatService.findByWhatsappPhone(whatsappPhone);
+            UserChatFullDto dto = userchatService.findByWhatsappPhone(whatsappPhone);
             return dto;
         }
         
         return null;
     }
 
-    // ======================================================
-    //   Paginar todos los usuarios
-    // ======================================================
+    // =================== Paginar todos los usuarios ========================
     /**
      * Listado paginado de usuarios junto con sus sesiones de chat.
      *
@@ -64,33 +60,24 @@ public class UserChatController {
      * @return página de UserChatEntity con metadatos de paginación
      */
     @GetMapping("/page/users/{page}")
-    public ResponseEntity<Page<UserChatEntity>> listUsers(
+    public ResponseEntity<Page<UserChatFullDto>> listUsers(
             @PathVariable("page") int page,
             @RequestParam(value = "pageSize", defaultValue = "10") int pageSize,
             @RequestParam(value = "sortBy", defaultValue = "nombres") String sortBy,
             @RequestParam(value = "direction", defaultValue = "asc") String direction) {
 
-        Page<UserChatEntity> usersPage = userchatService.findAll(page, pageSize, sortBy, direction);
+        Page<UserChatFullDto> usersPage = userchatService.findAll(page, pageSize, sortBy, direction);
         return ResponseEntity.ok(usersPage);
     }
 
-    // ======================================================
-    //   Actualizar datos de un usuario
-    // ======================================================
+    // ================== Actualizar datos de un usuario =======================
     @PatchMapping("/update/user/{id}")
-    public ResponseEntity<UserChatEntity> patchUser(
+    public ResponseEntity<UserChatFullDto> patchUser(
             @PathVariable("id") Long id,
             @RequestBody Map<String, Object> updates) {
 
-        UserChatEntity patched = userchatService.patchUser(id, updates);
+        UserChatFullDto patched = userchatService.patchUser(id, updates);
         return ResponseEntity.ok(patched);
     }
 
-    // ======================================================
-    //   Verifciar el ROl
-    // ======================================================
-    @GetMapping("/verify-role/{role}")
-    public ResponseEntity<Boolean> verifyRole(@PathVariable String role) {
-        return null;
-    }
 }

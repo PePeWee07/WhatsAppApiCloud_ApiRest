@@ -45,7 +45,6 @@ public class ErpJsonServerClient {
                 logger.warn("No se encontró usuario en ERP para cédula {}", identificacion);
                 return null;
             }
-            System.out.println("ERP User: " + users);
             return users.get(0);
             
         } catch (Exception e) {

@@ -1,9 +1,7 @@
 package com.BackEnd.WhatsappApiCloud.model.entity.user;
 
 import java.time.LocalDateTime;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
@@ -81,37 +79,8 @@ public class UserChatEntity {
     @JsonManagedReference
     private List<ChatSession> chatSessions;
 
-    // ----- Campos ERP básicos -----
-    @Column(name = "codigo_erp")
-    private String codigoErp;
-
-    @Column(name = "tipo_identificacion")
-    private String tipoIdentificacion;
+    // ----- Campo ERP básico -----
 
     @Column(name = "identificacion")
     private String identificacion;
-
-    @Column(name = "nombres")
-    private String nombres;
-
-    @Column(name = "apellidos")
-    private String apellidos;
-
-    @Column(name = "numero_celular_erp")
-    private String numeroCelular;
-
-    @Column(name = "email_institucional")
-    private String emailInstitucional;
-
-    @Column(name = "email_personal")
-    private String emailPersonal;
-
-    @Column(length = 20)
-    private String sexo;
-
-    // Relación con roles ERP
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @Fetch(FetchMode.SUBSELECT)
-    @JsonManagedReference
-    private Set<ErpRoleEntity> rolesUsuario = new HashSet<>();
 }

@@ -8,6 +8,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
@@ -25,14 +27,11 @@ import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.Reques
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestWhatsappAsRead;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppDataDto;
-import com.BackEnd.WhatsappApiCloud.model.dto.erp.ErpRoleDetailDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.erp.ErpUserDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.erp.RolUserDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.openIA.AnswersOpenIADto;
 import com.BackEnd.WhatsappApiCloud.model.dto.openIA.QuestionOpenIADto;
 import com.BackEnd.WhatsappApiCloud.model.entity.user.ConversationState;
-import com.BackEnd.WhatsappApiCloud.model.entity.user.ErpRoleDetailEntity;
-import com.BackEnd.WhatsappApiCloud.model.entity.user.ErpRoleEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
 import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
@@ -80,7 +79,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     ChatSessionService chatSessionService;
 
     // ======================================================
-    //   Constructor para inicializar el cliente REST
+    // Constructor para inicializar el cliente REST
     // ======================================================
     public ApiWhatsappServiceImpl(
         @Value("${Phone-Number-ID}") String identifier,
@@ -95,7 +94,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     }
 
     // ======================================================
-    //   Constructor de mensajes de respuesta
+    // Constructor de mensajes de respuesta
     // ======================================================
     private ResponseWhatsapp NewResponseBuilder(RequestMessages requestBody, String uri) {
         String response = restClient.post()
@@ -116,7 +115,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
 
     // ======================================================
-    //   Envio de mensaje
+    // Envio de mensaje
     // ======================================================
     @Override
     public ResponseWhatsapp sendMessage(MessageBody payload) {
@@ -138,7 +137,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
     
     // ======================================================
-    //   Mensaje leído
+    // Mensaje leído
     // ======================================================
     public void markAsRead(RequestWhatsappAsRead request) {
         restClient.post().
@@ -155,7 +154,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     // ======================================================
     private UserChatEntity createNewUser(String waId, LocalDateTime timeNow) {
         UserChatEntity newUser = new UserChatEntity();
-        newUser.setNombres("Anonymus");
+        newUser.setIdentificacion("Anonymus");
         newUser.setWhatsappPhone(waId);
         newUser.setFirstInteraction(timeNow);
         newUser.setConversationState(ConversationState.NEW);
@@ -176,7 +175,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             welcomeMessage = new String(bytes, StandardCharsets.UTF_8).trim();
         } catch (Exception e) {
             logger.error("Error al leer el archivo de bienvenida: ", e);
-            welcomeMessage = "Mensaje de bienvenidad no econtrado. Por favor, contacta al administrador soportetic@ucaue.edu.ec.";
+            welcomeMessage = "Mensaje de bienvenidad no econtrado. Por favor, reporta a soportetic@ucaue.edu.ec.";
         }
         sendStickerMessageByUrl(waId, "https://almacenamiento.ucacue.edu.ec/videos/VA-with-logo-uc-Photoroom-ezgif.com-png-to-webp-converter.webp");
         sendMessage(new MessageBody(waId, welcomeMessage));
@@ -189,6 +188,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     // ======================================================
     // Estado "WAITING_FOR_CEDULA"
     // ======================================================
+    @Transactional
     private ResponseWhatsapp handleWaitingForCedula(UserChatEntity user, String messageText, String waId, LocalDateTime timeNow) {
 
         ErpUserDto dto = erpJsonServerClient.getUser(messageText);
@@ -218,40 +218,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
 
         //! ========= SI LO ENCONTRÓ EN ERP =========
-        user.setCodigoErp(dto.getCodigoErp());
-        user.setTipoIdentificacion(dto.getTipoIdentificacion());
         user.setIdentificacion(dto.getIdentificacion());
-        user.setNombres(dto.getNombres());
-        user.setApellidos(dto.getApellidos());
-        user.setNumeroCelular(dto.getNumeroCelular());
-        user.setEmailInstitucional(dto.getEmailInstitucional());
-        user.setEmailPersonal(dto.getEmailPersonal());
-        user.setSexo(dto.getSexo());
-
-        user.getRolesUsuario().clear();
-        for (RolUserDto rDto : dto.getRolesUsuario()) {
-            ErpRoleEntity role = new ErpRoleEntity();
-            role.setTipoRol(rDto.getTipoRol());
-            role.setUser(user);
-
-            for (ErpRoleDetailDto det : rDto.getDetallesRol()) {
-                ErpRoleDetailEntity detail = new ErpRoleDetailEntity();
-                detail.setRole(role);
-                detail.setIdCarrera(det.getIdCarrera());
-                detail.setNombreCarrera(det.getNombreCarrera());
-                detail.setUltimoSemestreActivo(det.getUltimoSemestreActivo());
-                detail.setUnidadAcademica(det.getUnidadAcademica());
-                detail.setSede(det.getSede());
-                detail.setModalidad(det.getModalidad());
-                detail.setCurso(det.getCurso());
-                detail.setParalelo(det.getParalelo());
-                detail.setNombreRol(det.getNombreRol());
-                detail.setUnidadOrganizativa(det.getUnidadOrganizativa());
-                role.getDetallesRol().add(detail);
-            }
-            user.getRolesUsuario().add(role);
-        }
-
         user.setLastInteraction(timeNow);
         user.setConversationState(ConversationState.READY);
         user.setLimitQuestions(limitQuestionsPerDay);
@@ -260,42 +227,53 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         userChatRepository.save(user);
 
         return sendMessage(new MessageBody(waId,
-            "¡Hola 👋, " + user.getNombres() + "! ¿En qué puedo ayudarte hoy?"));
+            "¡Hola 👋, " + dto.getNombres() + " " + dto.getApellidos() + "! ¿En qué puedo ayudarte hoy?"));
     }
 
 
     // ======================================================
-    //   Verificar si el rol del usuario está denegado
+    // Verificar si el rol del usuario está denegado
     // ======================================================
-    public boolean isRoleDenied(UserChatEntity user) {
-        List<String> restricted = Arrays.stream(restrictedRol.split(","))
-                                        .map(String::trim)
-                                        .collect(Collectors.toList());
-
-        if (user.getRolesUsuario().isEmpty()) {
+    private boolean allRolesAreRestricted(List<RolUserDto> rolesUsuarioDto) {
+        if (rolesUsuarioDto == null || rolesUsuarioDto.isEmpty()) {
             return true;
         }
 
-        return user.getRolesUsuario().stream()
-                .map(ErpRoleEntity::getTipoRol)
-                .allMatch(restricted::contains);
+        Set<String> restrictedSet = Arrays.stream(restrictedRol.split(","))
+                                        .map(String::trim)
+                                        .map(String::toUpperCase)
+                                        .collect(Collectors.toSet());
+
+        return rolesUsuarioDto.stream()
+                            .map(RolUserDto::getTipoRol)
+                            .map(String::trim)
+                            .map(String::toUpperCase)
+                            .allMatch(restrictedSet::contains);
     }
 
 
     // ======================================================
     // Estado "READY"
     // ======================================================
+    @Transactional
     private ResponseWhatsapp handleReadyState(UserChatEntity user, String messageText, String waId, LocalDateTime timeNow) throws JsonProcessingException {
+            
+        ErpUserDto userDto = erpJsonServerClient.getUser(user.getIdentificacion());
+        if (userDto == null || userDto.getIdentificacion() == null) {
+            return sendMessage(new MessageBody(waId, "Hubo un problema al obtner tus datos desde el ERP."));
+        }
 
         //! 1. Verificar si el rol del usuario está denegado
-        System.out.println("ROL DENEGADO?: "+ isRoleDenied(user));
-        if(isRoleDenied(user)) {
-            if(user.getLimitQuestions() <= -1) {
+        if (allRolesAreRestricted(userDto.getRolesUsuario())) {
+            if (user.getLimitQuestions() <= -1) {
                 return null;
             }
             user.setLimitQuestions(-1);
             userChatRepository.save(user);
-            return sendMessage(new MessageBody(waId,"Lo sentimos, pero este asistente virtual aún no está disponible para los siguientes rol(es): *"+ restrictedRol + "*."));
+            return sendMessage(new MessageBody(
+                waId,
+                "Lo sentimos, pero este asistente virtual aún no está disponible para los siguientes rol(es): *" + restrictedRol + "*."
+            ));
         }
             
         //! 2. Verificar strikes
@@ -336,11 +314,11 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
 
         //! 6. Obtener respuesta de IA y Actualizar datos del usuario
-        List<String> userRoles = user.getRolesUsuario().stream().map(ErpRoleEntity::getTipoRol).collect(Collectors.toList());
+        List<String> userRoles = userDto.getRolesUsuario().stream().map(RolUserDto::getTipoRol).collect(Collectors.toList());
 
         QuestionOpenIADto question = new QuestionOpenIADto(
             messageText,
-            user.getNombres(),
+            userDto.getNombres() + " " + userDto.getApellidos(),
             waId,
             userRoles,
             user.getThreadId()
@@ -358,7 +336,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     }
 
     // ======================================================
-    //  LLegada de Exepeciones Informativas o Moderación de IA
+    // LLegada de Exepeciones Informativas o Moderación de IA
     // ======================================================
     private ResponseWhatsapp handleApiInfoException(ApiInfoException e, String waId) {
         userChatRepository.findByWhatsappPhone(waId).ifPresent(user -> {
@@ -373,7 +351,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
 
     // ======================================================
-    //   Recibir y enviar respuesta automática
+    // Recibir y enviar respuesta automática
     // ======================================================
     @Override
     public ResponseWhatsapp handleUserMessage(WhatsAppDataDto.WhatsAppMessage message) {
@@ -397,7 +375,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
         try {
             //! Buscar el usuario o crearlo si no existe
-            UserChatEntity user = userChatRepository.findWithRolesByWhatsappPhone(waId)
+            UserChatEntity user = userChatRepository.findByWhatsappPhone(waId)
                     .orElseGet(() -> createNewUser(waId, timeNow));
 
             //! Verificar si el usuario ya está bloqueado
@@ -438,7 +416,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
 
     // ======================================================
-    //  Cargar imagen a la API de WhatsApp
+    // Cargar imagen a la API de WhatsApp
     // ======================================================
     @Override
     public String uploadMedia(File mediaFile) {
