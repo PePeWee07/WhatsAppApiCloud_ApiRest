@@ -5,8 +5,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 
 import com.BackEnd.WhatsappApiCloud.exception.ApiInfoException;
+import com.BackEnd.WhatsappApiCloud.exception.ServerClientException;
 import com.BackEnd.WhatsappApiCloud.model.dto.openIA.AnswersOpenIADto;
 import com.BackEnd.WhatsappApiCloud.model.dto.openIA.QuestionOpenIADto;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -69,9 +71,9 @@ public class openAiServerClient {
                 logger.error("Bad Request al obtener respuesta de IA: " + e.getMessage());
                 throw new RuntimeException(e);
             }
-        }  catch (Exception e) {
-            logger.error("Error al obtener respuesta de IA: " + e.getMessage());
-            throw new RuntimeException(e);
+        } catch (RestClientException e) {
+            logger.error("Error al obtener respuesta del Asistente virtual: ", e.getMessage());
+            throw new ServerClientException("Error al obtener respuesta del Asistente virtual: ", e.getCause());
         }
     }
 }

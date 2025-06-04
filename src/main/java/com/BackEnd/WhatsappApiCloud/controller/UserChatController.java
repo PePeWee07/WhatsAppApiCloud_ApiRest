@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.BackEnd.WhatsappApiCloud.model.dto.user.UserChatFullDto;
 import com.BackEnd.WhatsappApiCloud.service.userChat.UserchatService;
+import com.BackEnd.WhatsappApiCloud.util.UserChatFieldsSorby;
+
 import org.springframework.web.bind.annotation.RequestMapping;
 
 @RestController
@@ -23,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 public class UserChatController {
 
     private final UserchatService userchatService;
+    private static final int MAX_PAGE_SIZE = 100;
 
     public UserChatController(UserchatService userchatService) {
         this.userchatService = userchatService;
@@ -30,21 +33,29 @@ public class UserChatController {
 
     // ========== Encontrar usuario por identificacion o whatsappPhone =============
     @GetMapping("/user/find")
-    public UserChatFullDto findUser(
+    public ResponseEntity<UserChatFullDto> findUser(
             @RequestParam(value = "identificacion", required = false) String identificacion,
             @RequestParam(value = "whatsappPhone", required = false) String whatsappPhone) {
 
-        if (identificacion != null) {
-            UserChatFullDto dto = userchatService.findByIdentificacion(identificacion);
-            return dto;
+        if (identificacion != null && whatsappPhone != null) {
+            return ResponseEntity
+                    .badRequest()
+                    .body(null);
         }
 
-        if (whatsappPhone != null) {
-            UserChatFullDto dto = userchatService.findByWhatsappPhone(whatsappPhone);
-            return dto;
+        if (identificacion == null && whatsappPhone == null) {
+            return ResponseEntity
+                    .badRequest()
+                    .body(null);
         }
-        
-        return null;
+
+        if (identificacion != null) {
+            UserChatFullDto dto = userchatService.findByIdentificacion(identificacion);
+            return ResponseEntity.ok(dto);
+        }
+
+        UserChatFullDto dto = userchatService.findByWhatsappPhone(whatsappPhone);
+        return ResponseEntity.ok(dto);
     }
 
     // =================== Paginar todos los usuarios ========================
@@ -69,7 +80,13 @@ public class UserChatController {
             @RequestParam(value = "sortBy", defaultValue = "lastInteraction") String sortBy,
             @RequestParam(value = "direction", defaultValue = "asc") String direction) {
 
-        Page<UserChatFullDto> usersPage = userchatService.findAll(page, pageSize, sortBy, direction);
+        int size = Math.min(pageSize, MAX_PAGE_SIZE);
+
+        if (!UserChatFieldsSorby.ALLOWED_SORT_FIELDS.contains(sortBy)) {
+            return ResponseEntity.badRequest().body(Page.empty());
+        }
+
+        Page<UserChatFullDto> usersPage = userchatService.usersTable(page, size, sortBy, direction);
         return ResponseEntity.ok(usersPage);
     }
 
@@ -81,7 +98,13 @@ public class UserChatController {
             @RequestParam(value = "direction",defaultValue = "asc")     String direction,
             @RequestParam("startDate") String startDateStr,
             @RequestParam("endDate")   String endDateStr) {
+        
+        int size = Math.min(pageSize, MAX_PAGE_SIZE);
 
+        if (!UserChatFieldsSorby.ALLOWED_SORT_FIELDS.contains(sortBy)) {
+            return ResponseEntity.badRequest().body(Page.empty());
+        }
+        
         LocalDateTime inicio, fin;
         try {
             inicio = LocalDateTime.parse(startDateStr, DateTimeFormatter.ISO_DATE_TIME);
@@ -89,12 +112,12 @@ public class UserChatController {
         } catch (DateTimeParseException ex) {
             return ResponseEntity.badRequest().build();
         }
+
         if (inicio.isAfter(fin)) {
             return ResponseEntity.badRequest().build();
         }
 
-        Page<UserChatFullDto> usuarios =
-            userchatService.findByLastInteraction(page, pageSize, sortBy, direction, inicio, fin);
+        Page<UserChatFullDto> usuarios = userchatService.tablefindByLastInteraction(page, size, sortBy, direction, inicio, fin);
         return ResponseEntity.ok(usuarios);
     }
 
@@ -104,7 +127,7 @@ public class UserChatController {
             @PathVariable("id") Long id,
             @RequestBody Map<String, Object> updates) {
 
-        UserChatFullDto patched = userchatService.patchUser(id, updates);
+        UserChatFullDto patched = userchatService.userUpdate(id, updates);
         return ResponseEntity.ok(patched);
     }
 

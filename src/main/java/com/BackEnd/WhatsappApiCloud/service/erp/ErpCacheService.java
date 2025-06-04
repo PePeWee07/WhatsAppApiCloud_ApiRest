@@ -21,16 +21,13 @@ public class ErpCacheService {
     }
 
     /**
-     * @param identificacion clave única de usuario en el ERP (cedula)
+     * @param identificacion clave única de usuario en el ERP (identificacion)
      * @return ErpUserDto recuperado del ERP o de la caché Redis
      */
     @Cacheable(cacheNames = "erpUserCache", key = "#identificacion")
     public ErpUserDto getCachedUser(String identificacion) {
         logger.debug("Cache miss para ERP: {}", identificacion);
         ErpUserDto dto = erpClient.getUser(identificacion);
-        if (dto == null || dto.getIdentificacion() == null) {
-            logger.warn("ERP devolvió null o identificación nula para {}", identificacion);
-        }
         return dto;
     }
 }

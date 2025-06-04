@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.stereotype.Service;
 
-import com.BackEnd.WhatsappApiCloud.model.entity.user.ChatSession;
+import com.BackEnd.WhatsappApiCloud.model.entity.user.ChatSessionEntity;
 import com.BackEnd.WhatsappApiCloud.repository.ChatSessionRepository;
 import com.BackEnd.WhatsappApiCloud.service.chatSession.ChatSessionService;
 
@@ -26,22 +26,22 @@ public class ChatSessionServiceImpl implements ChatSessionService {
     }
     
     @Override
-    public ChatSession createSessionIfNotExists(String whatsappPhone) {
+    public ChatSessionEntity createSessionIfNotExists(String whatsappPhone) {
         int sessionDurationHours = 24;
         LocalDateTime now       = LocalDateTime.now();
         LocalDateTime threshold = now.minusHours(sessionDurationHours);
 
         // 1) Buscar sesiones activas para este userChatId
-        List<ChatSession> active = chatSessionRepository.findByWhatsappPhoneAndStartTimeBetween(whatsappPhone, threshold, now);
+        List<ChatSessionEntity> active = chatSessionRepository.findByWhatsappPhoneAndStartTimeBetween(whatsappPhone, threshold, now);
 
         if (!active.isEmpty()) {
             // 2) Existe → actualizar contador
-            ChatSession session = active.get(0);
+            ChatSessionEntity session = active.get(0);
             session.setMessageCount(session.getMessageCount() + 1);
             return chatSessionRepository.save(session);
         } else {
             // 3) No existe → crear nueva
-            ChatSession session = new ChatSession();
+            ChatSessionEntity session = new ChatSessionEntity();
             session.setWhatsappPhone(whatsappPhone);
             session.setStartTime(now);
             session.setEndTime(now.plusHours(sessionDurationHours));

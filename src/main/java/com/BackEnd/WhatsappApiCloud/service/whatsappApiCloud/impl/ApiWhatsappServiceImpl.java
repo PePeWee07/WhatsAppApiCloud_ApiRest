@@ -31,7 +31,6 @@ import com.BackEnd.WhatsappApiCloud.model.dto.erp.ErpUserDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.erp.RolUserDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.openIA.AnswersOpenIADto;
 import com.BackEnd.WhatsappApiCloud.model.dto.openIA.QuestionOpenIADto;
-import com.BackEnd.WhatsappApiCloud.model.entity.user.ConversationState;
 import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
 import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
@@ -40,6 +39,7 @@ import com.BackEnd.WhatsappApiCloud.service.erp.ErpCacheService;
 import com.BackEnd.WhatsappApiCloud.service.erp.ErpJsonServerClient;
 import com.BackEnd.WhatsappApiCloud.service.openAi.openAiServerClient;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
+import com.BackEnd.WhatsappApiCloud.util.ConversationState;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -262,7 +262,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     private ResponseWhatsapp handleReadyState(UserChatEntity user, String messageText, String waId, LocalDateTime timeNow) throws JsonProcessingException {
             
         ErpUserDto userDto = erpCacheService.getCachedUser(user.getIdentificacion());
-        System.out.println("User DTO: " + userDto);
 
         if (userDto == null || userDto.getIdentificacion() == null) {
             return sendMessage(new MessageBody(waId, "Hubo un problema al obtner tus datos desde el ERP."));

@@ -22,7 +22,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "chat_sessions")
 @NoArgsConstructor
 @AllArgsConstructor
-public class ChatSession {
+public class ChatSessionEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

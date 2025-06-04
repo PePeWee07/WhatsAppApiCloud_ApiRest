@@ -6,6 +6,7 @@ import java.util.List;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 
+import com.BackEnd.WhatsappApiCloud.util.ConversationState;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.CascadeType;
@@ -77,7 +78,7 @@ public class UserChatEntity {
            fetch = FetchType.LAZY)
     @Fetch(FetchMode.SUBSELECT)
     @JsonManagedReference
-    private List<ChatSession> chatSessions;
+    private List<ChatSessionEntity> chatSessions;
 
     // ----- Campo ERP básico -----
 

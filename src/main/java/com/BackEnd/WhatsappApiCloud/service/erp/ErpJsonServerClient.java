@@ -7,9 +7,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
 import org.springframework.core.ParameterizedTypeReference;
 
-import com.BackEnd.WhatsappApiCloud.exception.CustomJsonServerException;
+import com.BackEnd.WhatsappApiCloud.exception.ServerClientException;
 import com.BackEnd.WhatsappApiCloud.model.dto.erp.ErpUserDto;
 
 @Component
@@ -47,9 +48,9 @@ public class ErpJsonServerClient {
             }
             return users.get(0);
             
-        } catch (Exception e) {
-            logger.error("Error al obtener el usuario desde el ERP: {}", e.getMessage());
-            throw new CustomJsonServerException("Error al obtener datos del usuario desde ERP", e.getCause());
+        } catch (RestClientException e) {
+            logger.error("Error al obtener el usuario desde el ERP: ", e.getMessage());
+            throw new ServerClientException("Error al obtener el usuario desde el ERP: ", e.getCause());
         }
     }
 }

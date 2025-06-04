@@ -7,9 +7,9 @@ import org.springframework.data.domain.Page;
 
 import com.BackEnd.WhatsappApiCloud.model.dto.user.UserChatFullDto;
 public interface UserchatService {
-    UserChatFullDto patchUser(Long id, Map<String, Object> updates);
-    Page<UserChatFullDto> findAll(int page, int size, String sortBy, String direction);
-    Page<UserChatFullDto> findByLastInteraction(int page, int size, String sortBy, String direction, LocalDateTime inicio, LocalDateTime fin);
+    UserChatFullDto userUpdate(Long id, Map<String, Object> updates);
+    Page<UserChatFullDto> usersTable(int page, int size, String sortBy, String direction);
+    Page<UserChatFullDto> tablefindByLastInteraction(int page, int size, String sortBy, String direction, LocalDateTime inicio, LocalDateTime fin);
     UserChatFullDto findByIdentificacion(String identificacion);
     UserChatFullDto findByWhatsappPhone(String whatsappPhone);
 }

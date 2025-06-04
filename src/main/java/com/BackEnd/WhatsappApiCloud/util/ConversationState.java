@@ -1,4 +1,4 @@
-package com.BackEnd.WhatsappApiCloud.model.entity.user;
+package com.BackEnd.WhatsappApiCloud.util;
 
 /**
  * Enum que representa los posibles estados de una conversación con el usuario.

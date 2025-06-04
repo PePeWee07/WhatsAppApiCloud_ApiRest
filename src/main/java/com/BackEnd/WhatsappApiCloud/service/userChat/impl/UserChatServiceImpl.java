@@ -13,7 +13,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.BackEnd.WhatsappApiCloud.exception.CustomJsonServerException;
+import com.BackEnd.WhatsappApiCloud.exception.UserNotFoundException;
 import com.BackEnd.WhatsappApiCloud.model.dto.erp.ErpUserDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.user.ChatSessionDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.user.UserChatFullDto;
@@ -21,20 +21,16 @@ import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
 import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
 import com.BackEnd.WhatsappApiCloud.service.erp.ErpJsonServerClient;
 import com.BackEnd.WhatsappApiCloud.service.userChat.UserchatService;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
-public class UserChatImpl implements UserchatService {
+public class UserChatServiceImpl implements UserchatService {
 
     private final UserChatRepository repo;
-    private final ObjectMapper objectMapper;
     private final ErpJsonServerClient erpClient;
 
-    public UserChatImpl(UserChatRepository repo, ObjectMapper objectMapper, ErpJsonServerClient erpClient) {
+    public UserChatServiceImpl(UserChatRepository repo, ErpJsonServerClient erpClient) {
         this.erpClient = erpClient;
         this.repo = repo;
-        this.objectMapper = objectMapper;
     }
 
     // ======================================================
@@ -44,7 +40,7 @@ public class UserChatImpl implements UserchatService {
     @Transactional(readOnly = true)
     public UserChatFullDto findByIdentificacion(String identificacion) {
         UserChatEntity user = repo.findByIdentificacion(identificacion)
-            .orElseThrow(() -> new RuntimeException("No se encontro el usuario con identificacion: " + identificacion));
+            .orElseThrow(() -> new UserNotFoundException("No se encontro el usuario con identificacion: " + identificacion));
 
         ErpUserDto erpUser;
         erpUser = erpClient.getUser(identificacion);
@@ -83,7 +79,7 @@ public class UserChatImpl implements UserchatService {
     @Transactional(readOnly = true)
     public UserChatFullDto findByWhatsappPhone(String whatsappPhone) {
         UserChatEntity user = repo.findByWhatsappPhone(whatsappPhone)
-            .orElseThrow(() -> new RuntimeException("No se encontro el usuario con identificacion: " + whatsappPhone));
+            .orElseThrow(() -> new UserNotFoundException("No se encontro el usuario con whatsappPhone: " + whatsappPhone));
         
         String identificacion = user.getIdentificacion();
 
@@ -119,13 +115,12 @@ public class UserChatImpl implements UserchatService {
         return fullDto;
     }
 
-
     // ======================================================
     //   Paginar todos los usuarios
     // ======================================================
     @Override
     @Transactional(readOnly = true)
-    public Page<UserChatFullDto> findAll(int page, int size, String sortBy, String direction) {
+    public Page<UserChatFullDto> usersTable(int page, int size, String sortBy, String direction) {
 
         Sort sort = Sort.by(sortBy);
         sort = "desc".equalsIgnoreCase(direction) ? sort.descending() : sort.ascending();
@@ -136,12 +131,7 @@ public class UserChatImpl implements UserchatService {
         List<UserChatFullDto> dtos = pageLocal.getContent().stream()
             .map(usuarioLocal -> {
                 ErpUserDto erpUser;
-
-                try {
-                    erpUser = erpClient.getUser(usuarioLocal.getIdentificacion());
-                } catch (CustomJsonServerException e) {
-                    erpUser = null;
-                }
+                erpUser = erpClient.getUser(usuarioLocal.getIdentificacion());
 
                 List<ChatSessionDto> sesionesDto = usuarioLocal.getChatSessions().stream()
                     .map(cs -> new ChatSessionDto(
@@ -180,7 +170,7 @@ public class UserChatImpl implements UserchatService {
     // ======================================================
     @Override
     @Transactional(readOnly = true)
-    public Page<UserChatFullDto> findByLastInteraction(int page, int size, String sortBy, String direction, LocalDateTime inicio, LocalDateTime fin) {
+    public Page<UserChatFullDto> tablefindByLastInteraction(int page, int size, String sortBy, String direction, LocalDateTime inicio, LocalDateTime fin) {
 
         Sort sort = Sort.by(sortBy);
         sort = "desc".equalsIgnoreCase(direction) ? sort.descending() : sort.ascending();
@@ -191,12 +181,7 @@ public class UserChatImpl implements UserchatService {
         List<UserChatFullDto> dtos = pageLocal.getContent().stream()
             .map(usuarioLocal -> {
                 ErpUserDto erpUser;
-
-                try {
-                    erpUser = erpClient.getUser(usuarioLocal.getIdentificacion());
-                } catch (CustomJsonServerException e) {
-                    erpUser = null;
-                }
+                erpUser = erpClient.getUser(usuarioLocal.getIdentificacion());
 
                 List<ChatSessionDto> sesionesDto = usuarioLocal.getChatSessions().stream()
                     .map(cs -> new ChatSessionDto(
@@ -234,15 +219,44 @@ public class UserChatImpl implements UserchatService {
     // ======================================================
     @Override
     @Transactional
-    public UserChatFullDto patchUser(Long id, Map<String, Object> updates) {
+    public UserChatFullDto userUpdate(Long id, Map<String, Object> updates) {
         UserChatEntity user = repo.findById(id)
             .orElseThrow(() -> new RuntimeException("Usuario no encontrado con id " + id));
 
-        try {
-            objectMapper.readerForUpdating(user)
-                        .readValue(objectMapper.writeValueAsString(updates));
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException("Error aplicando patch al usuario", e);
+        if (updates.containsKey("threadId")) {
+            Object threadVal = updates.get("threadId");
+            if (threadVal instanceof String) {
+                user.setThreadId((String) threadVal);
+            }
+        }
+        if (updates.containsKey("limitQuestions")) {
+            Object limQ = updates.get("limitQuestions");
+            if (limQ instanceof Number) {
+                user.setLimitQuestions(((Number) limQ).intValue());
+            } else if (limQ instanceof String) {
+                int parsed = Integer.parseInt((String) limQ);
+                user.setLimitQuestions(parsed);
+            }
+        }
+        if (updates.containsKey("limitStrike")) {
+            Object limS = updates.get("limitStrike");
+            if (limS instanceof Number) {
+                user.setLimitStrike(((Number) limS).intValue());
+            }
+        }
+        if (updates.containsKey("block")) {
+            Object blk = updates.get("block");
+            if (blk instanceof Boolean) {
+                user.setBlock((Boolean) blk);
+            } else if (blk instanceof String) {
+                user.setBlock(Boolean.parseBoolean((String) blk));
+            }
+        }
+        if (updates.containsKey("blockingReason")) {
+            Object reason = updates.get("blockingReason");
+            if (reason instanceof String) {
+                user.setBlockingReason((String) reason);
+            }
         }
 
         UserChatEntity saved = repo.save(user);
@@ -250,11 +264,7 @@ public class UserChatImpl implements UserchatService {
         saved.getChatSessions().size();
 
         ErpUserDto erpUser;
-        try {
-            erpUser = erpClient.getUser(saved.getIdentificacion());
-        } catch (CustomJsonServerException e) {
-            erpUser = null;
-        }
+        erpUser = erpClient.getUser(saved.getIdentificacion());
 
         List<ChatSessionDto> sesionesDto = saved.getChatSessions().stream()
             .map(cs -> new ChatSessionDto(
