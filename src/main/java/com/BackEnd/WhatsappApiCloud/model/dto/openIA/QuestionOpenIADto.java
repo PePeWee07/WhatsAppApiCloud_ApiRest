@@ -6,9 +6,22 @@ public record QuestionOpenIADto(
         String ask,
         String name,
         String phone,
-        List<String> userRoles,
-        String thread_id) {
-    public QuestionOpenIADto(String ask, String name, String phone, List<String> userRoles) {
-        this(ask, name, phone, userRoles, null);
+        List<String> roles,
+        String thread_id,
+        String identificacion,
+        String emailInstitucional,
+        String emailPersonal,
+        String sexo) {
+    public QuestionOpenIADto(
+            String ask,
+            String name,
+            String phone,
+            List<String> roles,
+            String identifiacion,
+            String emailInstitucional,
+            String emailPersonal,
+            String sexo
+        ) {
+        this(ask, name, phone, roles, null, identifiacion, emailInstitucional, emailPersonal, sexo);
     }
 }

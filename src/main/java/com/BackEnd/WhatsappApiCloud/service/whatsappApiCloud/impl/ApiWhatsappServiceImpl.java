@@ -325,7 +325,11 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             userDto.getNombres() + " " + userDto.getApellidos(),
             waId,
             userRoles,
-            user.getThreadId()
+            user.getThreadId(),
+            user.getIdentificacion(),
+            userDto.getEmailInstitucional(),
+            userDto.getEmailPersonal(),
+            userDto.getSexo()
         );
 
         AnswersOpenIADto data = openAiServerClient.getOpenAiData(question);
