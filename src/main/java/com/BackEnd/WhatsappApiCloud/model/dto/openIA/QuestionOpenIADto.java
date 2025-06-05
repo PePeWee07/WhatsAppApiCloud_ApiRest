@@ -1,7 +1,27 @@
 package com.BackEnd.WhatsappApiCloud.model.dto.openIA;
 
-public record QuestionOpenIADto(String ask, String name, String phone, String rol, String thread_id) {
-    public QuestionOpenIADto(String ask, String name, String phone, String rol) {
-        this(ask, name, phone, rol, null);
+import java.util.List;
+
+public record QuestionOpenIADto(
+        String ask,
+        String name,
+        String phone,
+        List<String> roles,
+        String thread_id,
+        String identificacion,
+        String emailInstitucional,
+        String emailPersonal,
+        String sexo) {
+    public QuestionOpenIADto(
+            String ask,
+            String name,
+            String phone,
+            List<String> roles,
+            String identifiacion,
+            String emailInstitucional,
+            String emailPersonal,
+            String sexo
+        ) {
+        this(ask, name, phone, roles, null, identifiacion, emailInstitucional, emailPersonal, sexo);
     }
 }
