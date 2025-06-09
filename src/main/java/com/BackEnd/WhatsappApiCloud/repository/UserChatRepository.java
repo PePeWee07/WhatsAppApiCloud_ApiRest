@@ -27,4 +27,9 @@ public interface UserChatRepository extends JpaRepository<UserChatEntity, Long> 
         LocalDateTime inicio,
         LocalDateTime fin,
         Pageable pageable);
+
+    Page<UserChatEntity> findDistinctByChatSessionsStartTimeBetween(
+        LocalDateTime inicio,
+        LocalDateTime fin,
+        Pageable pageable);
 }

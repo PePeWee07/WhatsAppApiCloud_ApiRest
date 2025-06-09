@@ -121,6 +121,38 @@ public class UserChatController {
         return ResponseEntity.ok(usuarios);
     }
 
+    // ================== Paginar usuarios por fecha de inicio de sesión de chat ========================
+    @GetMapping("/page/users/{page}/byChatSessionStart")
+    public ResponseEntity<Page<UserChatFullDto>> listChatSessionStart(
+            @PathVariable("page") int page,
+            @RequestParam(value = "pageSize", defaultValue = "10") int pageSize,
+            @RequestParam(value = "sortBy",   defaultValue = "lastInteraction") String sortBy,
+            @RequestParam(value = "direction",defaultValue = "asc")     String direction,
+            @RequestParam("startDate") String startDateStr,
+            @RequestParam("endDate")   String endDateStr) {
+        
+        int size = Math.min(pageSize, MAX_PAGE_SIZE);
+
+        if (!UserChatFieldsSorby.ALLOWED_SORT_FIELDS.contains(sortBy)) {
+            return ResponseEntity.badRequest().body(Page.empty());
+        }
+        
+        LocalDateTime inicio, fin;
+        try {
+            inicio = LocalDateTime.parse(startDateStr, DateTimeFormatter.ISO_DATE_TIME);
+            fin    = LocalDateTime.parse(endDateStr,   DateTimeFormatter.ISO_DATE_TIME);
+        } catch (DateTimeParseException ex) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        if (inicio.isAfter(fin)) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        Page<UserChatFullDto> usuarios = userchatService.tablefindByChatSessionStart(page, size, sortBy, direction, inicio, fin);
+        return ResponseEntity.ok(usuarios);
+    }
+
     // ================== Actualizar datos de un usuario =======================
     @PatchMapping("/update/user/{id}")
     public ResponseEntity<UserChatFullDto> patchUser(

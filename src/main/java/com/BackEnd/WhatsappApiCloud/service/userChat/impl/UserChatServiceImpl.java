@@ -215,6 +215,56 @@ public class UserChatServiceImpl implements UserchatService {
     }
 
     // ======================================================
+    //   Buscar usuarios por fecha de inicio de sesion
+    // ======================================================
+    @Override
+    @Transactional(readOnly = true)
+    public Page<UserChatFullDto> tablefindByChatSessionStart(int page, int size, String sortBy, String direction, LocalDateTime inicio, LocalDateTime fin) {
+
+        Sort sort = Sort.by(sortBy);
+        sort = "desc".equalsIgnoreCase(direction) ? sort.descending() : sort.ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Page<UserChatEntity> pageLocal = repo.findDistinctByChatSessionsStartTimeBetween(inicio, fin, pageable);
+
+        List<UserChatFullDto> dtos = pageLocal.getContent().stream()
+            .map(usuarioLocal -> {
+                ErpUserDto erpUser;
+                erpUser = erpClient.getUser(usuarioLocal.getIdentificacion());
+
+                List<ChatSessionDto> sesionesDto = usuarioLocal.getChatSessions().stream()
+                    .map(cs -> new ChatSessionDto(
+                        cs.getId(),
+                        cs.getWhatsappPhone(),
+                        cs.getMessageCount(),
+                        cs.getStartTime(),
+                        cs.getEndTime()))
+                    .collect(Collectors.toList());
+
+                UserChatFullDto fullDto = new UserChatFullDto();
+                fullDto.setId(usuarioLocal.getId());
+                fullDto.setWhatsappPhone(usuarioLocal.getWhatsappPhone());
+                fullDto.setThreadId(usuarioLocal.getThreadId());
+                fullDto.setLimitQuestions(usuarioLocal.getLimitQuestions());
+                fullDto.setFirstInteraction(usuarioLocal.getFirstInteraction());
+                fullDto.setLastInteraction(usuarioLocal.getLastInteraction());
+                fullDto.setNextResetDate(usuarioLocal.getNextResetDate());
+                fullDto.setConversationState(usuarioLocal.getConversationState().name());
+                fullDto.setLimitStrike(usuarioLocal.getLimitStrike());
+                fullDto.setBlock(usuarioLocal.isBlock());
+                fullDto.setBlockingReason(usuarioLocal.getBlockingReason());
+                fullDto.setValidQuestionCount(usuarioLocal.getValidQuestionCount());
+                fullDto.setChatSessions(sesionesDto);
+
+                fullDto.setErpUser(erpUser);
+                return fullDto;
+            })
+            .collect(Collectors.toList());
+
+        return new PageImpl<>(dtos, pageable, pageLocal.getTotalElements());
+    }
+
+    // ======================================================
     //   Actualizar datos de usuario
     // ======================================================
     @Override
