@@ -24,7 +24,12 @@ public interface UserChatRepository extends JpaRepository<UserChatEntity, Long> 
     Optional<UserChatEntity> findByWhatsappPhone(String whatsappPhone);
 
     Page<UserChatEntity> findByThreadIdIsNotNullAndLastInteractionBetween(
-        LocalDateTime inicio,
-        LocalDateTime fin,
-        Pageable pageable);
+            LocalDateTime inicio,
+            LocalDateTime fin,
+            Pageable pageable);
+
+    Page<UserChatEntity> findDistinctByChatSessionsStartTimeBetween(
+            LocalDateTime inicio,
+            LocalDateTime fin,
+            Pageable pageable);
 }
