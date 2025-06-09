@@ -18,6 +18,8 @@ import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import com.BackEnd.WhatsappApiCloud.exception.ServerClientException;
+import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.Ticket;
+import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.TicketFollowUp;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.UserGlpi;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.UserTicket;
 
@@ -74,8 +76,7 @@ public class GlpiServerClient {
         }
     }
 
-    // ---------- Obtener el token de sesión GLPI, renovándolo si es necesario
-    // ----------
+    // ----- Obtener el token de sesión GLPI, renovándolo si es necesario -----
     public String getSessionTokenGlpi() {
         if (sessionToken == null) {
             return fetchNewSessionToken();
@@ -88,8 +89,7 @@ public class GlpiServerClient {
         return sessionToken;
     }
 
-    // ---------- Obtener el ticket con datos de Solicitante, Observador, Asignado
-    // ----------
+    // ----- Obtener el ticket con datos de Solicitante, Observador, Asignado -----
     public List<UserTicket> getTicketUser(String ticketId) {
         String sessionToken = getSessionTokenGlpi();
 
@@ -101,9 +101,16 @@ public class GlpiServerClient {
                     .body(UserTicket[].class);
 
             return Arrays.asList(response);
-        } catch (RestClientException e) {
-            logger.error("Error al obtener ticket del usuario: ", e.getMessage());
-            throw new ServerClientException("\"Error al obtener ticket del usuario: ", e.getCause());
+        } catch (RestClientResponseException ex) {
+            String body = ex.getResponseBodyAsString();
+            String msg = String.format("HTTP %d al obtener obtener el ticket del usuario: %s", ex.getStatusCode(), body);
+            logger.error(msg, ex);
+            throw new ServerClientException(msg, ex);
+
+        } catch (RestClientException ex) {
+            String msg = "Error genérico el ticket del usuario: " + ex.getCause();
+            logger.error(msg, ex);
+            throw new ServerClientException(msg, ex);
         }
     }
 
@@ -138,44 +145,61 @@ public class GlpiServerClient {
         }
     }
 
-    public String findTicket(String ticketId) {
+    // ---------- Buscar ticket por ID ----------
+    public Ticket getTicketByLink(String ticketUrl) {
         String sessionToken = getSessionTokenGlpi();
 
+        URI uri = UriComponentsBuilder
+                .fromHttpUrl(ticketUrl)
+                .queryParam("expand_dropdowns", true)
+                .queryParam("with_notes", true)
+                .queryParam("with_documents", true)
+                .queryParam("with_tickets", true)
+                .build()
+                .toUri();
+
         try {
-            String response = apiClient.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/Ticket/" + ticketId)
-                            .queryParam("expand_dropdowns", true)
-                            .queryParam("with_notes", true)
-                            .queryParam("with_documents", true)
-                            .queryParam("with_tickets", true)
-                            .build())
+            Ticket response = absoluteUriClient.get()
+                    .uri(uri)
                     .header("Session-Token", sessionToken)
                     .retrieve()
-                    .body(String.class);
+                    .body(Ticket.class);
 
             return response;
+        } catch (RestClientResponseException ex) {
+            String body = ex.getResponseBodyAsString();
+            String msg = String.format("HTTP %d al obtener Ticket: %s", ex.getStatusCode(), body);
+            logger.error(msg, ex);
+            throw new ServerClientException(msg, ex);
         } catch (RestClientException e) {
-            logger.error("Error al buscar ticket: ", e.getMessage());
-            throw new ServerClientException("Error al buscar ticket: ", e);
+            String msg = "Error genérico al obtener el ticket: " + e.getCause();
+            logger.error(msg, e);
+            throw new ServerClientException(msg, e);
         }
     }
 
-    public String TicketWithNotes(String ticketId) {
+    // ---------- Obtener seguimientos de un ticket ----------
+    public List<TicketFollowUp> TicketWithNotes(Long ticketId) {
         String sessionToken = getSessionTokenGlpi();
 
         try {
-            String response = apiClient.get()
+            TicketFollowUp[] response = apiClient.get()
                     .uri("/Ticket/" + ticketId + "/ITILFollowup")
                     .header("Session-Token", sessionToken)
                     .retrieve()
-                    .body(String.class);
+                    .body(TicketFollowUp[].class);
 
-            return response;
+            return Arrays.asList(response);
 
+        } catch (RestClientResponseException ex) {
+            String body = ex.getResponseBodyAsString();
+            String msg = String.format("HTTP %d al obtener seguimeintos: %s", ex.getStatusCode(), body);
+            logger.error(msg, ex);
+            throw new ServerClientException(msg, ex);
         } catch (RestClientException e) {
-            logger.error("Error al buscar seguimeinto del ticket: ", e.getMessage());
-            throw new ServerClientException("Error al buscar seguimeinto del ticket: ", e);
+            String msg = "Error genérico al obtener seguimeintos: " + e.getCause();
+            logger.error(msg, e);
+            throw new ServerClientException(msg, e);
         }
     }
 }

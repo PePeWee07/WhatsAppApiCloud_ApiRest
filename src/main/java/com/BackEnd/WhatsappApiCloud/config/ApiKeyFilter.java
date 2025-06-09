@@ -5,15 +5,11 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.preauth.PreAuthenticatedAuthenticationToken;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
-
-import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
-import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
 
 import java.io.IOException;
 
@@ -30,18 +26,6 @@ public class ApiKeyFilter extends OncePerRequestFilter {
 
     @Value("${api.key.header}")
     private String API_KEY_HEADER;
-
-    private String PHONE_NUMBER;
-
-    @Autowired
-    ApiWhatsappService apiWhatsappService;
-
-    // ======================================================
-    //   Obtener el número de teléfono del usuario
-    // ======================================================
-    public String getPhoneNumber(String phone) {
-        return PHONE_NUMBER = phone;
-    }
 
 
     // ======================================================
@@ -76,10 +60,8 @@ public class ApiKeyFilter extends OncePerRequestFilter {
 
             filterChain.doFilter(request, response);
         } catch (Exception e) {
-            logger.error("Error durante la validacion de la clave API", e);
+            logger.error("Error: ", e);
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            MessageBody messageBody = new MessageBody(PHONE_NUMBER, "Lo sentimos, ocurrió un problema al procesar su solicitud. Por favor, inténtelo más tarde.");
-            apiWhatsappService.sendMessage(messageBody);
         }
     }
 }

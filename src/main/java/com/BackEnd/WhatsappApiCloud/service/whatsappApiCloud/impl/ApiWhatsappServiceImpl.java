@@ -134,7 +134,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
         } catch (Exception e) {
             logger.error("Error al enviar mensaje: " + e);
-            return null;
+            throw new RuntimeException("Error al enviar mensaje", e);
         }
     }
 

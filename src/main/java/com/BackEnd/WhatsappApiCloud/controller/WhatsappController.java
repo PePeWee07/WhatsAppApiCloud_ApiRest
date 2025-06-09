@@ -3,7 +3,6 @@ package com.BackEnd.WhatsappApiCloud.controller;
 import java.io.File;
 import java.io.IOException;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -13,7 +12,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.BackEnd.WhatsappApiCloud.config.ApiKeyFilter;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppDataDto;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
@@ -30,9 +28,6 @@ public class WhatsappController {
     public WhatsappController(ApiWhatsappService apiWhatsappService) {
         this.apiWhatsappService = apiWhatsappService;
     }
-
-    @Autowired
-    private ApiKeyFilter apiKeyFilter;
 
     
     // ======================================================
@@ -56,7 +51,6 @@ public class WhatsappController {
     public ResponseWhatsapp receiveMessage(@RequestBody WhatsAppDataDto.WhatsAppMessage message) throws JsonProcessingException {
         if(message.entry().get(0).changes().get(0).value().messages() != null){
             System.out.println("Mensaje recibido: " + message.entry().get(0).changes().get(0).value().messages().get(0).text()); //! Debug
-            apiKeyFilter.getPhoneNumber(message.entry().get(0).changes().get(0).value().contacts().get(0).wa_id());
             return apiWhatsappService.handleUserMessage(message);
         }
         return null;
