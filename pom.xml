@@ -150,6 +150,13 @@
 		<artifactId>spring-boot-starter-cache</artifactId>
 		</dependency>
 
+		<!-- Json -->
+		<dependency>
+			<groupId>org.json</groupId>
+			<artifactId>json</artifactId>
+			<version>20250517</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>

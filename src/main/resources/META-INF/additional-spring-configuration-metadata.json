@@ -78,5 +78,20 @@
     "name": "welcome.message",
     "type": "java.lang.String",
     "description": "A description for 'welcome.message'"
+  },
+  {
+    "name": "glpi.app_token",
+    "type": "java.lang.String",
+    "description": "A description for 'glpi.app_token'"
+  },
+  {
+    "name": "baseurl.glpi",
+    "type": "java.lang.String",
+    "description": "A description for 'baseurl.glpi'"
+  },
+  {
+    "name": "glpi.user_token",
+    "type": "java.lang.String",
+    "description": "A description for 'glpi.user_token'"
   }
 ]}
