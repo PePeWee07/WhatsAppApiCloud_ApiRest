@@ -16,7 +16,7 @@ public class RequestMessages {
     private String type;  // "text", "image", "video", "sticker"
 
     private RequestMessageText text;    // Usado cuando type = "text"
-    private RequestMediaLink image;     // Usado cuando type = "image"
+    private RequestMedia image;
     private RequestVideoLink video;     // Usado cuando type = "video"
     private RequestMediaLink sticker;   // Usado cuando type = "sticker"
 

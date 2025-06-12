@@ -1,10 +1,12 @@
 package com.BackEnd.WhatsappApiCloud.service.userChat;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.data.domain.Page;
 
+import com.BackEnd.WhatsappApiCloud.model.dto.glpi.UserTicketDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.user.UserChatFullDto;
 public interface UserchatService {
     UserChatFullDto userUpdate(Long id, Map<String, Object> updates);
@@ -13,4 +15,5 @@ public interface UserchatService {
     Page<UserChatFullDto> tablefindByChatSessionStart(int page, int size, String sortBy, String direction, LocalDateTime inicio, LocalDateTime fin);
     UserChatFullDto findByIdentificacion(String identificacion);
     UserChatFullDto findByWhatsappPhone(String whatsappPhone);
+    List<UserTicketDto> listOpenTickets(String whatsAppPhone);
 }

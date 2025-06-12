@@ -3,6 +3,7 @@ package com.BackEnd.WhatsappApiCloud.controller;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.data.domain.Page;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.BackEnd.WhatsappApiCloud.model.dto.glpi.UserTicketDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.user.UserChatFullDto;
 import com.BackEnd.WhatsappApiCloud.service.userChat.UserchatService;
 import com.BackEnd.WhatsappApiCloud.util.UserChatFieldsSorby;
@@ -96,7 +98,7 @@ public class UserChatController {
             @PathVariable("page") int page,
             @RequestParam(value = "pageSize", defaultValue = "10") int pageSize,
             @RequestParam(value = "sortBy",   defaultValue = "lastInteraction") String sortBy,
-            @RequestParam(value = "direction",defaultValue = "asc")     String direction,
+            @RequestParam(value = "direction", defaultValue = "asc")     String direction,
             @RequestParam("startDate") String startDateStr,
             @RequestParam("endDate")   String endDateStr) {
         
@@ -162,6 +164,15 @@ public class UserChatController {
 
         UserChatFullDto patched = userchatService.userUpdate(id, updates);
         return ResponseEntity.ok(patched);
+    }
+
+    // ================== Obtener Ticket Abiertos de un usuario =================
+    @GetMapping("/user/tickets")
+    public ResponseEntity<List<UserTicketDto>> listOpenTickets(
+            @RequestParam("whatsappPhone") String whatsAppPhone) {
+
+        List<UserTicketDto> tickets = userchatService.listOpenTickets(whatsAppPhone);
+        return ResponseEntity.ok(tickets);
     }
 
 }

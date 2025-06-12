@@ -1,6 +1,11 @@
 package com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.impl;
 
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.tika.Tika;
+
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -14,12 +19,14 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.BackEnd.WhatsappApiCloud.exception.ApiInfoException;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestMessages;
@@ -41,6 +48,7 @@ import com.BackEnd.WhatsappApiCloud.service.openAi.openAiServerClient;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
 import com.BackEnd.WhatsappApiCloud.util.ConversationState;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.nio.file.Paths;
@@ -54,6 +62,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     private static final Logger logger = LoggerFactory.getLogger(ApiWhatsappServiceImpl.class);
 
     private final RestClient restClient;
+    private final ObjectMapper objectMapper;
 
     @Value("${restricted.roles}")
     private String restrictedRol;
@@ -88,12 +97,14 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         @Value("${Phone-Number-ID}") String identifier,
         @Value("${whatsapp.token}") String token,
         @Value("${whatsapp.urlbase}") String urlBase,
-        @Value("${whatsapp.version}") String version) {
+        @Value("${whatsapp.version}") String version,
+        ObjectMapper objectMapper) {
 
         restClient = RestClient.builder()
                     .baseUrl(urlBase + version + "/" + identifier)
                     .defaultHeader("Authorization", "Bearer " + token)
                     .build();
+        this.objectMapper = objectMapper;
     }
 
     // ======================================================
@@ -429,21 +440,25 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     @Override
     public String uploadMedia(File mediaFile) {
         try {
-            // Detectar el tipo MIME de la imagen
-            String contentType = Files.probeContentType(mediaFile.toPath());
-
-            if (contentType == null) {
-                logger.error("No se pudo detectar el tipo MIME de la imagen.");
-                throw new RuntimeException("No se pudo detectar el tipo MIME de la imagen.");
+            if (mediaFile.length() == 0 || !mediaFile.exists()) {
+                throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST, "El archivo está vacío."
+                );
             }
 
-            // Construir el cuerpo de la petición multipart
+            Tika tika = new Tika();
+            String contentType = tika.detect(mediaFile);
+
+            if ("text/csv".equals(contentType)) {
+                mediaFile = convertCsvToExcel(mediaFile);
+                contentType = "application/vnd.ms-excel";
+            }
+
             MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
             body.add("file", new FileSystemResource(mediaFile));
             body.add("type", contentType);
             body.add("messaging_product", "whatsapp");
 
-            // Enviar la solicitud usando restClient configurado en el constructor
             String response = restClient.post()
                     .uri("/media")
                     .contentType(MediaType.MULTIPART_FORM_DATA)
@@ -451,18 +466,60 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     .retrieve()
                     .body(String.class);
 
-            return response;
+            JsonNode root = objectMapper.readTree(response);
+            return root.path("id").asText();
 
         } catch (IOException e) {
             logger.error("Error al leer el archivo: ", e);
             throw new RuntimeException("Error al leer el archivo: ", e);
         } catch (Exception e) {
             logger.error("Error inesperado al subir el archivo: ", e);
-            throw new RuntimeException("Error inesperado al subir el archivo: ", e);
+            throw new RuntimeException("Error inesperado al subir el archivo al servidor de Whatsapp: ", e);
         }
     }
 
+    // ======================================================
+    //  Eliminar archvio multi media por ID
+    // ======================================================
+    @Override
+    public Boolean deleteMediaById(String mediaId) {
+        try {
+            // Construir la URL manualmente sin el identifier
+            String url = "https://graph.facebook.com/v23.0/" + mediaId;
 
+            String response = restClient.delete()
+                .uri(url)
+                .retrieve()
+                .body(String.class);
+
+            JsonNode root = objectMapper.readTree(response);
+            return root.path("success").asBoolean();
+        } catch (Exception e) {
+            logger.error("Error al eliminar el archivo multimedia " + mediaId + ": ", e);
+            return false;
+        }
+    }
+
+    // ======================================================
+    //  Enviar una imagen por ID como mensaje
+    // ======================================================
+    @Override
+    public ResponseWhatsapp sendImageMessageById(String toPhoneNumber, String mediaId, String caption) {
+        try {
+            // Construir el mensaje usando el método de la fábrica
+            RequestMessages mensajeImage = RequestMessagesFactory.buildImageByIdWithText(toPhoneNumber, mediaId, caption);
+
+            // Enviar la solicitud
+            ResponseWhatsapp respuesta = NewResponseBuilder(mensajeImage, "/messages");
+            return respuesta;
+
+        } catch (Exception e) {
+            logger.error("Error al enviar la imagen: ", e);
+            return null;
+        }
+    }
+
+    
     // ======================================================
     //  Enviar una imagen por URL como mensaje
     // ======================================================
@@ -513,4 +570,29 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
+    // Método para convertir CSV a Excel
+    private File convertCsvToExcel(File csvFile) throws IOException {
+        File excelFile = new File(csvFile.getParent(), "converted_" + csvFile.getName() + ".xlsx");
+
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("Sheet1");
+            List<String> lines = Files.readAllLines(csvFile.toPath(), StandardCharsets.UTF_8);
+
+            int rowIndex = 0;
+            for (String line : lines) {
+                Row row = sheet.createRow(rowIndex++);
+                String[] cells = line.split(",");
+                for (int cellIndex = 0; cellIndex < cells.length; cellIndex++) {
+                    Cell cell = row.createCell(cellIndex);
+                    cell.setCellValue(cells[cellIndex]);
+                }
+            }
+
+            try (FileOutputStream fos = new FileOutputStream(excelFile)) {
+                workbook.write(fos);
+            }
+        }
+
+        return excelFile;
+    }
 }

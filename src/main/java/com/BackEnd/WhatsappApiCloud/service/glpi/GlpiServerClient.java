@@ -18,10 +18,14 @@ import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import com.BackEnd.WhatsappApiCloud.exception.ServerClientException;
+import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.CreateTicket;
+import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.Document_Item;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.Ticket;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.TicketFollowUp;
+import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.TicketSolution;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.UserGlpi;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.UserTicket;
+import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.responseCreateTicketSuccess;
 
 @Component
 public class GlpiServerClient {
@@ -145,7 +149,7 @@ public class GlpiServerClient {
         }
     }
 
-    // ---------- Buscar ticket por ID ----------
+    // ---------- Obtener Ticket ----------
     public Ticket getTicketByLink(String ticketUrl) {
         String sessionToken = getSessionTokenGlpi();
 
@@ -178,6 +182,33 @@ public class GlpiServerClient {
         }
     }
 
+    // ---------- Obtener Ticket por ID ----------
+    public Ticket getTicketById(Long ticketid) {
+        String sessionToken = getSessionTokenGlpi();
+
+        try {
+            Ticket response = apiClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/Ticket/" + ticketid)
+                            .queryParam("expand_dropdowns", true)
+                            .build())
+                    .header("Session-Token", sessionToken)
+                    .retrieve()
+                    .body(Ticket.class);
+
+            return response;
+        } catch (RestClientResponseException ex) {
+            String body = ex.getResponseBodyAsString();
+            String msg = String.format("HTTP %d al obtener Ticket por Id: %s", ex.getStatusCode(), body);
+            logger.error(msg, ex);
+            throw new ServerClientException(msg, ex);
+        } catch (RestClientException e) {
+            String msg = "Error genérico al obtener el ticket por Id: " + e.getCause();
+            logger.error(msg, e);
+            throw new ServerClientException(msg, e);
+        }
+    }
+
     // ---------- Obtener seguimientos de un ticket ----------
     public List<TicketFollowUp> TicketWithNotes(Long ticketId) {
         String sessionToken = getSessionTokenGlpi();
@@ -202,4 +233,115 @@ public class GlpiServerClient {
             throw new ServerClientException(msg, e);
         }
     }
+
+    // ------- Obtener documentos_itens de un seguimeinto ----------
+    public List<Document_Item> getDocumentItems(String document_itemUrl) {
+        String sessionToken = getSessionTokenGlpi();
+
+        URI uri = UriComponentsBuilder
+                .fromHttpUrl(document_itemUrl)
+                .queryParam("expand_dropdowns", true)
+                .build()
+                .toUri();
+
+        try {
+            Document_Item[] response = apiClient.get()
+                    .uri(uri)
+                    .header("Session-Token", sessionToken)
+                    .retrieve()
+                    .body(Document_Item[].class);
+
+            return Arrays.asList(response);
+        } catch (RestClientResponseException ex) {
+            String body = ex.getResponseBodyAsString();
+            String msg = String.format("HTTP %d al obtener documentos_itens: %s", ex.getStatusCode(), body);
+            logger.error(msg, ex);
+            throw new ServerClientException(msg, ex);
+        } catch (RestClientException e) {
+            String msg = "Error genérico al obtener documentos_itens: " + e.getCause();
+            logger.error(msg, e);
+            throw new ServerClientException(msg, e);
+        }
+    }
+
+    // ---------- Descargar Docuemnt_itens ----------
+    public byte[] downloadDocument(String documentHref) {
+        String session = getSessionTokenGlpi();
+
+        URI uri = UriComponentsBuilder
+            .fromHttpUrl(documentHref)
+            .queryParam("alt", "media")
+            .build()
+            .toUri();
+
+        try {
+            return absoluteUriClient.get()
+                .uri(uri)
+                .header("Session-Token", session)
+                .retrieve()
+                .body(byte[].class);
+        } catch (RestClientResponseException ex) {
+            String body = ex.getResponseBodyAsString();
+            String msg = String.format("HTTP %d al descargar documento: %s", ex.getStatusCode(), body);
+            logger.error(msg, ex);
+            throw new ServerClientException(msg, ex);
+        } catch (RestClientException e) {
+            String msg = "Error genérico al descargar documento: " + e.getCause();
+            logger.error(msg, e);
+            throw new ServerClientException(msg, e);
+        }
+    }
+
+    // ---------- Obtener solucion del Ticket ----------
+    public List<TicketSolution> getTicketSolution(Long ticketId) {
+        String sessionToken = getSessionTokenGlpi();
+
+        try {
+            TicketSolution[] response = apiClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/Ticket/" + ticketId + "/ITILSolution")
+                            .queryParam("expand_dropdowns", true)
+                            .build())
+                    .header("Session-Token", sessionToken)
+                    .retrieve()
+                    .body(TicketSolution[].class);
+
+            return Arrays.asList(response);
+        } catch (RestClientResponseException ex) {
+            String body = ex.getResponseBodyAsString();
+            String msg = String.format("HTTP %d al obtener solución del ticket: %s", ex.getStatusCode(), body);
+            logger.error(msg, ex);
+            throw new ServerClientException(msg, ex);
+        } catch (RestClientException e) {
+            String msg = "Error genérico al obtener solución del ticket: " + e.getCause();
+            logger.error(msg, e);
+            throw new ServerClientException(msg, e);
+        }
+    }
+
+    // ---------- Crear Ticket ----------
+    public responseCreateTicketSuccess createTicket(CreateTicket ticket) {
+        String sessionToken = getSessionTokenGlpi();
+
+        try {
+            responseCreateTicketSuccess response = apiClient.post()
+                    .uri("/Ticket")
+                    .header("Session-Token", sessionToken)
+                    .body(ticket)
+                    .retrieve()
+                    .body(responseCreateTicketSuccess.class);
+
+            return response;
+        } catch (RestClientResponseException ex) {
+            String body = ex.getResponseBodyAsString();
+            String msg = String.format("HTTP %d al crear el ticket: %s", ex.getStatusCode(), body);
+            logger.error(msg, ex);
+            throw new ServerClientException(msg, ex);
+        } catch (RestClientException e) {
+            String msg = "Error genérico al crear el ticket: " + e.getCause();
+            logger.error(msg, e);
+            throw new ServerClientException(msg, e);
+        }
+    }
+   
 }

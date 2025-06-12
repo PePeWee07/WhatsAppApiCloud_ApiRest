@@ -7,6 +7,7 @@ public record TicketInfoDto(
     List<String> watcher_emails,
     List<TicketInfoDto.TechDto> assigned_techs,
     TicketInfoDto.TicketDto ticket,
+    List<TicketInfoDto.TicketSolutionDto> solutions,
     List<TicketInfoDto.NoteDto> notes
 ) {
     public static record TechDto(
@@ -29,25 +30,27 @@ public record TicketInfoDto(
         String closedate,
         String solvedate,
         String date_mod,
-        Long status,
+        Object status,
         String content,
-        Long urgency,
-        Long impact,
-        Long priority,
+        String urgency,
+        String impact,
+        String priority,
         String itilcategories_id,
-        Long type,
+        String type,
         String locations_id,
         String date_creation
     ) {}
 
+    public static record TicketSolutionDto(
+        String content,
+        String date_creation,
+        String status,
+        List<String> mediaIds
+    ) {}
+
     public static record NoteDto(
         String date_creation,
-        String content
+        String content,
+        List<String> mediaIds
     ) {}
 }
-
-// Obtener el userTicket (links, type, alternative_email)
-// Si esta un tecnico asignado, consultar usaurio (id, name, mobile, realname, firstname, locations_id, is_active, profiles_id, usertitles_id, groups_id, users_id_supervisor)
-// Obtener el ticket (id, name, closedate, solvedate, date_mod, status, content, urgency, impact, priority, itilcategories_id, type(incidencia, solicitud), locations_id, date_creation, _notes)
-// Verificar si tiene _notes(date_creation, content)
-// Devolver datos

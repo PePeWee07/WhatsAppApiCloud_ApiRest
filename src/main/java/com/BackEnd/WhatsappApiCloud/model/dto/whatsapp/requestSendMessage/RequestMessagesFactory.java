@@ -4,6 +4,13 @@ import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.media.
 
 public class RequestMessagesFactory {
 
+     public static RequestMessages buildImageByIdWithText(
+            String to, String mediaId, String caption) {
+        RequestMessages msg = base(to, "image");
+        msg.setImage(new RequestMediaId(mediaId, caption));
+        return msg;
+    }
+
     public static RequestMessages buildTextMessage(String to, String message) {
         RequestMessages req = base(to, "text");
         req.setText(new RequestMessageText(false, message));

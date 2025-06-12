@@ -13,24 +13,35 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.BackEnd.WhatsappApiCloud.exception.ServerClientException;
 import com.BackEnd.WhatsappApiCloud.exception.UserNotFoundException;
 import com.BackEnd.WhatsappApiCloud.model.dto.erp.ErpUserDto;
+import com.BackEnd.WhatsappApiCloud.model.dto.glpi.TicketInfoDto;
+import com.BackEnd.WhatsappApiCloud.model.dto.glpi.UserTicketDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.user.ChatSessionDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.user.UserChatFullDto;
+import com.BackEnd.WhatsappApiCloud.model.entity.glpi.UserTicketEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
+import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
 import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
+import com.BackEnd.WhatsappApiCloud.repository.UserTicketRepository;
 import com.BackEnd.WhatsappApiCloud.service.erp.ErpJsonServerClient;
+import com.BackEnd.WhatsappApiCloud.service.glpi.GlpiService;
 import com.BackEnd.WhatsappApiCloud.service.userChat.UserchatService;
 
 @Service
 public class UserChatServiceImpl implements UserchatService {
 
     private final UserChatRepository repo;
+    private final UserTicketRepository  userTicketRepository;
     private final ErpJsonServerClient erpClient;
+    private final GlpiService glpiService;
 
-    public UserChatServiceImpl(UserChatRepository repo, ErpJsonServerClient erpClient) {
+    public UserChatServiceImpl(UserChatRepository repo, ErpJsonServerClient erpClient, UserTicketRepository  userTicketRepository, GlpiService glpiService) {
         this.erpClient = erpClient;
         this.repo = repo;
+        this.userTicketRepository = userTicketRepository;
+        this.glpiService = glpiService;
     }
 
     // ======================================================
@@ -53,6 +64,18 @@ public class UserChatServiceImpl implements UserchatService {
                 cs.getStartTime(),
                 cs.getEndTime()))
             .collect(Collectors.toList());
+        
+        List<UserTicketDto> ticketsDto = user.getTickets().stream()
+            .map(ticket -> new UserTicketDto(
+                ticket.getId(),
+                ticket.getWhatsappPhone(),
+                ticket.getName(),
+                ticket.getStatus(),
+                ticket.getDate_creation(),
+                ticket.getClosedate(),
+                ticket.getSolvedate(),
+                ticket.getDate_mod()
+                )).collect(Collectors.toList());
 
         UserChatFullDto fullDto = new UserChatFullDto();
         fullDto.setId(user.getId());
@@ -68,6 +91,7 @@ public class UserChatServiceImpl implements UserchatService {
         fullDto.setBlockingReason(user.getBlockingReason());
         fullDto.setValidQuestionCount(user.getValidQuestionCount());
         fullDto.setChatSessions(sesionesDto);
+        fullDto.setUserTickets(ticketsDto);
 
         fullDto.setErpUser(erpUser);
 
@@ -94,6 +118,17 @@ public class UserChatServiceImpl implements UserchatService {
                 cs.getStartTime(),
                 cs.getEndTime()))
             .collect(Collectors.toList());
+        List<UserTicketDto> ticketsDto = user.getTickets().stream()
+            .map(ticket -> new UserTicketDto(
+                ticket.getId(),
+                ticket.getWhatsappPhone(),
+                ticket.getName(),
+                ticket.getStatus(),
+                ticket.getDate_creation(),
+                ticket.getClosedate(),
+                ticket.getSolvedate(),
+                ticket.getDate_mod()
+                )).collect(Collectors.toList());
 
         UserChatFullDto fullDto = new UserChatFullDto();
         fullDto.setId(user.getId());
@@ -109,6 +144,7 @@ public class UserChatServiceImpl implements UserchatService {
         fullDto.setBlockingReason(user.getBlockingReason());
         fullDto.setValidQuestionCount(user.getValidQuestionCount());
         fullDto.setChatSessions(sesionesDto);
+        fullDto.setUserTickets(ticketsDto);
 
         fullDto.setErpUser(erpUser);
 
@@ -129,11 +165,11 @@ public class UserChatServiceImpl implements UserchatService {
         Page<UserChatEntity> pageLocal = repo.findAll(pageable);
 
         List<UserChatFullDto> dtos = pageLocal.getContent().stream()
-            .map(usuarioLocal -> {
+            .map(user -> {
                 ErpUserDto erpUser;
-                erpUser = erpClient.getUser(usuarioLocal.getIdentificacion());
+                erpUser = erpClient.getUser(user.getIdentificacion());
 
-                List<ChatSessionDto> sesionesDto = usuarioLocal.getChatSessions().stream()
+                List<ChatSessionDto> sesionesDto = user.getChatSessions().stream()
                     .map(cs -> new ChatSessionDto(
                         cs.getId(),
                         cs.getWhatsappPhone(),
@@ -141,21 +177,35 @@ public class UserChatServiceImpl implements UserchatService {
                         cs.getStartTime(),
                         cs.getEndTime()))
                     .collect(Collectors.toList());
+                
+                List<UserTicketDto> ticketsDto = user.getTickets().stream()
+                    .map(ticket -> new UserTicketDto(
+                        ticket.getId(),
+                        ticket.getWhatsappPhone(),
+                        ticket.getName(),
+                        ticket.getStatus(),
+                        ticket.getDate_creation(),
+                        ticket.getClosedate(),
+                        ticket.getSolvedate(),
+                        ticket.getDate_mod()
+                        )).collect(Collectors.toList());
 
                 UserChatFullDto fullDto = new UserChatFullDto();
-                fullDto.setId(usuarioLocal.getId());
-                fullDto.setWhatsappPhone(usuarioLocal.getWhatsappPhone());
-                fullDto.setThreadId(usuarioLocal.getThreadId());
-                fullDto.setLimitQuestions(usuarioLocal.getLimitQuestions());
-                fullDto.setFirstInteraction(usuarioLocal.getFirstInteraction());
-                fullDto.setLastInteraction(usuarioLocal.getLastInteraction());
-                fullDto.setNextResetDate(usuarioLocal.getNextResetDate());
-                fullDto.setConversationState(usuarioLocal.getConversationState().name());
-                fullDto.setLimitStrike(usuarioLocal.getLimitStrike());
-                fullDto.setBlock(usuarioLocal.isBlock());
-                fullDto.setBlockingReason(usuarioLocal.getBlockingReason());
-                fullDto.setValidQuestionCount(usuarioLocal.getValidQuestionCount());
+                fullDto.setId(user.getId());
+                fullDto.setWhatsappPhone(user.getWhatsappPhone());
+                fullDto.setThreadId(user.getThreadId());
+                fullDto.setLimitQuestions(user.getLimitQuestions());
+                fullDto.setFirstInteraction(user.getFirstInteraction());
+                fullDto.setLastInteraction(user.getLastInteraction());
+                fullDto.setNextResetDate(user.getNextResetDate());
+                fullDto.setConversationState(user.getConversationState().name());
+                fullDto.setLimitStrike(user.getLimitStrike());
+                fullDto.setBlock(user.isBlock());
+                fullDto.setBlockingReason(user.getBlockingReason());
+                fullDto.setValidQuestionCount(user.getValidQuestionCount());
                 fullDto.setChatSessions(sesionesDto);
+                fullDto.setUserTickets(ticketsDto);
+                
 
                 fullDto.setErpUser(erpUser);
                 return fullDto;
@@ -179,11 +229,11 @@ public class UserChatServiceImpl implements UserchatService {
         Page<UserChatEntity> pageLocal = repo.findByThreadIdIsNotNullAndLastInteractionBetween(inicio, fin, pageable);
 
         List<UserChatFullDto> dtos = pageLocal.getContent().stream()
-            .map(usuarioLocal -> {
+            .map(user -> {
                 ErpUserDto erpUser;
-                erpUser = erpClient.getUser(usuarioLocal.getIdentificacion());
+                erpUser = erpClient.getUser(user.getIdentificacion());
 
-                List<ChatSessionDto> sesionesDto = usuarioLocal.getChatSessions().stream()
+                List<ChatSessionDto> sesionesDto = user.getChatSessions().stream()
                     .map(cs -> new ChatSessionDto(
                         cs.getId(),
                         cs.getWhatsappPhone(),
@@ -191,21 +241,33 @@ public class UserChatServiceImpl implements UserchatService {
                         cs.getStartTime(),
                         cs.getEndTime()))
                     .collect(Collectors.toList());
+                List<UserTicketDto> ticketsDto = user.getTickets().stream()
+            .map(ticket -> new UserTicketDto(
+                ticket.getId(),
+                ticket.getWhatsappPhone(),
+                ticket.getName(),
+                ticket.getStatus(),
+                ticket.getDate_creation(),
+                ticket.getClosedate(),
+                ticket.getSolvedate(),
+                ticket.getDate_mod()
+                )).collect(Collectors.toList());
 
                 UserChatFullDto fullDto = new UserChatFullDto();
-                fullDto.setId(usuarioLocal.getId());
-                fullDto.setWhatsappPhone(usuarioLocal.getWhatsappPhone());
-                fullDto.setThreadId(usuarioLocal.getThreadId());
-                fullDto.setLimitQuestions(usuarioLocal.getLimitQuestions());
-                fullDto.setFirstInteraction(usuarioLocal.getFirstInteraction());
-                fullDto.setLastInteraction(usuarioLocal.getLastInteraction());
-                fullDto.setNextResetDate(usuarioLocal.getNextResetDate());
-                fullDto.setConversationState(usuarioLocal.getConversationState().name());
-                fullDto.setLimitStrike(usuarioLocal.getLimitStrike());
-                fullDto.setBlock(usuarioLocal.isBlock());
-                fullDto.setBlockingReason(usuarioLocal.getBlockingReason());
-                fullDto.setValidQuestionCount(usuarioLocal.getValidQuestionCount());
+                fullDto.setId(user.getId());
+                fullDto.setWhatsappPhone(user.getWhatsappPhone());
+                fullDto.setThreadId(user.getThreadId());
+                fullDto.setLimitQuestions(user.getLimitQuestions());
+                fullDto.setFirstInteraction(user.getFirstInteraction());
+                fullDto.setLastInteraction(user.getLastInteraction());
+                fullDto.setNextResetDate(user.getNextResetDate());
+                fullDto.setConversationState(user.getConversationState().name());
+                fullDto.setLimitStrike(user.getLimitStrike());
+                fullDto.setBlock(user.isBlock());
+                fullDto.setBlockingReason(user.getBlockingReason());
+                fullDto.setValidQuestionCount(user.getValidQuestionCount());
                 fullDto.setChatSessions(sesionesDto);
+            fullDto.setUserTickets(ticketsDto);
 
                 fullDto.setErpUser(erpUser);
                 return fullDto;
@@ -228,11 +290,11 @@ public class UserChatServiceImpl implements UserchatService {
         Page<UserChatEntity> pageLocal = repo.findDistinctByChatSessionsStartTimeBetween(inicio, fin, pageable);
 
         List<UserChatFullDto> dtos = pageLocal.getContent().stream()
-            .map(usuarioLocal -> {
+            .map(user -> {
                 ErpUserDto erpUser;
-                erpUser = erpClient.getUser(usuarioLocal.getIdentificacion());
+                erpUser = erpClient.getUser(user.getIdentificacion());
 
-                List<ChatSessionDto> sesionesDto = usuarioLocal.getChatSessions().stream()
+                List<ChatSessionDto> sesionesDto = user.getChatSessions().stream()
                     .map(cs -> new ChatSessionDto(
                         cs.getId(),
                         cs.getWhatsappPhone(),
@@ -240,21 +302,33 @@ public class UserChatServiceImpl implements UserchatService {
                         cs.getStartTime(),
                         cs.getEndTime()))
                     .collect(Collectors.toList());
+                    List<UserTicketDto> ticketsDto = user.getTickets().stream()
+            .map(ticket -> new UserTicketDto(
+                ticket.getId(),
+                ticket.getWhatsappPhone(),
+                ticket.getName(),
+                ticket.getStatus(),
+                ticket.getDate_creation(),
+                ticket.getClosedate(),
+                ticket.getSolvedate(),
+                ticket.getDate_mod()
+                )).collect(Collectors.toList());
 
                 UserChatFullDto fullDto = new UserChatFullDto();
-                fullDto.setId(usuarioLocal.getId());
-                fullDto.setWhatsappPhone(usuarioLocal.getWhatsappPhone());
-                fullDto.setThreadId(usuarioLocal.getThreadId());
-                fullDto.setLimitQuestions(usuarioLocal.getLimitQuestions());
-                fullDto.setFirstInteraction(usuarioLocal.getFirstInteraction());
-                fullDto.setLastInteraction(usuarioLocal.getLastInteraction());
-                fullDto.setNextResetDate(usuarioLocal.getNextResetDate());
-                fullDto.setConversationState(usuarioLocal.getConversationState().name());
-                fullDto.setLimitStrike(usuarioLocal.getLimitStrike());
-                fullDto.setBlock(usuarioLocal.isBlock());
-                fullDto.setBlockingReason(usuarioLocal.getBlockingReason());
-                fullDto.setValidQuestionCount(usuarioLocal.getValidQuestionCount());
+                fullDto.setId(user.getId());
+                fullDto.setWhatsappPhone(user.getWhatsappPhone());
+                fullDto.setThreadId(user.getThreadId());
+                fullDto.setLimitQuestions(user.getLimitQuestions());
+                fullDto.setFirstInteraction(user.getFirstInteraction());
+                fullDto.setLastInteraction(user.getLastInteraction());
+                fullDto.setNextResetDate(user.getNextResetDate());
+                fullDto.setConversationState(user.getConversationState().name());
+                fullDto.setLimitStrike(user.getLimitStrike());
+                fullDto.setBlock(user.isBlock());
+                fullDto.setBlockingReason(user.getBlockingReason());
+                fullDto.setValidQuestionCount(user.getValidQuestionCount());
                 fullDto.setChatSessions(sesionesDto);
+                fullDto.setUserTickets(ticketsDto);
 
                 fullDto.setErpUser(erpUser);
                 return fullDto;
@@ -324,6 +398,17 @@ public class UserChatServiceImpl implements UserchatService {
                 cs.getStartTime(),
                 cs.getEndTime()))
             .collect(Collectors.toList());
+         List<UserTicketDto> ticketsDto = saved.getTickets().stream()
+        .map(ticket -> new UserTicketDto(
+                ticket.getId(),
+                ticket.getWhatsappPhone(),
+                ticket.getName(),
+                ticket.getStatus(),
+                ticket.getDate_creation(),
+                ticket.getClosedate(),
+                ticket.getSolvedate(),
+                ticket.getDate_mod()
+                )).collect(Collectors.toList());
 
         UserChatFullDto fullDto = new UserChatFullDto();
         fullDto.setId(saved.getId());
@@ -339,11 +424,61 @@ public class UserChatServiceImpl implements UserchatService {
         fullDto.setBlockingReason(saved.getBlockingReason());
         fullDto.setValidQuestionCount(saved.getValidQuestionCount());
         fullDto.setChatSessions(sesionesDto);
+        fullDto.setUserTickets(ticketsDto);
 
         fullDto.setErpUser(erpUser);
 
         return fullDto;
     }
 
+    @Override
+    public List<UserTicketDto> listOpenTickets(String whatsAppPhone) {
+            repo.findByWhatsappPhone(whatsAppPhone)
+            .orElseThrow(() ->
+                    new UserNotFoundException(
+                    "Usuario no encontrado para el número de WhatsApp: " + whatsAppPhone)
+            );
+
+            List<UserTicketEntity> entities = userTicketRepository.findByWhatsappPhoneAndStatusNot(whatsAppPhone, "Cerrado");
+
+            return entities.stream()
+            .map(e -> new UserTicketDto(
+                    e.getId(),
+                    e.getWhatsappPhone(),
+                    e.getName(),
+                    e.getStatus(),
+                    e.getDate_creation(),
+                    e.getClosedate(),
+                    e.getSolvedate(),
+                    e.getDate_mod()
+            ))
+            .toList();
+    }
+
+    // ---------- Usuario solicita info del Ticket ----------
+    public void userRequest(String whatsAppPhone, String ticketId) {
+
+        // 1) Verificar que el usuario existe
+        repo.findByWhatsappPhone(whatsAppPhone)
+            .orElseThrow(() -> new UserNotFoundException(
+                "Usuario no encontrado para el número: " + whatsAppPhone));
+
+        // 2) Verificar que el ticket le pertenece
+        Long id = Long.valueOf(ticketId);
+        if (!userTicketRepository.existsByWhatsappPhoneAndId(whatsAppPhone, id)) {
+            throw new ServerClientException(
+                "El ticket " + ticketId + " no pertenece al usuario " + whatsAppPhone);
+        }
+
+        // 3) Recuperar la info limpia del ticket
+        TicketInfoDto info = glpiService.getInfoTicketById(ticketId);
+
+        // 4) Construir un mensaje resumen
+        
+
+        // 5) Enviar por WhatsApp
+        // MessageBody payload = new MessageBody(whatsAppPhone, sb.toString());
+        // apiWhatsappService.sendMessage(payload);
+    }
 
 }

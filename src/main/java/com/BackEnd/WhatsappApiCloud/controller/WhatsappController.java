@@ -5,6 +5,7 @@ import java.io.IOException;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -70,13 +71,55 @@ public class WhatsappController {
             tempFile.delete();
 
             if (mediaId != null) {
-                return ResponseEntity.ok("Imagen subida con éxito. Media ID: " + mediaId);
+                return ResponseEntity.ok(mediaId);
             } else {
                 return ResponseEntity.status(500).body("Error al subir la imagen.");
             }
 
         } catch (IOException e) {
             return ResponseEntity.status(500).body("Error al procesar el archivo: " + e.getMessage());
+        }
+    }
+
+    // ======================================================
+    //   Eliminar un archvio multimedia del server de WhatsApp
+    // ======================================================
+    @DeleteMapping("/delete-media-file")
+    public ResponseEntity<?> deleteMedia(@RequestParam("mediaId") String mediaId) {
+        try {
+            if (mediaId == null || mediaId.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("El mediaId no puede estar vacío.");
+            }
+
+            boolean deleted = apiWhatsappService.deleteMediaById(mediaId);
+            if (deleted) {
+                return ResponseEntity.ok("Archivo multimedia eliminado correctamente.");
+            } else {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("El archivo multimedia no se pudo encontrar o eliminar.");
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error al procesar la solicitud: " + e.getMessage());
+        }
+    }
+
+    
+    // ======================================================
+    //   Enviar imagen por ID con texto a un usuario de WhatsApp
+    // ======================================================
+    @PostMapping("/send-image-by-id")
+    public ResponseEntity<ResponseWhatsapp> sendImageById(
+            @RequestParam("toPhoneNumber") String toPhoneNumber,
+            @RequestParam("mediaId") String mediaId,
+            @RequestParam("caption") String caption) {
+        try {
+            ResponseWhatsapp response = apiWhatsappService.sendImageMessageById(toPhoneNumber, mediaId, caption);
+            if (response != null) {
+                return ResponseEntity.ok(response);
+            } else {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
 }
