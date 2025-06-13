@@ -1,6 +1,7 @@
 package com.BackEnd.WhatsappApiCloud.service.userChat.impl;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -13,7 +14,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.BackEnd.WhatsappApiCloud.exception.ServerClientException;
 import com.BackEnd.WhatsappApiCloud.exception.UserNotFoundException;
 import com.BackEnd.WhatsappApiCloud.model.dto.erp.ErpUserDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.TicketInfoDto;
@@ -469,27 +469,32 @@ public class UserChatServiceImpl implements UserchatService {
                 "Usuario no encontrado para el número: " + whatsAppPhone));
 
         // 2) Verificar que el ticket le pertenece
-        Long id = Long.valueOf(ticketId);
-        if (!userTicketRepository.existsByWhatsappPhoneAndId(whatsAppPhone, id)) {
-            throw new ServerClientException(
-                "El ticket " + ticketId + " no pertenece al usuario " + whatsAppPhone);
-        }
+        // Long id = Long.valueOf(ticketId);
+        // if (!userTicketRepository.existsByWhatsappPhoneAndId(whatsAppPhone, id)) {
+        //     throw new ServerClientException(
+        //         "El ticket " + ticketId + " no pertenece al usuario " + whatsAppPhone);
+        // }
 
         // 3) Recuperar la info limpia del ticket
         TicketInfoDto info = glpiService.getInfoTicketById(ticketId);
 
         // 4) Construir un mensaje resumen
         StringBuilder sb = new StringBuilder();
-        sb.append("*Información del Ticket*\n");
-        sb.append("Nombre del Ticket: ").append(info.ticket().name()).append("\n");
-        sb.append("Estado: ").append(info.ticket().status()).append("\n");
-        sb.append("Fecha de Creación: ").append(info.ticket().date_creation()).append("\n");
+        sb.append(" > *Información del Ticket*\n");
+        sb.append("`ID:` ").append(info.ticket().id()).append("\n");
+        sb.append("`Titulo:` ").append(info.ticket().name()).append("\n");
+        sb.append("`Tipo:` ").append(info.ticket().type()).append("\n");
+        sb.append("`Estado:` ").append(info.ticket().status()).append("\n");
+        sb.append("`Fecha de apertura:` ").append(info.ticket().date_creation()).append("\n");
+        if (info.ticket().closedate() != null) {
+            sb.append("`Fecha de cierre:` ").append(info.ticket().closedate()).append("\n");
+        }
 
         // 4.1) Información de técnicos asignados
         if (!info.assigned_techs().isEmpty()) {
             sb.append("\n*Técnicos Asignados:*\n");
             for (TicketInfoDto.TechDto tech : info.assigned_techs()) {
-                sb.append("- ").append(tech.realname()).append(" ").append(tech.firstname());
+                sb.append("- ").append(tech.firstname()).append(" ").append(tech.realname());
                 if (tech.mobile() != null) {
                     sb.append(" (").append(tech.mobile()).append(")");
                 }
@@ -498,6 +503,7 @@ public class UserChatServiceImpl implements UserchatService {
         }
 
         // 4.2) Información de la solución (si existe y no está rechazada)
+        boolean hasValidSolution = false;
         if (!info.solutions().isEmpty()) {
             TicketInfoDto.TicketSolutionDto solution = info.solutions().stream()
                 .filter(s -> !"Rechazado".equalsIgnoreCase(s.status()))
@@ -505,9 +511,10 @@ public class UserChatServiceImpl implements UserchatService {
                 .orElse(null);
 
             if (solution != null) {
-                sb.append("\n*Solución:*\n");
-                sb.append("Contenido: ").append(solution.content()).append("\n");
-                sb.append("Fecha de Creación: ").append(solution.date_creation()).append("\n");
+                hasValidSolution = true;
+                sb.append("\n").append("> *Solucionado:*\n");
+                sb.append("`Fecha de resolución:` ").append(solution.date_creation()).append("\n\n");
+                sb.append(solution.content()).append("\n");
 
                 // Enviar imágenes asociadas a la solución
                 if (solution.mediaIds() != null && !solution.mediaIds().isEmpty()) {
@@ -519,11 +526,11 @@ public class UserChatServiceImpl implements UserchatService {
         }
 
         // 4.3) Último seguimiento (si existe)
-        if (!info.notes().isEmpty()) {
+        if (!hasValidSolution && info.notes() != null && !info.notes().isEmpty()) {
             TicketInfoDto.NoteDto lastNote = info.notes().get(info.notes().size() - 1);
-            sb.append("\n*Último Seguimiento:*\n");
-            sb.append("Contenido: ").append(lastNote.content()).append("\n");
-            sb.append("Fecha de Creación: ").append(lastNote.date_creation()).append("\n");
+            sb.append("\n").append("> *Último Seguimiento:*\n");
+            sb.append("`Fecha:` ").append(lastNote.date_creation()).append("\n\n");
+            sb.append(lastNote.content()).append("\n");
 
             // Enviar imágenes asociadas al seguimiento
             if (lastNote.mediaIds() != null && !lastNote.mediaIds().isEmpty()) {
@@ -533,8 +540,26 @@ public class UserChatServiceImpl implements UserchatService {
             }
         }
 
-        // 5) Enviar el mensaje resumen por WhatsApp
-        apiWhatsappService.sendMessage(new MessageBody(whatsAppPhone, sb.toString()));
+         // 4) Dividir el mensaje si excede el límite de 4096 caracteres
+        String message = sb.toString();
+        if (message.length() > 4096) {
+            List<String> parts = splitMessage(message, 4096);
+            for (String part : parts) {
+                apiWhatsappService.sendMessage(new MessageBody(whatsAppPhone, part));
+            }
+        } else {
+            apiWhatsappService.sendMessage(new MessageBody(whatsAppPhone, message));
+        }
     }
 
+    private List<String> splitMessage(String message, int maxLength) {
+        List<String> parts = new ArrayList<>();
+        int start = 0;
+        while (start < message.length()) {
+            int end = Math.min(start + maxLength, message.length());
+            parts.add(message.substring(start, end));
+            start = end;
+        }
+        return parts;
+    }
 }

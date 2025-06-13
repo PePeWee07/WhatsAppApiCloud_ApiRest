@@ -10,8 +10,15 @@ import java.util.stream.Collectors;
 import java.io.File;
 import java.nio.file.Files;
 
-import org.apache.tika.Tika;
 import org.jsoup.Jsoup;
+import org.jsoup.parser.Parser;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.nodes.Node;
+import org.jsoup.nodes.TextNode;
+
+
+import org.apache.tika.Tika;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -106,11 +113,63 @@ public class GlpiServiceImpl implements GlpiService {
                 return allowedMimeTypes.contains(mimeType);
         }
 
+        private String cleanHtmlForWhatsApp(String rawHtml) {
+                // 1) Parseamos y decodificamos entidades
+                Document doc = Jsoup.parse(Parser.unescapeEntities(rawHtml, false));
+                doc.outputSettings().prettyPrint(false);
+
+                StringBuilder sb = new StringBuilder();
+
+                // 2) Recorremos sólo los hijos directos de <body>
+                for (Node node : doc.body().childNodes()) {
+                        if (node instanceof Element) {
+                        Element el = (Element) node;
+                        switch (el.tagName()) {
+                                case "p":
+                                // párrafos TOP-level
+                                appendParagraph(sb, el.text());
+                                break;
+                                case "div":
+                                // tu contenedor de contenido GLPi
+                                if (el.hasClass("item_content")) {
+                                        Element rich = el.selectFirst("div.rich_text_container");
+                                        if (rich != null) {
+                                        // 2.1) Dentro, sólo los <p> directos
+                                        for (Element p : rich.select("> p")) {
+                                                appendParagraph(sb, p.text());
+                                        }
+                                        // 2.2) Después, sólo el <ul> para los ítems
+                                        Element ul = rich.selectFirst("ul");
+                                        if (ul != null) {
+                                                for (Element li : ul.select("> li")) {
+                                                sb.append("* ").append(li.text().trim()).append("\n");
+                                                }
+                                                sb.append("\n");
+                                        }
+                                        }
+                                }
+                                break;
+                        }
+                        } else if (node instanceof TextNode) {
+                        // texto suelto fuera de etiquetas
+                        String t = ((TextNode) node).text().trim();
+                        appendParagraph(sb, t);
+                        }
+                }
+
+                return sb.toString().trim();
+        }
+
+        private void appendParagraph(StringBuilder sb, String text) {
+                if (text != null && !text.isEmpty()) {
+                        sb.append(text).append("\n\n");
+                }
+        }
+
+
         @Override
         public TicketInfoDto getInfoTicketById(String ticketId) {
                 List<UserTicket> userTickets = glpiServerClient.getTicketUser(ticketId);
-
-                System.out.println("Datos obtenidos de GLPI para el ticket: " + ticketId + userTickets);
 
                 // 1) Obtener link del ticket desde el solicitante
                 String ticketLink = userTickets.stream()
@@ -175,7 +234,7 @@ public class GlpiServiceImpl implements GlpiService {
                                         : glpiTicket.status() == 4L ? "En espera"
                                                 : glpiTicket.status() == 5L ? "Resuelto"
                                                         : glpiTicket.status() == 6L ? "Cerrado" : "Indefinido",
-                Jsoup.parse(glpiTicket.content()).text(),
+                cleanHtmlForWhatsApp(glpiTicket.content()),
                 glpiTicket.urgency() == 1L ? "Muy baja"
                         : glpiTicket.urgency() == 2L ? "Baja"
                                 : glpiTicket.urgency() == 3L ? "Media"
@@ -203,27 +262,33 @@ public class GlpiServiceImpl implements GlpiService {
                 List<TicketSolutionDto> solutionDto = new ArrayList<>();
                 if (glpiTicket.solvedate() != null) {
                         List<TicketSolution> glpiSolutions = glpiServerClient.getTicketSolution(glpiTicket.id());
-                        solutionDto = glpiSolutions.stream().map(solution -> {
-                                String content = Jsoup.parse(solution.content()).text();
+                       solutionDto = glpiSolutions.stream()
+                        .map(solution -> {
+                                String formatted = cleanHtmlForWhatsApp(solution.content());
+
                                 String solutionStatus = solution.status() == 1L ? "None"
                                                 : solution.status() == 2L ? "En espera"
-                                                                : solution.status() == 3L ? "Aceptado"
-                                                                                : solution.status() == 4L ? "Rechazado"
-                                                                                                : "Indefinido";
+                                                : solution.status() == 3L ? "Aceptado"
+                                                : solution.status() == 4L ? "Rechazado"
+                                                : "Indefinido";
+
                                 List<String> mediaIds = extractMediaIdsFromLinks(solution.links());
-                                return new TicketSolutionDto(content,
-                                 solution.date_creation(),
-                                 solutionStatus,
-                                 mediaIds.isEmpty() ? null : mediaIds
+
+                                return new TicketSolutionDto(
+                                formatted,
+                                solution.date_creation(),
+                                solutionStatus,
+                                mediaIds.isEmpty() ? null : mediaIds
                                 );
-                        }).collect(Collectors.toList());
+                        })
+                        .collect(Collectors.toList());
                 }
 
                 // 7) Seguimientos (_notes)
                 List<TicketFollowUp> rawNotes = glpiServerClient.TicketWithNotes(glpiTicket.id());
                 List<NoteDto> notes = rawNotes.stream()
                         .map(n -> {
-                        String content = Jsoup.parse(n.content()).text();
+                        String content = cleanHtmlForWhatsApp(n.content());
                         List<String> mediaIds = extractMediaIdsFromLinks(n.links());
 
                         return new NoteDto(

@@ -145,13 +145,13 @@ public class GlpiDto {
                         String locations_id,
                         Long validation_percent,
                         String date_creation,
-                        Document[] _documents,
+                        DocumentGlpi[] _documents,
                         Tickets[] _tickets,
                         Notes _notes,
                         Link[] links) {
         }
 
-        public record Document(
+        public record DocumentGlpi(
                         Long assocID,
                         String assocdate,
                         Long entityID,
@@ -170,7 +170,7 @@ public class GlpiDto {
                         Long is_deleted,
                         String link,
                         Object users_id,
-                        Long tickets_id,
+                        Object tickets_id,
                         String sha1sum,
                         Long is_blacklisted,
                         String tag,
