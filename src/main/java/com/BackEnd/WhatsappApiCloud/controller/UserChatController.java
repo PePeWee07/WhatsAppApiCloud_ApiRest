@@ -15,10 +15,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.BackEnd.WhatsappApiCloud.exception.ServerClientException;
+import com.BackEnd.WhatsappApiCloud.exception.UserNotFoundException;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.UserTicketDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.user.UserChatFullDto;
 import com.BackEnd.WhatsappApiCloud.service.userChat.UserchatService;
 import com.BackEnd.WhatsappApiCloud.util.UserChatFieldsSorby;
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 
@@ -173,6 +176,24 @@ public class UserChatController {
 
         List<UserTicketDto> tickets = userchatService.listOpenTickets(whatsAppPhone);
         return ResponseEntity.ok(tickets);
+    }
+    
+
+    // ================== Solicitar información de un ticket ==================
+    @GetMapping("/user/ticket/info")
+    public ResponseEntity<String> getTicketInfo(
+            @RequestParam("whatsappPhone") String whatsAppPhone,
+            @RequestParam("ticketId") String ticketId) {
+        try {
+            userchatService.userRequest(whatsAppPhone, ticketId);
+            return ResponseEntity.ok("Información del ticket enviada correctamente por WhatsApp.");
+        } catch (JsonProcessingException e) {
+            return ResponseEntity.status(500).body("Error procesando la solicitud: " + e.getMessage());
+        } catch (UserNotFoundException | ServerClientException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error inesperado: " + e.getMessage());
+        }
     }
 
 }

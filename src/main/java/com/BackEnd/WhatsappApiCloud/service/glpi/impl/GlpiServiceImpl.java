@@ -110,6 +110,8 @@ public class GlpiServiceImpl implements GlpiService {
         public TicketInfoDto getInfoTicketById(String ticketId) {
                 List<UserTicket> userTickets = glpiServerClient.getTicketUser(ticketId);
 
+                System.out.println("Datos obtenidos de GLPI para el ticket: " + ticketId + userTickets);
+
                 // 1) Obtener link del ticket desde el solicitante
                 String ticketLink = userTickets.stream()
                                 .filter(t -> t.type() == 1)
@@ -243,30 +245,50 @@ public class GlpiServiceImpl implements GlpiService {
 
         @Override
         @Transactional
-        public responseCreateTicketSuccess createTicket(CreateTicket ticket, String whatsAppPhone) {
+        public responseCreateTicketSuccess createTicket(CreateTicket payload, String whatsAppPhone) {
 
+                // 1) Verificar que el usuario existe
                 UserChatEntity user = userChatRepository
                         .findByWhatsappPhone(whatsAppPhone)
                         .orElseThrow(() -> new ServerClientException(
-                        "Usuario no encontrado para el número de WhatsApp: " + whatsAppPhone));
+                                "Usuario no encontrado para el número de WhatsApp: " + whatsAppPhone));
 
-                responseCreateTicketSuccess response = glpiServerClient.createTicket(ticket);
+                // 2) Construir el cuerpo del ticket con los datos proporcionados
+                CreateTicket ticketToCreate = new CreateTicket(
+                        new Input(
+                                payload.input().name(),
+                                payload.input().content(),
+                                payload.input().entities_id(),
+                                payload.input().requesttypes_id(),
+                                payload.input()._users_id_requester(),
+                                new UserIdRequesterNotif(
+                                        payload.input()._users_id_requester_notif().use_notification(),
+                                        payload.input()._users_id_requester_notif().alternative_email()
+                                ),
+                                payload.input().users_id_lastupdater()
+                        )
+                );
 
+                // 3) Crear el ticket en GLPI
+                responseCreateTicketSuccess response = glpiServerClient.createTicket(ticketToCreate);
+
+                // 4) Obtener los datos del ticket creado
                 Ticket glpiTicket = glpiServerClient.getTicketById(response.id());
 
+                // 5) Guardar el ticket en la base de datos local
                 UserTicketEntity entity = new UserTicketEntity();
                 entity.setId(glpiTicket.id());
                 entity.setWhatsappPhone(user.getWhatsappPhone());
                 entity.setName(glpiTicket.name());
                 entity.setStatus(
                         switch (glpiTicket.status().intValue()) {
-                        case 1 -> "Nuevo";
-                        case 2 -> "En curso (Asignado)";
-                        case 3 -> "En curso (Planificado)";
-                        case 4 -> "En espera";
-                        case 5 -> "Resuelto";
-                        case 6 -> "Cerrado";
-                        default -> "Indefinido";
+                                case 1 -> "Nuevo";
+                                case 2 -> "En curso (Asignado)";
+                                case 3 -> "En curso (Planificado)";
+                                case 4 -> "En espera";
+                                case 5 -> "Resuelto";
+                                case 6 -> "Cerrado";
+                                default -> "Indefinido";
                         }
                 );
                 entity.setDate_creation(glpiTicket.date_creation());
@@ -278,5 +300,4 @@ public class GlpiServiceImpl implements GlpiService {
 
                 return response;
         }
-
 }

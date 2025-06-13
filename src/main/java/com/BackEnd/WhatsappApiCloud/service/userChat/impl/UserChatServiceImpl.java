@@ -28,6 +28,8 @@ import com.BackEnd.WhatsappApiCloud.repository.UserTicketRepository;
 import com.BackEnd.WhatsappApiCloud.service.erp.ErpJsonServerClient;
 import com.BackEnd.WhatsappApiCloud.service.glpi.GlpiService;
 import com.BackEnd.WhatsappApiCloud.service.userChat.UserchatService;
+import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 @Service
 public class UserChatServiceImpl implements UserchatService {
@@ -36,12 +38,15 @@ public class UserChatServiceImpl implements UserchatService {
     private final UserTicketRepository  userTicketRepository;
     private final ErpJsonServerClient erpClient;
     private final GlpiService glpiService;
+    private final ApiWhatsappService apiWhatsappService;
 
-    public UserChatServiceImpl(UserChatRepository repo, ErpJsonServerClient erpClient, UserTicketRepository  userTicketRepository, GlpiService glpiService) {
+
+    public UserChatServiceImpl(UserChatRepository repo, ErpJsonServerClient erpClient, UserTicketRepository  userTicketRepository, GlpiService glpiService, ApiWhatsappService apiWhatsappService) {
         this.erpClient = erpClient;
         this.repo = repo;
         this.userTicketRepository = userTicketRepository;
         this.glpiService = glpiService;
+        this.apiWhatsappService = apiWhatsappService;
     }
 
     // ======================================================
@@ -456,7 +461,8 @@ public class UserChatServiceImpl implements UserchatService {
     }
 
     // ---------- Usuario solicita info del Ticket ----------
-    public void userRequest(String whatsAppPhone, String ticketId) {
+    @Override
+    public void userRequest(String whatsAppPhone, String ticketId) throws JsonProcessingException {
 
         // 1) Verificar que el usuario existe
         repo.findByWhatsappPhone(whatsAppPhone)
@@ -474,11 +480,62 @@ public class UserChatServiceImpl implements UserchatService {
         TicketInfoDto info = glpiService.getInfoTicketById(ticketId);
 
         // 4) Construir un mensaje resumen
-        
+        StringBuilder sb = new StringBuilder();
+        sb.append("*Información del Ticket*\n");
+        sb.append("Nombre del Ticket: ").append(info.ticket().name()).append("\n");
+        sb.append("Estado: ").append(info.ticket().status()).append("\n");
+        sb.append("Fecha de Creación: ").append(info.ticket().date_creation()).append("\n");
 
-        // 5) Enviar por WhatsApp
-        // MessageBody payload = new MessageBody(whatsAppPhone, sb.toString());
-        // apiWhatsappService.sendMessage(payload);
+        // 4.1) Información de técnicos asignados
+        if (!info.assigned_techs().isEmpty()) {
+            sb.append("\n*Técnicos Asignados:*\n");
+            for (TicketInfoDto.TechDto tech : info.assigned_techs()) {
+                sb.append("- ").append(tech.realname()).append(" ").append(tech.firstname());
+                if (tech.mobile() != null) {
+                    sb.append(" (").append(tech.mobile()).append(")");
+                }
+                sb.append("\n");
+            }
+        }
+
+        // 4.2) Información de la solución (si existe y no está rechazada)
+        if (!info.solutions().isEmpty()) {
+            TicketInfoDto.TicketSolutionDto solution = info.solutions().stream()
+                .filter(s -> !"Rechazado".equalsIgnoreCase(s.status()))
+                .findFirst()
+                .orElse(null);
+
+            if (solution != null) {
+                sb.append("\n*Solución:*\n");
+                sb.append("Contenido: ").append(solution.content()).append("\n");
+                sb.append("Fecha de Creación: ").append(solution.date_creation()).append("\n");
+
+                // Enviar imágenes asociadas a la solución
+                if (solution.mediaIds() != null && !solution.mediaIds().isEmpty()) {
+                    for (String mediaId : solution.mediaIds()) {
+                        apiWhatsappService.sendImageMessageById(whatsAppPhone, mediaId, "Solución del Ticket");
+                    }
+                }
+            }
+        }
+
+        // 4.3) Último seguimiento (si existe)
+        if (!info.notes().isEmpty()) {
+            TicketInfoDto.NoteDto lastNote = info.notes().get(info.notes().size() - 1);
+            sb.append("\n*Último Seguimiento:*\n");
+            sb.append("Contenido: ").append(lastNote.content()).append("\n");
+            sb.append("Fecha de Creación: ").append(lastNote.date_creation()).append("\n");
+
+            // Enviar imágenes asociadas al seguimiento
+            if (lastNote.mediaIds() != null && !lastNote.mediaIds().isEmpty()) {
+                for (String mediaId : lastNote.mediaIds()) {
+                    apiWhatsappService.sendImageMessageById(whatsAppPhone, mediaId, "Seguimiento del Ticket");
+                }
+            }
+        }
+
+        // 5) Enviar el mensaje resumen por WhatsApp
+        apiWhatsappService.sendMessage(new MessageBody(whatsAppPhone, sb.toString()));
     }
 
 }

@@ -1,5 +1,7 @@
 package com.BackEnd.WhatsappApiCloud.model.dto.glpi;
 
+import java.util.List;
+
 public class GlpiDto {
 
         public record UserTicket(
@@ -259,7 +261,7 @@ public class GlpiDto {
         ) {}
         public record UserIdRequesterNotif(
                 Long use_notification,
-                String alternative_email
+                List<String> alternative_email
         ) {}
 
         public record responseCreateTicketSuccess(
