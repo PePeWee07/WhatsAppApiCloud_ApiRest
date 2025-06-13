@@ -32,6 +32,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
+    @ExceptionHandler(ErpNotFoundException.class)
+    public ResponseEntity<Map<String,String>> handleErpNotFound(ErpNotFoundException ex) {
+        return ResponseEntity
+            .status(HttpStatus.NOT_FOUND)
+            .body(Map.of("error", ex.getMessage()));
+    }
+
     @ExceptionHandler(ServerClientException.class)
     public ResponseEntity<Map<String, String>> handleErpError(ServerClientException ex) {
         Map<String, String> body = Map.of("error", ex.getMessage());
@@ -56,7 +63,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
-    // Servicio de WhatsApp
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<Map<String, String>> handleBadRequest(BadRequestException ex) {
+        return ResponseEntity
+            .status(HttpStatus.BAD_REQUEST)
+            .body(Map.of("error", ex.getMessage()));
+    }
+
+
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<Map<String, String>> handleMaxSize(MaxUploadSizeExceededException ex) {
         Map<String, String> body = Map.of("error", "El archivo supera el tamaño máximo permitido.");
@@ -92,6 +106,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleHttpMessageNotReadable(HttpMessageNotReadableException ex) {
         String errorMessage = "Error en el formato del JSON enviado. Verifica los datos.";
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", errorMessage));
+    }
+
+    @ExceptionHandler(GlpiNotFoundException.class)
+    public ResponseEntity<Map<String,String>> handleGlpiNotFound(GlpiNotFoundException ex) {
+        return ResponseEntity
+            .status(HttpStatus.NOT_FOUND)
+            .body(Map.of("error", ex.getMessage()));
     }
 
     // Manejador genérico para cualquier otra excepción no contemplada

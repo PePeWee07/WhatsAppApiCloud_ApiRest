@@ -2,7 +2,6 @@ package com.BackEnd.WhatsappApiCloud.controller;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 
@@ -15,8 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.BackEnd.WhatsappApiCloud.exception.ServerClientException;
-import com.BackEnd.WhatsappApiCloud.exception.UserNotFoundException;
+import com.BackEnd.WhatsappApiCloud.exception.BadRequestException;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.UserTicketDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.user.UserChatFullDto;
 import com.BackEnd.WhatsappApiCloud.service.userChat.UserchatService;
@@ -39,27 +37,23 @@ public class UserChatController {
     // ========== Encontrar usuario por identificacion o whatsappPhone =============
     @GetMapping("/user/find")
     public ResponseEntity<UserChatFullDto> findUser(
-            @RequestParam(value = "identificacion", required = false) String identificacion,
-            @RequestParam(value = "whatsappPhone", required = false) String whatsappPhone) {
+        @RequestParam(value = "identificacion", required = false) String identificacion,
+        @RequestParam(value = "whatsappPhone", required = false) String whatsAppPhone) {
 
-        if (identificacion != null && whatsappPhone != null) {
-            return ResponseEntity
-                    .badRequest()
-                    .body(null);
+        if (identificacion != null && whatsAppPhone != null) {
+            throw new BadRequestException("Debe indicar solo un paramentro de busqueda: identificacion o whatsappPhone");
         }
 
-        if (identificacion == null && whatsappPhone == null) {
-            return ResponseEntity
-                    .badRequest()
-                    .body(null);
+        if (identificacion == null && whatsAppPhone == null) {
+            throw new BadRequestException("Debe indicar un paramentro de busqueda: identificacion o whatsappPhone");
         }
 
+        UserChatFullDto dto;
         if (identificacion != null) {
-            UserChatFullDto dto = userchatService.findByIdentificacion(identificacion);
-            return ResponseEntity.ok(dto);
+            dto = userchatService.findByIdentificacion(identificacion);
+        } else {
+            dto = userchatService.findByWhatsappPhone(whatsAppPhone);
         }
-
-        UserChatFullDto dto = userchatService.findByWhatsappPhone(whatsappPhone);
         return ResponseEntity.ok(dto);
     }
 
@@ -112,12 +106,8 @@ public class UserChatController {
         }
         
         LocalDateTime inicio, fin;
-        try {
-            inicio = LocalDateTime.parse(startDateStr, DateTimeFormatter.ISO_DATE_TIME);
-            fin    = LocalDateTime.parse(endDateStr,   DateTimeFormatter.ISO_DATE_TIME);
-        } catch (DateTimeParseException ex) {
-            return ResponseEntity.badRequest().build();
-        }
+        inicio = LocalDateTime.parse(startDateStr, DateTimeFormatter.ISO_DATE_TIME);
+        fin    = LocalDateTime.parse(endDateStr,   DateTimeFormatter.ISO_DATE_TIME);
 
         if (inicio.isAfter(fin)) {
             return ResponseEntity.badRequest().build();
@@ -144,12 +134,8 @@ public class UserChatController {
         }
         
         LocalDateTime inicio, fin;
-        try {
-            inicio = LocalDateTime.parse(startDateStr, DateTimeFormatter.ISO_DATE_TIME);
-            fin    = LocalDateTime.parse(endDateStr,   DateTimeFormatter.ISO_DATE_TIME);
-        } catch (DateTimeParseException ex) {
-            return ResponseEntity.badRequest().build();
-        }
+        inicio = LocalDateTime.parse(startDateStr, DateTimeFormatter.ISO_DATE_TIME);
+        fin    = LocalDateTime.parse(endDateStr,   DateTimeFormatter.ISO_DATE_TIME);
 
         if (inicio.isAfter(fin)) {
             return ResponseEntity.badRequest().build();
@@ -183,17 +169,10 @@ public class UserChatController {
     @GetMapping("/user/ticket/info")
     public ResponseEntity<String> getTicketInfo(
             @RequestParam("whatsappPhone") String whatsAppPhone,
-            @RequestParam("ticketId") String ticketId) {
-        try {
+            @RequestParam("ticketId") String ticketId) throws JsonProcessingException {
             userchatService.userRequest(whatsAppPhone, ticketId);
             return ResponseEntity.ok("Información del ticket enviada correctamente por WhatsApp.");
-        } catch (JsonProcessingException e) {
-            return ResponseEntity.status(500).body("Error procesando la solicitud: " + e.getMessage());
-        } catch (UserNotFoundException | ServerClientException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body("Error inesperado: " + e.getMessage());
-        }
+        
     }
 
 }

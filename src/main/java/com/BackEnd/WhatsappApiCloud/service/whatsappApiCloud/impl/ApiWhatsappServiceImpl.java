@@ -35,7 +35,7 @@ import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.Reques
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppDataDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.erp.ErpUserDto;
-import com.BackEnd.WhatsappApiCloud.model.dto.erp.RolUserDto;
+import com.BackEnd.WhatsappApiCloud.model.dto.erp.ErpRolUserDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.openIA.AnswersOpenIADto;
 import com.BackEnd.WhatsappApiCloud.model.dto.openIA.QuestionOpenIADto;
 import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
@@ -248,7 +248,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     // ======================================================
     // Verificar si el rol del usuario está denegado
     // ======================================================
-    private boolean allRolesAreRestricted(List<RolUserDto> rolesUsuarioDto) {
+    private boolean allRolesAreRestricted(List<ErpRolUserDto> rolesUsuarioDto) {
         if (rolesUsuarioDto == null || rolesUsuarioDto.isEmpty()) {
             return true;
         }
@@ -259,7 +259,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                                         .collect(Collectors.toSet());
 
         return rolesUsuarioDto.stream()
-                            .map(RolUserDto::getTipoRol)
+                            .map(ErpRolUserDto::getTipoRol)
                             .map(String::trim)
                             .map(String::toUpperCase)
                             .allMatch(restrictedSet::contains);
@@ -329,7 +329,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
 
         //! 6. Obtener respuesta de IA
-        List<String> userRoles = userDto.getRolesUsuario().stream().map(RolUserDto::getTipoRol).collect(Collectors.toList());
+        List<String> userRoles = userDto.getRolesUsuario().stream().map(ErpRolUserDto::getTipoRol).collect(Collectors.toList());
 
         QuestionOpenIADto question = new QuestionOpenIADto(
             messageText,

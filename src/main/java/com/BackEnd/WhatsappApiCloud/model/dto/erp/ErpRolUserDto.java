@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class RolUserDto implements Serializable {
+public class ErpRolUserDto implements Serializable {
     private String tipoRol;
     private List<ErpRoleDetailDto> detallesRol;
 }

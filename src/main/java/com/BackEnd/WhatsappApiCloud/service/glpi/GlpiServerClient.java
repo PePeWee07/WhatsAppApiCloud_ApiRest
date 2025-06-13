@@ -17,6 +17,7 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import com.BackEnd.WhatsappApiCloud.exception.GlpiNotFoundException;
 import com.BackEnd.WhatsappApiCloud.exception.ServerClientException;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.CreateTicket;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.Document_Item;
@@ -107,14 +108,16 @@ public class GlpiServerClient {
             return Arrays.asList(response);
         } catch (RestClientResponseException ex) {
             String body = ex.getResponseBodyAsString();
-            String msg = String.format("HTTP %d al obtener obtener el ticket del usuario: %s", ex.getStatusCode(), body);
+            if (ex.getStatusCode().value() == 404) {
+                throw new GlpiNotFoundException("No se encontró información de usuarios para el ticket GLPI con ID: " + ticketId);
+            }
+            String msg = String.format("HTTP %d al obtener información de usuarios del ticket: %s", ex.getStatusCode().value(), body);
             logger.error(msg, ex);
             throw new ServerClientException(msg, ex);
 
         } catch (RestClientException ex) {
-            String msg = "Error genérico el ticket del usuario: " + ex.getCause();
-            logger.error(msg, ex);
-            throw new ServerClientException(msg, ex);
+            logger.error("Error genérico al obtener información de usuarios del ticket: " + ex.getMessage(), ex);
+            throw new ServerClientException("Error genérico al obtener información de usuarios del ticket: " + ex.getMessage(), ex);
         }
     }
 
@@ -138,14 +141,16 @@ public class GlpiServerClient {
             return response;
         } catch (RestClientResponseException ex) {
             String body = ex.getResponseBodyAsString();
+            if (ex.getStatusCode().value() == 404) {
+                throw new GlpiNotFoundException("No se encontró el Usuario en el GLPI con url: " + urlUser);
+            }
             String msg = String.format("HTTP %d al obtener usuario: %s", ex.getStatusCode(), body);
             logger.error(msg, ex);
             throw new ServerClientException(msg, ex);
 
         } catch (RestClientException ex) {
-            String msg = "Error genérico al obtener usuario: " + ex.getCause();
-            logger.error(msg, ex);
-            throw new ServerClientException(msg, ex);
+            logger.error("Error genérico al obtener usuario: " + ex.getMessage(), ex);
+            throw new ServerClientException("Error genérico al obtener usuario: " + ex.getMessage(), ex);
         }
     }
 
@@ -172,13 +177,15 @@ public class GlpiServerClient {
             return response;
         } catch (RestClientResponseException ex) {
             String body = ex.getResponseBodyAsString();
+            if (ex.getStatusCode().value() == 404) {
+                throw new GlpiNotFoundException("No se encontró el Ticket en el GLPI con url: " + ticketUrl);
+            }
             String msg = String.format("HTTP %d al obtener Ticket: %s", ex.getStatusCode(), body);
             logger.error(msg, ex);
             throw new ServerClientException(msg, ex);
         } catch (RestClientException e) {
-            String msg = "Error genérico al obtener el ticket: " + e.getCause();
-            logger.error(msg, e);
-            throw new ServerClientException(msg, e);
+            logger.error("Error genérico al obtener el ticket: " + e.getMessage(), e);
+            throw new ServerClientException("Error genérico al obtener el ticket: " + e.getMessage(), e);
         }
     }
 
@@ -199,13 +206,15 @@ public class GlpiServerClient {
             return response;
         } catch (RestClientResponseException ex) {
             String body = ex.getResponseBodyAsString();
+            if (ex.getStatusCode().value() == 404) {
+                throw new GlpiNotFoundException("Ticket no encontrado en GLPI con ID: " + ticketid);
+            }
             String msg = String.format("HTTP %d al obtener Ticket por Id: %s", ex.getStatusCode(), body);
             logger.error(msg, ex);
             throw new ServerClientException(msg, ex);
         } catch (RestClientException e) {
-            String msg = "Error genérico al obtener el ticket por Id: " + e.getCause();
-            logger.error(msg, e);
-            throw new ServerClientException(msg, e);
+            logger.error("Error genérico al obtener el ticket por Id: " + e.getMessage(), e);
+            throw new ServerClientException("Error genérico al obtener el ticket por Id: " + e.getMessage(), e);
         }
     }
 
@@ -224,13 +233,15 @@ public class GlpiServerClient {
 
         } catch (RestClientResponseException ex) {
             String body = ex.getResponseBodyAsString();
+            if (ex.getStatusCode().value() == 404) {
+                throw new GlpiNotFoundException("No se encontró información Seguimeintos del ticket GLPI con ID: " + ticketId);
+            }
             String msg = String.format("HTTP %d al obtener seguimeintos: %s", ex.getStatusCode(), body);
             logger.error(msg, ex);
             throw new ServerClientException(msg, ex);
         } catch (RestClientException e) {
-            String msg = "Error genérico al obtener seguimeintos: " + e.getCause();
-            logger.error(msg, e);
-            throw new ServerClientException(msg, e);
+            logger.error("Error genérico al obtener seguimeintos: " + e.getMessage(), e);
+            throw new ServerClientException("Error genérico al obtener seguimeintos: " + e.getMessage(), e);
         }
     }
 
@@ -254,13 +265,15 @@ public class GlpiServerClient {
             return Arrays.asList(response);
         } catch (RestClientResponseException ex) {
             String body = ex.getResponseBodyAsString();
+            if (ex.getStatusCode().value() == 404) {
+                throw new GlpiNotFoundException("No se encontró el docuemtos_itens en el GLPI con url: " + document_itemUrl);
+            }
             String msg = String.format("HTTP %d al obtener documentos_itens: %s", ex.getStatusCode(), body);
             logger.error(msg, ex);
             throw new ServerClientException(msg, ex);
         } catch (RestClientException e) {
-            String msg = "Error genérico al obtener documentos_itens: " + e.getCause();
-            logger.error(msg, e);
-            throw new ServerClientException(msg, e);
+            logger.error("Error genérico al obtener documentos_itens: " + e.getMessage(), e);
+            throw new ServerClientException("Error genérico al obtener documentos_itens: " + e.getMessage(), e);
         }
     }
 
@@ -282,13 +295,15 @@ public class GlpiServerClient {
                 .body(byte[].class);
         } catch (RestClientResponseException ex) {
             String body = ex.getResponseBodyAsString();
+            if (ex.getStatusCode().value() == 404) {
+                throw new GlpiNotFoundException("Documento no encontrado en GLPI con URL: " + documentHref);
+            }
             String msg = String.format("HTTP %d al descargar documento: %s", ex.getStatusCode(), body);
             logger.error(msg, ex);
             throw new ServerClientException(msg, ex);
         } catch (RestClientException e) {
-            String msg = "Error genérico al descargar documento: " + e.getCause();
-            logger.error(msg, e);
-            throw new ServerClientException(msg, e);
+            logger.error("Error genérico al descargar documento: " + e.getMessage(), e);
+            throw new ServerClientException("Error genérico al descargar documento: " + e.getMessage(), e);
         }
     }
 
@@ -309,13 +324,15 @@ public class GlpiServerClient {
             return Arrays.asList(response);
         } catch (RestClientResponseException ex) {
             String body = ex.getResponseBodyAsString();
+            if (ex.getStatusCode().value() == 404) {
+                throw new GlpiNotFoundException("Solución de ticket no encontrada en GLPI para ID: " + ticketId);
+            }
             String msg = String.format("HTTP %d al obtener solución del ticket: %s", ex.getStatusCode(), body);
             logger.error(msg, ex);
             throw new ServerClientException(msg, ex);
         } catch (RestClientException e) {
-            String msg = "Error genérico al obtener solución del ticket: " + e.getCause();
-            logger.error(msg, e);
-            throw new ServerClientException(msg, e);
+            logger.error("Error genérico al obtener solución del ticket: " + e.getMessage(), e);
+            throw new ServerClientException("Error genérico al obtener solución del ticket: " + e.getMessage(), e);
         }
     }
 
@@ -338,9 +355,8 @@ public class GlpiServerClient {
             logger.error(msg, ex);
             throw new ServerClientException(msg, ex);
         } catch (RestClientException e) {
-            String msg = "Error genérico al crear el ticket: " + e.getCause();
-            logger.error(msg, e);
-            throw new ServerClientException(msg, e);
+            logger.error("Error genérico al crear el ticket: " + e.getMessage(), e);
+            throw new ServerClientException("Error genérico al crear el ticket: " + e.getMessage(), e);
         }
     }
    

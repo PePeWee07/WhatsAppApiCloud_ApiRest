@@ -10,6 +10,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import org.springframework.core.ParameterizedTypeReference;
 
+import com.BackEnd.WhatsappApiCloud.exception.ErpNotFoundException;
 import com.BackEnd.WhatsappApiCloud.exception.ServerClientException;
 import com.BackEnd.WhatsappApiCloud.model.dto.erp.ErpUserDto;
 
@@ -44,13 +45,13 @@ public class ErpJsonServerClient {
             
             if (users == null || users.isEmpty()) {
                 logger.warn("No se encontró usuario en ERP para cédula {}", identificacion);
-                return null;
+                throw new ErpNotFoundException("No se encontró usuario en ERP para identificación: " + identificacion);
             }
             return users.get(0);
             
         } catch (RestClientException e) {
-            logger.error("Error al obtener el usuario desde el ERP: ", e.getMessage());
-            throw new ServerClientException("Error al obtener el usuario desde el ERP: ", e.getCause());
+            logger.error("Error al conectar con el ERP: ", e.getMessage());
+            throw new ServerClientException("Error al conectar con el ERP: " + e.getMessage(), e);
         }
     }
 }

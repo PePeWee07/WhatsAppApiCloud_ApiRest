@@ -58,8 +58,7 @@ public class UserChatServiceImpl implements UserchatService {
         UserChatEntity user = repo.findByIdentificacion(identificacion)
             .orElseThrow(() -> new UserNotFoundException("No se encontro el usuario con identificacion: " + identificacion));
 
-        ErpUserDto erpUser;
-        erpUser = erpClient.getUser(identificacion);
+        ErpUserDto erpUser = erpClient.getUser(identificacion);
 
         List<ChatSessionDto> sesionesDto = user.getChatSessions().stream()
             .map(cs -> new ChatSessionDto(
@@ -350,7 +349,7 @@ public class UserChatServiceImpl implements UserchatService {
     @Transactional
     public UserChatFullDto userUpdate(Long id, Map<String, Object> updates) {
         UserChatEntity user = repo.findById(id)
-            .orElseThrow(() -> new RuntimeException("Usuario no encontrado con id " + id));
+            .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado con id " + id));
 
         if (updates.containsKey("threadId")) {
             Object threadVal = updates.get("threadId");
