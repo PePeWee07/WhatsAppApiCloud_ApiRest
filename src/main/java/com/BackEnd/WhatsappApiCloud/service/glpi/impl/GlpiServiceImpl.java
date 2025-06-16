@@ -2,6 +2,7 @@ package com.BackEnd.WhatsappApiCloud.service.glpi.impl;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -17,17 +18,17 @@ import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
 import org.jsoup.nodes.TextNode;
 
-
 import org.apache.tika.Tika;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.BackEnd.WhatsappApiCloud.exception.ServerClientException;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.*;
+import com.BackEnd.WhatsappApiCloud.model.dto.glpi.SolutionDecisionRequest;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.TicketInfoDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.TicketInfoDto.*;
 import com.BackEnd.WhatsappApiCloud.model.entity.glpi.UserTicketEntity;
-import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
 import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
 import com.BackEnd.WhatsappApiCloud.repository.UserTicketRepository;
 import com.BackEnd.WhatsappApiCloud.service.glpi.GlpiServerClient;
@@ -52,7 +53,6 @@ public class GlpiServiceImpl implements GlpiService {
                                 this.userChatRepository = userChatRepository;
                                 this.userTicketRepository = userTicketRepository;
         }
-
         
         private List<String> extractMediaIdsFromLinks(Link[] links) {
         List<String> mediaIds = new ArrayList<>();
@@ -65,27 +65,27 @@ public class GlpiServiceImpl implements GlpiService {
                                 .filter(docLink -> "Document".equals(docLink.rel()))
                                 .forEach(docLink -> {
                                         try {
-                                        byte[] fileData = glpiServerClient.downloadDocument(docLink.href());
+                                                byte[] fileData = glpiServerClient.downloadDocument(docLink.href());
 
-                                        Tika tika = new Tika();
-                                        String contentType = tika.detect(fileData);
+                                                Tika tika = new Tika();
+                                                String contentType = tika.detect(fileData);
 
-                                        if (!isMimeTypeAllowed(contentType)) {
-                                                return;
-                                        }
+                                                if (!isMimeTypeAllowed(contentType)) {
+                                                        return;
+                                                }
 
-                                        String extension = getExtensionFromDocumentId(documentItem.documents_id());
+                                                String extension = getExtensionFromDocumentId(documentItem.documents_id());
 
-                                        File tempFile = File.createTempFile("document", extension);
-                                        Files.write(tempFile.toPath(), fileData);
+                                                File tempFile = File.createTempFile("document", extension);
+                                                Files.write(tempFile.toPath(), fileData);
 
-                                        String mediaId = apiWhatsappService.uploadMedia(tempFile);
-                                        mediaIds.add(mediaId);
+                                                String mediaId = apiWhatsappService.uploadMedia(tempFile);
+                                                mediaIds.add(mediaId);
 
-                                        tempFile.delete();
+                                                tempFile.delete();
                                         } catch (Exception e) {
-                                        logger.error("Error procesando documento del GLPI: " + e.getMessage(), e);
-                                        throw new ServerClientException("Error procesar documento del GLPI: " + e.getMessage(), e);
+                                                logger.error("Error procesando documento del GLPI: " + e.getMessage(), e);
+                                                mediaIds.add("Error");
                                         }
                                 });
                         });
@@ -261,7 +261,7 @@ public class GlpiServiceImpl implements GlpiService {
                 // 6) Si fue solucionado
                 List<TicketSolutionDto> solutionDto = new ArrayList<>();
                 if (glpiTicket.solvedate() != null) {
-                        List<TicketSolution> glpiSolutions = glpiServerClient.getTicketSolution(glpiTicket.id());
+                        List<TicketSolution> glpiSolutions = glpiServerClient.getTicketSolutionById(glpiTicket.id());
                        solutionDto = glpiSolutions.stream()
                         .map(solution -> {
                                 String formatted = cleanHtmlForWhatsApp(solution.content());
@@ -312,15 +312,11 @@ public class GlpiServiceImpl implements GlpiService {
         @Transactional
         public responseCreateTicketSuccess createTicket(CreateTicket payload, String whatsAppPhone) {
 
-                // 1) Verificar que el usuario existe
-                UserChatEntity user = userChatRepository
-                        .findByWhatsappPhone(whatsAppPhone)
-                        .orElseThrow(() -> new ServerClientException(
-                                "Usuario no encontrado para el número de WhatsApp: " + whatsAppPhone));
+                userChatRepository.findByWhatsappPhone(whatsAppPhone)
+                        .orElseThrow(() -> new ServerClientException("Usuario no encontrado para el número de WhatsApp: " + whatsAppPhone));
 
-                // 2) Construir el cuerpo del ticket con los datos proporcionados
                 CreateTicket ticketToCreate = new CreateTicket(
-                        new Input(
+                        new InputCreateTicket(
                                 payload.input().name(),
                                 payload.input().content(),
                                 payload.input().entities_id(),
@@ -334,19 +330,23 @@ public class GlpiServiceImpl implements GlpiService {
                         )
                 );
 
-                // 3) Crear el ticket en GLPI
                 responseCreateTicketSuccess response = glpiServerClient.createTicket(ticketToCreate);
 
-                // 4) Obtener los datos del ticket creado
                 Ticket glpiTicket = glpiServerClient.getTicketById(response.id());
 
-                // 5) Guardar el ticket en la base de datos local
                 UserTicketEntity entity = new UserTicketEntity();
                 entity.setId(glpiTicket.id());
-                entity.setWhatsappPhone(user.getWhatsappPhone());
+                entity.setWhatsappPhone(whatsAppPhone);
                 entity.setName(glpiTicket.name());
-                entity.setStatus(
-                        switch (glpiTicket.status().intValue()) {
+                userTicketRepository.save(entity);
+
+                return response;
+        }
+
+        @Override
+        public String getStatusTicket(Long ticketId) {
+                Long status = glpiServerClient.getTicketById(ticketId).status();
+                return switch (status.intValue()) {
                                 case 1 -> "Nuevo";
                                 case 2 -> "En curso (Asignado)";
                                 case 3 -> "En curso (Planificado)";
@@ -354,15 +354,40 @@ public class GlpiServiceImpl implements GlpiService {
                                 case 5 -> "Resuelto";
                                 case 6 -> "Cerrado";
                                 default -> "Indefinido";
-                        }
-                );
-                entity.setDate_creation(glpiTicket.date_creation());
-                entity.setClosedate(glpiTicket.closedate());
-                entity.setSolvedate(glpiTicket.solvedate());
-                entity.setDate_mod(glpiTicket.date_mod());
-
-                userTicketRepository.save(entity);
-
-                return response;
+                        };
         }
+
+
+        @Override
+        public Object refusedOrAcceptedSolutionTicket(SolutionDecisionRequest request) {
+                Boolean _acepted = request.getAccepted();
+                Long ticketId = request.getTicketId();
+                String contentNote = request.getContent();
+
+                Long status = glpiServerClient.getTicketById(ticketId).status();
+                
+                if (status == 5L) {
+                        if (_acepted) {
+                                RequestUpdateStatus updateStatus = new RequestUpdateStatus(
+                                        new InputUpdate(6L, _acepted)
+                                );
+        
+                                return glpiServerClient.updateTicketStatusById(ticketId, updateStatus);
+                        } else {
+                                // Actualiza el Status del ticket(En progreso)
+                                RequestUpdateStatus updateStatus = new RequestUpdateStatus(new InputUpdate(2L));
+                                glpiServerClient.updateTicketStatusById(ticketId, updateStatus);
+
+                                // GLPI se encarga de rechazar la solución automáticamente al cambiar ticket-status(5>2)  
+
+                                // Enviar nuevo seguimeinto del ticket
+                                CreateNoteForTicket note = new CreateNoteForTicket( new InputFollowup("Ticket", ticketId, contentNote));
+                                return glpiServerClient.createNoteForTicket(note);
+                        }          
+                } else {
+                        return "El ticket aun no tiene una solucion";
+                }
+
+        }
+        
 }

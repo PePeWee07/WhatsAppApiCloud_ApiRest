@@ -19,14 +19,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import com.BackEnd.WhatsappApiCloud.exception.GlpiNotFoundException;
 import com.BackEnd.WhatsappApiCloud.exception.ServerClientException;
-import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.CreateTicket;
-import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.Document_Item;
-import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.Ticket;
-import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.TicketFollowUp;
-import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.TicketSolution;
-import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.UserGlpi;
-import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.UserTicket;
-import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.responseCreateTicketSuccess;
+import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.*;
 
 @Component
 public class GlpiServerClient {
@@ -308,7 +301,7 @@ public class GlpiServerClient {
     }
 
     // ---------- Obtener solucion del Ticket ----------
-    public List<TicketSolution> getTicketSolution(Long ticketId) {
+    public List<TicketSolution> getTicketSolutionById(Long ticketId) {
         String sessionToken = getSessionTokenGlpi();
 
         try {
@@ -360,4 +353,86 @@ public class GlpiServerClient {
         }
     }
    
+
+    // ---------- Edit Status Ticket ----------
+    public Object updateTicketStatusById(Long ticketid, RequestUpdateStatus ticket) {
+        String sessionToken = getSessionTokenGlpi();
+
+        try {
+            Object response = apiClient.put()
+                    .uri("/Ticket/" + ticketid)
+                    .header("Session-Token", sessionToken)
+                    .body(ticket)
+                    .retrieve()
+                    .body(Object.class);
+
+            return response;
+        } catch (RestClientResponseException ex) {
+            String body = ex.getResponseBodyAsString();
+            if (ex.getStatusCode().value() == 404) {
+                throw new GlpiNotFoundException("Ticket no encontrado en GLPI con ID: " + ticketid);
+            }
+            String msg = String.format("HTTP %d al editar status del Ticket por Id: %s", ex.getStatusCode(), body);
+            logger.error(msg, ex);
+            throw new ServerClientException(msg, ex);
+        } catch (RestClientException e) {
+            logger.error("Error genérico al editar status del ticket por Id: " + e.getMessage(), e);
+            throw new ServerClientException("Error genérico al editar status del ticket por Id: " + e.getMessage(), e);
+        }
+    }
+
+
+    // ---------- Edit Status Ticket Solution (No usada Glpi maneja logica rechazo al retroceder el estado del ticket) ----------
+    public Object updateTicketSolutionById(Long solutionId, RequestUpdateStatus ticket) {
+        String sessionToken = getSessionTokenGlpi();
+
+        try {
+            Object response = apiClient.put()
+                    .uri("/ITILSolution/" + solutionId)
+                    .header("Session-Token", sessionToken)
+                    .body(ticket)
+                    .retrieve()
+                    .body(Object.class);
+
+            return response;
+        } catch (RestClientResponseException ex) {
+            String body = ex.getResponseBodyAsString();
+            if (ex.getStatusCode().value() == 404) {
+                throw new GlpiNotFoundException("Solución de ticket no encontrada en GLPI para ID: " + solutionId);
+            }
+            String msg = String.format("HTTP %d al editar solución del ticket: %s", ex.getStatusCode(), body);
+            logger.error(msg, ex);
+            throw new ServerClientException(msg, ex);
+        } catch (RestClientException e) {
+            logger.error("Error genérico al editar solución del ticket: " + e.getMessage(), e);
+            throw new ServerClientException("Error genérico al editar solución del ticket: " + e.getMessage(), e);
+        }
+    }
+
+
+    // ---------- Crear un seguimiento al Ticket ----------
+    public Object createNoteForTicket(CreateNoteForTicket note) {
+        String sessionToken = getSessionTokenGlpi();
+
+        try {
+            Object response = apiClient.post()
+                    .uri("/TicketFollowup")
+                    .header("Session-Token", sessionToken)
+                    .body(note)
+                    .retrieve()
+                    .body(Object.class);
+            return response;
+        } catch (RestClientResponseException ex) {
+            String body = ex.getResponseBodyAsString();
+            if (ex.getStatusCode().value() == 404) {
+                throw new GlpiNotFoundException("Ticket no encontrado en GLPI para crear seguimiento: " + note);
+            }
+            String msg = String.format("HTTP %d al crear seguimiento del ticket: %s", ex.getStatusCode(), body);
+            logger.error(msg, ex);
+            throw new ServerClientException(msg, ex);
+        } catch (RestClientException e) {
+            logger.error("Error genérico al crear seguimiento del ticket: " + e.getMessage(), e);
+            throw new ServerClientException("Error genérico al crear seguimiento del ticket: " + e.getMessage(), e);
+        }
+    }
 }

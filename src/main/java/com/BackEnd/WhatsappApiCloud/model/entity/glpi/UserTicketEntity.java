@@ -32,16 +32,7 @@ public class UserTicketEntity {
     private String whatsappPhone;
 
     private String name;
-    
     private String status;
-    
-    private String date_creation;
-    
-    private String closedate;
-    
-    private String solvedate;
-    
-    private String date_mod;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(

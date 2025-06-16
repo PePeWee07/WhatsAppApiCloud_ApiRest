@@ -4,6 +4,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.CreateTicket;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.responseCreateTicketSuccess;
+import com.BackEnd.WhatsappApiCloud.model.dto.glpi.SolutionDecisionRequest;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.TicketInfoDto;
 import com.BackEnd.WhatsappApiCloud.service.glpi.GlpiService;
 
@@ -40,6 +41,12 @@ public class GlpiController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(resp);
+    }
+
+   @PostMapping("/ticket/solution/decision")
+    public ResponseEntity<Object> refusedOrAcceptedTicketSolution(@RequestBody SolutionDecisionRequest request) {
+        Object resp = glpiService.refusedOrAcceptedSolutionTicket(request);
+        return ResponseEntity.status(HttpStatus.OK).body(resp);
     }
     
 }

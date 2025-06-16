@@ -4,7 +4,6 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import com.BackEnd.WhatsappApiCloud.model.dto.erp.ErpUserDto;
-import com.BackEnd.WhatsappApiCloud.model.dto.glpi.UserTicketDto;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

@@ -1,8 +1,8 @@
 package com.BackEnd.WhatsappApiCloud.controller;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 import java.util.Map;
 
 import org.springframework.data.domain.Page;
@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.BackEnd.WhatsappApiCloud.exception.BadRequestException;
-import com.BackEnd.WhatsappApiCloud.model.dto.glpi.UserTicketDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.user.UserChatFullDto;
 import com.BackEnd.WhatsappApiCloud.service.userChat.UserchatService;
 import com.BackEnd.WhatsappApiCloud.util.UserChatFieldsSorby;
@@ -155,24 +154,22 @@ public class UserChatController {
         return ResponseEntity.ok(patched);
     }
 
-    // ================== Obtener Ticket Abiertos de un usuario =================
-    @GetMapping("/user/tickets")
-    public ResponseEntity<List<UserTicketDto>> listOpenTickets(
-            @RequestParam("whatsappPhone") String whatsAppPhone) {
-
-        List<UserTicketDto> tickets = userchatService.listOpenTickets(whatsAppPhone);
-        return ResponseEntity.ok(tickets);
-    }
-    
-
     // ================== Solicitar información de un ticket ==================
     @GetMapping("/user/ticket/info")
     public ResponseEntity<String> getTicketInfo(
             @RequestParam("whatsappPhone") String whatsAppPhone,
-            @RequestParam("ticketId") String ticketId) throws JsonProcessingException {
-            userchatService.userRequest(whatsAppPhone, ticketId);
-            return ResponseEntity.ok("Información del ticket enviada correctamente por WhatsApp.");
+            @RequestParam("ticketId") String ticketId) throws IOException {
+            userchatService.userRequestTicketInfo(whatsAppPhone, ticketId);
+            return ResponseEntity.ok("La Información del ticket fue enviada correctamente por WhatsApp.");
         
+    }
+
+    // ================== Enviar lista de tickets a WhatsApp ==================
+    @GetMapping("/user/tickets/send")
+    public ResponseEntity<String> sendTicketListToWhatsApp(
+            @RequestParam("whatsappPhone") String whatsAppPhone) throws JsonProcessingException {
+            userchatService.userRequestTicketList(whatsAppPhone);
+            return ResponseEntity.ok("La lista de tickets fue enviada correctamente por WhatsApp.");
     }
 
 }

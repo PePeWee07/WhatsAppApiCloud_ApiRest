@@ -13,7 +13,7 @@ public interface UserTicketRepository extends JpaRepository<UserTicketEntity, Lo
      * Busca todos los tickets de un whatsappPhone dado
      * cuyo campo status sea distinto de "Cerrado".
      */
-    List<UserTicketEntity> findByWhatsappPhoneAndStatusNot(String whatsappPhone, String status);
+    List<UserTicketEntity> findByWhatsappPhone(String whatsappPhone);
 
     // Verifico que el ticket pertenesca al usaurio
     boolean existsByWhatsappPhoneAndId(String whatsappPhone, Long id);

@@ -26,9 +26,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.BackEnd.WhatsappApiCloud.exception.ApiInfoException;
+import com.BackEnd.WhatsappApiCloud.exception.ServerClientException;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestMessages;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestMessagesFactory;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestWhatsappAsRead;
@@ -111,21 +113,31 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     // Constructor de mensajes de respuesta
     // ======================================================
     private ResponseWhatsapp NewResponseBuilder(RequestMessages requestBody, String uri) {
-        String response = restClient.post()
-                .uri(uri)
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(requestBody)
-                .retrieve()
-                .body(String.class);
-    
-        ObjectMapper obj = new ObjectMapper();
         try {
+            String response = restClient.post()
+                    .uri(uri)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(requestBody)
+                    .retrieve()
+                    .body(String.class);
+
+            ObjectMapper obj = new ObjectMapper();
             return obj.readValue(response, ResponseWhatsapp.class);
+
+        } catch (RestClientResponseException e) {
+            logger.warn("⚠️ Error HTTP al enviar mensaje: Código {}, Cuerpo: {}", e.getStatusCode(), e.getResponseBodyAsString());
+            throw new ServerClientException("Error al enviar el mensaje: " + e.getResponseBodyAsString(), e);
+
         } catch (JsonProcessingException e) {
-            logger.error("Error al procesar JSON: " + e.getMessage());
-            throw new RuntimeException("Error processing JSON", e);
+            logger.error("❌ Error al procesar JSON de respuesta: " + e.getMessage(), e);
+            throw new RuntimeException("Error al procesar JSON", e);
+
+        } catch (Exception e) {
+            logger.error("❌ Error inesperado al enviar mensaje:", e);
+            throw new ServerClientException("Error inesperado al enviar mensaje", e);
         }
     }
+
 
 
     // ======================================================
@@ -514,7 +526,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             return respuesta;
 
         } catch (Exception e) {
-            logger.error("Error al enviar la imagen: ", e);
+            logger.error("Error al enviar la imagen con texto: ", e);
             return null;
         }
     }

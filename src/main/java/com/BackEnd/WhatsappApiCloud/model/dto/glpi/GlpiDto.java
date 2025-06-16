@@ -248,9 +248,9 @@ public class GlpiDto {
         }
 
         public record CreateTicket (
-                Input input
+                InputCreateTicket input
         ) {}
-        public record Input(
+        public record InputCreateTicket(
                 String name,
                 String content,
                 Object entities_id,
@@ -259,6 +259,7 @@ public class GlpiDto {
                 UserIdRequesterNotif _users_id_requester_notif,
                 Long users_id_lastupdater
         ) {}
+
         public record UserIdRequesterNotif(
                 Long use_notification,
                 List<String> alternative_email
@@ -267,5 +268,24 @@ public class GlpiDto {
         public record responseCreateTicketSuccess(
                 Long id,
                 String message
+        ) {}
+
+        public record RequestUpdateStatus (
+                InputUpdate input
+
+        ) {}
+
+        public record InputUpdate(Long status, Object _accepted) {
+                public InputUpdate(Long status) {
+                        this(status, null);
+                }
+        }
+
+        public record CreateNoteForTicket(InputFollowup input) {}
+
+        public record InputFollowup(
+                String itemtype,
+                Long items_id,
+                String content 
         ) {}
 }
