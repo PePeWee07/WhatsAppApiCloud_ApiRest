@@ -57,21 +57,17 @@ public class UserChatServiceImpl implements UserchatService {
             userTicketRepository.delete(ticket);
             return null;
         } else {
-            UserTicketEntity entity = userTicketRepository.findById(ticket.getId())
-            .orElse(new UserTicketEntity());
-            entity.setStatus(status);
-            userTicketRepository.save(entity);
+            ticket.setStatus(status);
+            userTicketRepository.save(ticket);
         }
-        
-        return new UserTicketDto(
-            ticket.getId(),
-            ticket.getName(),
-            status
-        );
+
+        return new UserTicketDto(ticket.getId(), ticket.getName(), status);
     }
+
 
     public List<UserTicketDto> listOpenTickets(String whatsAppPhone) {
         List<UserTicketEntity> tickets = userTicketRepository.findByWhatsappPhone(whatsAppPhone);
+        //! List<UserTicketEntity> tickets = user.getTickets(); // ✅ usamos la colección mapeada por Hibernate
 
         return tickets.stream()
             .map(ticket -> mapToUserTicketDto(ticket))
@@ -125,8 +121,6 @@ public class UserChatServiceImpl implements UserchatService {
         UserChatEntity user = repo.findByWhatsappPhone(whatsappPhone)
             .orElseThrow(() -> new UserNotFoundException("No se encontro el usuario con whatsappPhone: " + whatsappPhone));
         
-        String identificacion = user.getIdentificacion();
-        
         List<ChatSessionDto> sesionesDto = user.getChatSessions().stream()
         .map(cs -> new ChatSessionDto(
                 cs.getId(),
@@ -152,9 +146,13 @@ public class UserChatServiceImpl implements UserchatService {
         fullDto.setValidQuestionCount(user.getValidQuestionCount());
         fullDto.setChatSessions(sesionesDto);
         fullDto.setUserTickets(ticketsDto);
-        
-        ErpUserDto erpUser = erpClient.getUser(identificacion);
-        fullDto.setErpUser(erpUser);
+
+        if ("Anonymus".equals(user.getIdentificacion())) {
+            fullDto.setErpUser(null);
+        } else {
+            ErpUserDto erpUser = erpClient.getUser(user.getIdentificacion());
+            fullDto.setErpUser(erpUser);
+        }
 
         return fullDto;
     }
@@ -199,8 +197,13 @@ public class UserChatServiceImpl implements UserchatService {
                 fullDto.setChatSessions(sesionesDto);
                 fullDto.setUserTickets(ticketsDto);
                 
-                ErpUserDto erpUser = erpClient.getUser(user.getIdentificacion());
-                fullDto.setErpUser(erpUser);
+                if ("Anonymus".equals(user.getIdentificacion())) {
+                    fullDto.setErpUser(null);
+                } else {
+                    ErpUserDto erpUser = erpClient.getUser(user.getIdentificacion());
+                    fullDto.setErpUser(erpUser);
+                }
+                
 
                 return fullDto;
             })
@@ -249,8 +252,12 @@ public class UserChatServiceImpl implements UserchatService {
                 fullDto.setChatSessions(sesionesDto);
                 fullDto.setUserTickets(ticketsDto);
                 
-                ErpUserDto erpUser = erpClient.getUser(user.getIdentificacion());
-                fullDto.setErpUser(erpUser);
+                if ("Anonymus".equals(user.getIdentificacion())) {
+                    fullDto.setErpUser(null);
+                } else {
+                    ErpUserDto erpUser = erpClient.getUser(user.getIdentificacion());
+                    fullDto.setErpUser(erpUser);
+                }
 
                 return fullDto;
             })
@@ -298,8 +305,12 @@ public class UserChatServiceImpl implements UserchatService {
                 fullDto.setChatSessions(sesionesDto);
                 fullDto.setUserTickets(ticketsDto);
                 
-                ErpUserDto erpUser = erpClient.getUser(user.getIdentificacion());
-                fullDto.setErpUser(erpUser);
+                if ("Anonymus".equals(user.getIdentificacion())) {
+                    fullDto.setErpUser(null);
+                } else {
+                    ErpUserDto erpUser = erpClient.getUser(user.getIdentificacion());
+                    fullDto.setErpUser(erpUser);
+                }
 
                 return fullDto;
             })
@@ -380,8 +391,12 @@ public class UserChatServiceImpl implements UserchatService {
         fullDto.setChatSessions(sesionesDto);
         fullDto.setUserTickets(ticketsDto);
 
-        ErpUserDto erpUser = erpClient.getUser(userEntity.getIdentificacion());
-        fullDto.setErpUser(erpUser);
+        if ("Anonymus".equals(userEntity.getIdentificacion())) {
+            fullDto.setErpUser(null); // Asignar null para usuarios "Anonymus"
+        } else {
+            ErpUserDto erpUser = erpClient.getUser(userEntity.getIdentificacion());
+            fullDto.setErpUser(erpUser);
+        }
 
         return fullDto;
     }
@@ -502,7 +517,8 @@ public class UserChatServiceImpl implements UserchatService {
    
     // ============ Usuario solicita info del Ticket ============
     @Override
-    public void userRequestTicketList(String whatsAppPhone) throws JsonProcessingException {
+    @Transactional
+    public List<UserTicketDto> userRequestTicketList(String whatsAppPhone) throws JsonProcessingException {
         UserChatEntity user = repo.findByWhatsappPhone(whatsAppPhone)
             .orElseThrow(() -> new UserNotFoundException("No se encontró el usuario con el teléfono: " + whatsAppPhone));
 
@@ -530,5 +546,7 @@ public class UserChatServiceImpl implements UserchatService {
         } else {
             apiWhatsappService.sendMessage(new MessageBody(whatsAppPhone, message));
         }
+
+        return ticketsDto;
     }
 }

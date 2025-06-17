@@ -2,11 +2,13 @@ package com.BackEnd.WhatsappApiCloud.service.userChat;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.data.domain.Page;
 
 import com.BackEnd.WhatsappApiCloud.model.dto.user.UserChatFullDto;
+import com.BackEnd.WhatsappApiCloud.model.dto.user.UserTicketDto;
 import com.fasterxml.jackson.core.JsonProcessingException;
 public interface UserchatService {
     UserChatFullDto userUpdate(Long id, Map<String, Object> updates);
@@ -16,5 +18,5 @@ public interface UserchatService {
     UserChatFullDto findByIdentificacion(String identificacion);
     UserChatFullDto findByWhatsappPhone(String whatsappPhone);
     void userRequestTicketInfo(String whatsAppPhone, String ticketId) throws JsonProcessingException, IOException;
-    void userRequestTicketList(String whatsAppPhone) throws JsonProcessingException;
+    List<UserTicketDto> userRequestTicketList(String whatsAppPhone) throws JsonProcessingException;
 }

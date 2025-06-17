@@ -183,6 +183,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         newUser.setIdentificacion("Anonymus");
         newUser.setWhatsappPhone(waId);
         newUser.setFirstInteraction(timeNow);
+        newUser.setLastInteraction(timeNow);
         newUser.setConversationState(ConversationState.NEW);
         newUser.setLimitQuestions(5);
         UserChatEntity savedUser = userChatRepository.save(newUser);

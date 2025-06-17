@@ -29,6 +29,7 @@ import com.BackEnd.WhatsappApiCloud.model.dto.glpi.SolutionDecisionRequest;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.TicketInfoDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.TicketInfoDto.*;
 import com.BackEnd.WhatsappApiCloud.model.entity.glpi.UserTicketEntity;
+import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
 import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
 import com.BackEnd.WhatsappApiCloud.repository.UserTicketRepository;
 import com.BackEnd.WhatsappApiCloud.service.glpi.GlpiServerClient;
@@ -312,7 +313,7 @@ public class GlpiServiceImpl implements GlpiService {
         @Transactional
         public responseCreateTicketSuccess createTicket(CreateTicket payload, String whatsAppPhone) {
 
-                userChatRepository.findByWhatsappPhone(whatsAppPhone)
+                UserChatEntity user = userChatRepository.findByWhatsappPhone(whatsAppPhone)
                         .orElseThrow(() -> new ServerClientException("Usuario no encontrado para el número de WhatsApp: " + whatsAppPhone));
 
                 CreateTicket ticketToCreate = new CreateTicket(
@@ -338,6 +339,7 @@ public class GlpiServiceImpl implements GlpiService {
                 entity.setId(glpiTicket.id());
                 entity.setWhatsappPhone(whatsAppPhone);
                 entity.setName(glpiTicket.name());
+                entity.setUserChat(user);
                 userTicketRepository.save(entity);
 
                 return response;

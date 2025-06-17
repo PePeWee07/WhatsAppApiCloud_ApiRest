@@ -83,7 +83,6 @@ public class UserChatEntity {
 
     @OneToMany(mappedBy = "userChat",
            cascade = CascadeType.ALL,
-           orphanRemoval = true,
            fetch = FetchType.LAZY)
     @Fetch(FetchMode.SUBSELECT)
     @JsonManagedReference
