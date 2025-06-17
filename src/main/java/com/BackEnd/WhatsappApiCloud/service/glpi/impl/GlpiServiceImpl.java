@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import java.io.File;
@@ -361,12 +362,18 @@ public class GlpiServiceImpl implements GlpiService {
 
 
         @Override
-        public Object refusedOrAcceptedSolutionTicket(SolutionDecisionRequest request) {
+        public Object refusedOrAcceptedSolutionTicket(SolutionDecisionRequest request, String whatsAppPhone) {
                 Boolean _acepted = request.getAccepted();
                 Long ticketId = request.getTicketId();
                 String contentNote = request.getContent();
-
                 Long status = glpiServerClient.getTicketById(ticketId).status();
+
+                // Verificar que el ticket le pertenece
+                // Long id = Long.valueOf(ticketId);
+                // if (!userTicketRepository.existsByWhatsappPhoneAndId(whatsAppPhone, id)) {
+                //     throw new ServerClientException(
+                //         "El ticket " + ticketId + " no te pertenece.");
+                // }
                 
                 if (status == 5L) {
                         if (_acepted) {
@@ -374,7 +381,8 @@ public class GlpiServiceImpl implements GlpiService {
                                         new InputUpdate(6L, _acepted)
                                 );
         
-                                return glpiServerClient.updateTicketStatusById(ticketId, updateStatus);
+                                glpiServerClient.updateTicketStatusById(ticketId, updateStatus);
+                                return Map.of("message", "La solución del ticket ha sido aceptada exitosamente.");
                         } else {
                                 // Actualiza el Status del ticket(En progreso)
                                 RequestUpdateStatus updateStatus = new RequestUpdateStatus(new InputUpdate(2L));
@@ -384,10 +392,12 @@ public class GlpiServiceImpl implements GlpiService {
 
                                 // Enviar nuevo seguimeinto del ticket
                                 CreateNoteForTicket note = new CreateNoteForTicket( new InputFollowup("Ticket", ticketId, contentNote));
-                                return glpiServerClient.createNoteForTicket(note);
+                                glpiServerClient.createNoteForTicket(note);
+
+                                return Map.of("message", "La solución del ticket ha sido rechazada exitosamente y se ha notificado el motivo del rechazo.");
                         }          
                 } else {
-                        return "El ticket aun no tiene una solucion";
+                        return Map.of("message", "El ticket aún no tiene solución.");
                 }
 
         }

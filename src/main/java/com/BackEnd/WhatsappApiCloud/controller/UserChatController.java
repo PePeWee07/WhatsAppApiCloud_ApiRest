@@ -3,6 +3,7 @@ package com.BackEnd.WhatsappApiCloud.controller;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -158,12 +159,17 @@ public class UserChatController {
 
     // ================== Solicitar información de un ticket ==================
     @GetMapping("/user/ticket/info")
-    public ResponseEntity<String> getTicketInfo(
+    public ResponseEntity<Map<String, Object>> getTicketInfo(
             @RequestParam("whatsappPhone") String whatsAppPhone,
             @RequestParam("ticketId") String ticketId) throws IOException {
-            userchatService.userRequestTicketInfo(whatsAppPhone, ticketId);
-            return ResponseEntity.ok("La Información del ticket fue enviada correctamente por WhatsApp.");
-        
+
+        boolean hasValidSolution = userchatService.userRequestTicketInfo(whatsAppPhone, ticketId);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Se consultó correctamente el detalle del ticket.");
+        response.put("hasSolution", hasValidSolution);
+
+        return ResponseEntity.ok(response);
     }
 
     // ================== Enviar lista de tickets a WhatsApp ==================

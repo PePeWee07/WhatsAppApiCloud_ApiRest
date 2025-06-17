@@ -117,9 +117,9 @@ public class UserChatServiceImpl implements UserchatService {
 
     @Override
     @Transactional(readOnly = true)
-    public UserChatFullDto findByWhatsappPhone(String whatsappPhone) {
-        UserChatEntity user = repo.findByWhatsappPhone(whatsappPhone)
-            .orElseThrow(() -> new UserNotFoundException("No se encontro el usuario con whatsappPhone: " + whatsappPhone));
+    public UserChatFullDto findByWhatsappPhone(String whatsAppPhone) {
+        UserChatEntity user = repo.findByWhatsappPhone(whatsAppPhone)
+            .orElseThrow(() -> new UserNotFoundException("No se encontro el usuario con whatsAppPhone: " + whatsAppPhone));
         
         List<ChatSessionDto> sesionesDto = user.getChatSessions().stream()
         .map(cs -> new ChatSessionDto(
@@ -414,7 +414,7 @@ public class UserChatServiceImpl implements UserchatService {
 
     // ============ Usuario solicita info del Ticket ============
     @Override
-    public void userRequestTicketInfo(String whatsAppPhone, String ticketId) throws IOException {
+    public boolean userRequestTicketInfo(String whatsAppPhone, String ticketId) throws IOException {
 
         // 1) Verificar que el usuario existe
         repo.findByWhatsappPhone(whatsAppPhone)
@@ -513,6 +513,8 @@ public class UserChatServiceImpl implements UserchatService {
         } else {
             apiWhatsappService.sendMessage(new MessageBody(whatsAppPhone, message));
         }
+
+        return hasValidSolution;
     }
    
     // ============ Usuario solicita info del Ticket ============

@@ -68,12 +68,12 @@ public class openAiServerClient {
                     }
                 throw new ApiInfoException(infoMessage, null);
             } else {
-                logger.error("Bad Request al obtener respuesta de IA: " + e.getMessage());
+                logger.error("Bad Request al obtener respuesta de IA: " + e);
                 throw new RuntimeException(e);
             }
         } catch (RestClientException e) {
-            logger.error("Error al obtener respuesta del Asistente virtual: ", e.getMessage());
-            throw new ServerClientException("Error al obtener respuesta del Asistente virtual: ", e.getCause());
+            logger.error("Error al obtener respuesta del Asistente virtual: ", e);
+            throw new ServerClientException("Error al obtener respuesta del Asistente virtual: ", e);
         }
     }
 }

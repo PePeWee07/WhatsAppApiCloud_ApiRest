@@ -35,7 +35,7 @@ public class GlpiController {
     @PostMapping("/ticket")
     public ResponseEntity<responseCreateTicketSuccess> createTicket(
             @RequestBody CreateTicket payload,
-            @RequestParam("whatsAppPhone") String whatsAppPhone) {
+            @RequestParam("whatsappPhone") String whatsAppPhone) {
 
         responseCreateTicketSuccess resp = glpiService.createTicket(payload, whatsAppPhone);
         return ResponseEntity
@@ -44,8 +44,8 @@ public class GlpiController {
     }
 
    @PostMapping("/ticket/solution/decision")
-    public ResponseEntity<Object> refusedOrAcceptedTicketSolution(@RequestBody SolutionDecisionRequest request) {
-        Object resp = glpiService.refusedOrAcceptedSolutionTicket(request);
+    public ResponseEntity<Object> refusedOrAcceptedTicketSolution(@RequestBody SolutionDecisionRequest request,  @RequestParam("whatsappPhone") String whatsAppPhone) {
+        Object resp = glpiService.refusedOrAcceptedSolutionTicket(request, whatsAppPhone);
         return ResponseEntity.status(HttpStatus.OK).body(resp);
     }
     

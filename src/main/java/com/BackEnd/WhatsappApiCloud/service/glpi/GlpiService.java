@@ -10,5 +10,5 @@ public interface GlpiService {
     TicketInfoDto getInfoTicketById(String ticketId);
     responseCreateTicketSuccess createTicket(CreateTicket ticket, String whatsAppPhone);
     String getStatusTicket(Long tickedId);
-    Object refusedOrAcceptedSolutionTicket(SolutionDecisionRequest request);
+    Object refusedOrAcceptedSolutionTicket(SolutionDecisionRequest request, String whatsAppPhone);
 }
