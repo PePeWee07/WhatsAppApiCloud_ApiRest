@@ -45,7 +45,7 @@ import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
 import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
 import com.BackEnd.WhatsappApiCloud.service.chatSession.ChatSessionService;
 import com.BackEnd.WhatsappApiCloud.service.erp.ErpCacheService;
-import com.BackEnd.WhatsappApiCloud.service.erp.ErpJsonServerClient;
+import com.BackEnd.WhatsappApiCloud.service.erp.ErpServerClient;
 import com.BackEnd.WhatsappApiCloud.service.openAi.openAiServerClient;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
 import com.BackEnd.WhatsappApiCloud.util.ConversationState;
@@ -84,7 +84,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     @Autowired
     UserChatRepository userChatRepository;
     @Autowired
-    ErpJsonServerClient erpJsonServerClient;
+    ErpServerClient erpJsonServerClient;
     @Autowired
     openAiServerClient openAiServerClient;
     @Autowired

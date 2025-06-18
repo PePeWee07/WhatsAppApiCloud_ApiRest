@@ -26,7 +26,7 @@ import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
 import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
 import com.BackEnd.WhatsappApiCloud.repository.UserTicketRepository;
-import com.BackEnd.WhatsappApiCloud.service.erp.ErpJsonServerClient;
+import com.BackEnd.WhatsappApiCloud.service.erp.ErpServerClient;
 import com.BackEnd.WhatsappApiCloud.service.glpi.GlpiService;
 import com.BackEnd.WhatsappApiCloud.service.userChat.UserchatService;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
@@ -37,12 +37,12 @@ public class UserChatServiceImpl implements UserchatService {
 
     private final UserChatRepository repo;
     private final UserTicketRepository  userTicketRepository;
-    private final ErpJsonServerClient erpClient;
+    private final ErpServerClient erpClient;
     private final GlpiService glpiService;
     private final ApiWhatsappService apiWhatsappService;
 
 
-    public UserChatServiceImpl(UserChatRepository repo, ErpJsonServerClient erpClient, UserTicketRepository  userTicketRepository, GlpiService glpiService, ApiWhatsappService apiWhatsappService) {
+    public UserChatServiceImpl(UserChatRepository repo, ErpServerClient erpClient, UserTicketRepository  userTicketRepository, GlpiService glpiService, ApiWhatsappService apiWhatsappService) {
         this.erpClient = erpClient;
         this.repo = repo;
         this.userTicketRepository = userTicketRepository;

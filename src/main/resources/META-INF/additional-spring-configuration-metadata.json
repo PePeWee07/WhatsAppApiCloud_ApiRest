@@ -93,5 +93,30 @@
     "name": "glpi.user_token",
     "type": "java.lang.String",
     "description": "A description for 'glpi.user_token'"
+  },
+  {
+    "name": "erp.api.base-url",
+    "type": "java.lang.String",
+    "description": "A description for 'erp.api.base-url'"
+  },
+  {
+    "name": "erp.api.login-uri",
+    "type": "java.lang.String",
+    "description": "A description for 'erp.api.login-uri'"
+  },
+  {
+    "name": "erp.api.user-base64",
+    "type": "java.lang.String",
+    "description": "A description for 'erp.api.user-base64'"
+  },
+  {
+    "name": "erp.api.password-base64",
+    "type": "java.lang.String",
+    "description": "A description for 'erp.api.password-base64'"
+  },
+  {
+    "name": "erp.api.data-uri",
+    "type": "java.lang.String",
+    "description": "A description for 'erp.api.data-uri'"
   }
 ]}
