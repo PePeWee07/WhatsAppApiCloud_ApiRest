@@ -19,5 +19,6 @@ public interface ApiWhatsappService {
      String uploadMedia(File mediaFile) throws IOException;
      Boolean deleteMediaById(String mediaId) throws IOException;
      ResponseWhatsapp sendImageMessageById(String toPhoneNumber, String mediaId, String caption) throws JsonProcessingException;
+     ResponseWhatsapp sendDocumentMessageById(String toPhoneNumber, String documentId, String caption, String filename);
 
 }

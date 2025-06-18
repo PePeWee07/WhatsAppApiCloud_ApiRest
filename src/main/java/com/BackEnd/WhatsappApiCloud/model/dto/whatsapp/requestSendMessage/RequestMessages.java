@@ -13,11 +13,11 @@ public class RequestMessages {
     private String messaging_product;
     private String recipient_type;
     private String to;
-    private String type;  // "text", "image", "video", "sticker"
+    private String type;  // "text", "image", "video", "sticker", "document"
 
     private RequestMessageText text;    // Usado cuando type = "text"
-    private RequestMedia image;
+    private RequestMedia image;         // Usado cuando type = "document"
     private RequestVideoLink video;     // Usado cuando type = "video"
     private RequestMediaLink sticker;   // Usado cuando type = "sticker"
-
+    private RequestDocument document;   // Usado cuando type = "document"
 }

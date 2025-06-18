@@ -107,12 +107,34 @@ public class WhatsappController {
     //   Enviar imagen por ID con texto a un usuario de WhatsApp
     // ======================================================
     @PostMapping("/send-image-by-id")
-    public ResponseEntity<ResponseWhatsapp> sendImageById(
+    public ResponseEntity<ResponseWhatsapp> sendImageByIdWithText(
             @RequestParam("toPhoneNumber") String toPhoneNumber,
             @RequestParam("mediaId") String mediaId,
             @RequestParam("caption") String caption) {
         try {
             ResponseWhatsapp response = apiWhatsappService.sendImageMessageById(toPhoneNumber, mediaId, caption);
+            if (response != null) {
+                return ResponseEntity.ok(response);
+            } else {
+                return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            }
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+        }
+    }
+
+
+    // ======================================================
+    //   Enviar docuemnto por ID con texto a un usuario de WhatsApp
+    // ======================================================
+    @PostMapping("/send-document-by-id")
+    public ResponseEntity<ResponseWhatsapp> sendDocumentByIdWithText(
+            @RequestParam("toPhoneNumber") String toPhoneNumber,
+            @RequestParam("mediaId") String mediaId,
+            @RequestParam("caption") String caption,
+            @RequestParam("filename") String filename) {
+        try {
+            ResponseWhatsapp response = apiWhatsappService.sendDocumentMessageById(toPhoneNumber, mediaId, caption, filename);
             if (response != null) {
                 return ResponseEntity.ok(response);
             } else {

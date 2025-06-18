@@ -447,9 +447,34 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     }
 
 
-    // ======================================================
-    // Cargar imagen a la API de WhatsApp
-    // ======================================================
+    // ============== Método para convertir CSV a Excel ==============
+    private File convertCsvToExcel(File csvFile) throws IOException {
+        File excelFile = new File(csvFile.getParent(), "converted_" + csvFile.getName() + ".xlsx");
+
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("Sheet1");
+            List<String> lines = Files.readAllLines(csvFile.toPath(), StandardCharsets.UTF_8);
+
+            int rowIndex = 0;
+            for (String line : lines) {
+                Row row = sheet.createRow(rowIndex++);
+                String[] cells = line.split(",");
+                for (int cellIndex = 0; cellIndex < cells.length; cellIndex++) {
+                    Cell cell = row.createCell(cellIndex);
+                    cell.setCellValue(cells[cellIndex]);
+                }
+            }
+
+            try (FileOutputStream fos = new FileOutputStream(excelFile)) {
+                workbook.write(fos);
+            }
+        }
+
+        return excelFile;
+    }
+
+
+    // ============== Cargar archivo multimedia a servidores WhatsApp ===============
     @Override
     public String uploadMedia(File mediaFile) {
         try {
@@ -491,9 +516,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
-    // ======================================================
-    //  Eliminar archvio multi media por ID
-    // ======================================================
+
+    // ============== Eliminar archvio multi-media por ID ===================
     @Override
     public Boolean deleteMediaById(String mediaId) {
         try {
@@ -513,18 +537,15 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
-    // ======================================================
-    //  Enviar una imagen por ID como mensaje
-    // ======================================================
+
+    // ============== Enviar una imagen por ID junto a un mensaje ==================
     @Override
     public ResponseWhatsapp sendImageMessageById(String toPhoneNumber, String mediaId, String caption) {
         try {
-            // Construir el mensaje usando el método de la fábrica
-            RequestMessages mensajeImage = RequestMessagesFactory.buildImageByIdWithText(toPhoneNumber, mediaId, caption);
+            RequestMessages msj = RequestMessagesFactory.buildImageByIdWithText(toPhoneNumber, mediaId, caption);
 
-            // Enviar la solicitud
-            ResponseWhatsapp respuesta = NewResponseBuilder(mensajeImage, "/messages");
-            return respuesta;
+            ResponseWhatsapp res = NewResponseBuilder(msj, "/messages");
+            return res;
 
         } catch (Exception e) {
             logger.error("Error al enviar la imagen con texto: ", e);
@@ -532,16 +553,30 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
+
+    // ============== Enviar un docuemnto por ID junto a un mensaje ==================
+    @Override
+    public ResponseWhatsapp sendDocumentMessageById(String toPhoneNumber, String documentId, String caption, String filename) {
+        try {
+            RequestMessages msj = RequestMessagesFactory.buildDocumentByIdWithText(toPhoneNumber, documentId, caption, filename);
+
+            ResponseWhatsapp res = NewResponseBuilder(msj, "/messages");
+            return res;
+
+        } catch (Exception e) {
+            logger.error("Error al enviar documento con texto: ", e);
+            return null;
+        }
+    }
+
     
-    // ======================================================
-    //  Enviar una imagen por URL como mensaje
-    // ======================================================
+    // ============= Enviar una imagen por URL como mensaje ================
     public ResponseWhatsapp sendImageMessageByUrl(String toPhoneNumber, String imageUrl) {
         try {
-            RequestMessages mensajeImage = RequestMessagesFactory.buildImageByUrl(toPhoneNumber, imageUrl);
+            RequestMessages msj = RequestMessagesFactory.buildImageByUrl(toPhoneNumber, imageUrl);
 
-            ResponseWhatsapp respuesta = NewResponseBuilder(mensajeImage, "/messages");
-            return respuesta;
+            ResponseWhatsapp res = NewResponseBuilder(msj, "/messages");
+            return res;
 
         } catch (Exception e) {
             logger.error("Error al enviar la imagen: ", e);
@@ -550,15 +585,13 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     }
 
 
-    // ======================================================
-    //  Enviar una video por URL como mensaje
-    // ======================================================
+    // ============== Enviar una video por URL como mensaje ============
     public ResponseWhatsapp sendVideoMessageByUrl(String toPhoneNumber, String videoUrl, String caption) {
         try {
-            RequestMessages mensajeVideo = RequestMessagesFactory.buildVideoByUrl(toPhoneNumber, videoUrl, caption);
+            RequestMessages msj = RequestMessagesFactory.buildVideoByUrl(toPhoneNumber, videoUrl, caption);
 
-            ResponseWhatsapp respuesta = NewResponseBuilder(mensajeVideo, "/messages");
-            return respuesta;
+            ResponseWhatsapp res = NewResponseBuilder(msj, "/messages");
+            return res;
 
         } catch (Exception e) {
             logger.error("Error al enviar el video: ", e);
@@ -567,15 +600,13 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     }
 
 
-    // ======================================================
-    //  Enviar una Sticker statico/animado por URL como mensaje
-    // ======================================================
+    // ============== Enviar una Sticker statico/animado por URL como mensaje ==============
     public ResponseWhatsapp sendStickerMessageByUrl(String toPhoneNumber, String stickerUrl) {
         try {
-            RequestMessages mensajeSticker = RequestMessagesFactory.buildStickerByUrl(toPhoneNumber, stickerUrl);
+            RequestMessages msj = RequestMessagesFactory.buildStickerByUrl(toPhoneNumber, stickerUrl);
 
-            ResponseWhatsapp respuesta = NewResponseBuilder(mensajeSticker, "/messages");
-            return respuesta;
+            ResponseWhatsapp res = NewResponseBuilder(msj, "/messages");
+            return res;
 
         } catch (Exception e) {
             logger.error("Error al enviar el sticker: ", e);
@@ -583,29 +614,4 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
-    // Método para convertir CSV a Excel
-    private File convertCsvToExcel(File csvFile) throws IOException {
-        File excelFile = new File(csvFile.getParent(), "converted_" + csvFile.getName() + ".xlsx");
-
-        try (Workbook workbook = new XSSFWorkbook()) {
-            Sheet sheet = workbook.createSheet("Sheet1");
-            List<String> lines = Files.readAllLines(csvFile.toPath(), StandardCharsets.UTF_8);
-
-            int rowIndex = 0;
-            for (String line : lines) {
-                Row row = sheet.createRow(rowIndex++);
-                String[] cells = line.split(",");
-                for (int cellIndex = 0; cellIndex < cells.length; cellIndex++) {
-                    Cell cell = row.createCell(cellIndex);
-                    cell.setCellValue(cells[cellIndex]);
-                }
-            }
-
-            try (FileOutputStream fos = new FileOutputStream(excelFile)) {
-                workbook.write(fos);
-            }
-        }
-
-        return excelFile;
-    }
 }

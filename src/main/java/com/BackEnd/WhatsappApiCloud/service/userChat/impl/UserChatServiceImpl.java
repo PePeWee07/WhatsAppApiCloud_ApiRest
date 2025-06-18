@@ -431,6 +431,8 @@ public class UserChatServiceImpl implements UserchatService {
         // 3) Recuperar la info limpia del ticket
         TicketInfoDto info = glpiService.getInfoTicketById(ticketId);
 
+        System.out.println("INFO: " + info); //! DEBUG
+
         // 4) Construir un mensaje resumen
         StringBuilder sb = new StringBuilder();
         sb.append(" > *Información del Ticket*\n");
