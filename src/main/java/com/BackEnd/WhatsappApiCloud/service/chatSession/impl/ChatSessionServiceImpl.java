@@ -35,12 +35,12 @@ public class ChatSessionServiceImpl implements ChatSessionService {
         List<ChatSessionEntity> active = chatSessionRepository.findByWhatsappPhoneAndStartTimeBetween(whatsappPhone, threshold, now);
 
         if (!active.isEmpty()) {
-            // 2) Existe → actualizar contador
+            // 2) Existe actualizar contador
             ChatSessionEntity session = active.get(0);
             session.setMessageCount(session.getMessageCount() + 1);
             return chatSessionRepository.save(session);
         } else {
-            // 3) No existe → crear nueva
+            // 3) No existe crear nueva
             ChatSessionEntity session = new ChatSessionEntity();
             session.setWhatsappPhone(whatsappPhone);
             session.setStartTime(now);

@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import com.BackEnd.WhatsappApiCloud.model.dto.erp.ErpUserDto;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -34,6 +35,7 @@ public class UserChatFullDto {
 
     // Mapeamos chatSessions a un sub‐DTO sencillo:
     private List<ChatSessionDto> chatSessions;
+    private List<UserTicketDto> userTickets;
 
     // ----- Datos nominales directamente con ErpUserDto -----
     private ErpUserDto erpUser;

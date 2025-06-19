@@ -14,9 +14,9 @@ import com.BackEnd.WhatsappApiCloud.model.dto.erp.ErpUserDto;
 @Service
 public class ErpCacheService {
     private final Logger logger = LoggerFactory.getLogger(getClass());
-    private final ErpJsonServerClient erpClient;
+    private final ErpServerClient erpClient;
 
-    public ErpCacheService(ErpJsonServerClient erpClient) {
+    public ErpCacheService(ErpServerClient erpClient) {
         this.erpClient = erpClient;
     }
 

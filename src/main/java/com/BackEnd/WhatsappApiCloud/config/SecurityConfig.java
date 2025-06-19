@@ -9,13 +9,24 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.*;
 
+import com.BackEnd.WhatsappApiCloud.config.security.RestAccessDeniedHandler;
+import com.BackEnd.WhatsappApiCloud.config.security.RestAuthenticationEntryPoint;
+
 @Configuration
 public class SecurityConfig {
 
     private final ApiKeyFilter apiKeyFilter;
+    private final RestAuthenticationEntryPoint authEntryPoint;
+    private final RestAccessDeniedHandler accessDeniedHandler;
 
-    public SecurityConfig(ApiKeyFilter apiKeyFilter) {
+    public SecurityConfig(
+      ApiKeyFilter apiKeyFilter,
+      RestAuthenticationEntryPoint authEntryPoint,
+      RestAccessDeniedHandler accessDeniedHandler
+    ) {
         this.apiKeyFilter = apiKeyFilter;
+        this.authEntryPoint = authEntryPoint;
+        this.accessDeniedHandler = accessDeniedHandler;
     }
 
     // ======================================================
@@ -26,6 +37,10 @@ public class SecurityConfig {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
+            .exceptionHandling(ex -> ex
+              .authenticationEntryPoint(authEntryPoint)
+              .accessDeniedHandler(accessDeniedHandler)
+            )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/health").permitAll()
                 .anyRequest().authenticated()

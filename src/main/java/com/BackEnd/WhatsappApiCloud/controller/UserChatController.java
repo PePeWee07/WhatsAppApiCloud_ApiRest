@@ -1,8 +1,10 @@
 package com.BackEnd.WhatsappApiCloud.controller;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.springframework.data.domain.Page;
@@ -14,9 +16,12 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.BackEnd.WhatsappApiCloud.exception.BadRequestException;
 import com.BackEnd.WhatsappApiCloud.model.dto.user.UserChatFullDto;
+import com.BackEnd.WhatsappApiCloud.model.dto.user.UserTicketDto;
 import com.BackEnd.WhatsappApiCloud.service.userChat.UserchatService;
 import com.BackEnd.WhatsappApiCloud.util.UserChatFieldsSorby;
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 import org.springframework.web.bind.annotation.RequestMapping;
 
@@ -34,27 +39,23 @@ public class UserChatController {
     // ========== Encontrar usuario por identificacion o whatsappPhone =============
     @GetMapping("/user/find")
     public ResponseEntity<UserChatFullDto> findUser(
-            @RequestParam(value = "identificacion", required = false) String identificacion,
-            @RequestParam(value = "whatsappPhone", required = false) String whatsappPhone) {
+        @RequestParam(value = "identificacion", required = false) String identificacion,
+        @RequestParam(value = "whatsappPhone", required = false) String whatsAppPhone) {
 
-        if (identificacion != null && whatsappPhone != null) {
-            return ResponseEntity
-                    .badRequest()
-                    .body(null);
+        if (identificacion != null && whatsAppPhone != null) {
+            throw new BadRequestException("Debe indicar solo un paramentro de busqueda: identificacion o whatsappPhone");
         }
 
-        if (identificacion == null && whatsappPhone == null) {
-            return ResponseEntity
-                    .badRequest()
-                    .body(null);
+        if (identificacion == null && whatsAppPhone == null) {
+            throw new BadRequestException("Debe indicar un paramentro de busqueda: identificacion o whatsappPhone");
         }
 
+        UserChatFullDto dto;
         if (identificacion != null) {
-            UserChatFullDto dto = userchatService.findByIdentificacion(identificacion);
-            return ResponseEntity.ok(dto);
+            dto = userchatService.findByIdentificacion(identificacion);
+        } else {
+            dto = userchatService.findByWhatsappPhone(whatsAppPhone);
         }
-
-        UserChatFullDto dto = userchatService.findByWhatsappPhone(whatsappPhone);
         return ResponseEntity.ok(dto);
     }
 
@@ -90,12 +91,13 @@ public class UserChatController {
         return ResponseEntity.ok(usersPage);
     }
 
+    // ================== Paginar usuarios por fecha de última interacción ========================
     @GetMapping("/page/users/{page}/byLastInteraction")
     public ResponseEntity<Page<UserChatFullDto>> listByLastInteraction(
             @PathVariable("page") int page,
             @RequestParam(value = "pageSize", defaultValue = "10") int pageSize,
             @RequestParam(value = "sortBy",   defaultValue = "lastInteraction") String sortBy,
-            @RequestParam(value = "direction",defaultValue = "asc")     String direction,
+            @RequestParam(value = "direction", defaultValue = "asc")     String direction,
             @RequestParam("startDate") String startDateStr,
             @RequestParam("endDate")   String endDateStr) {
         
@@ -106,12 +108,8 @@ public class UserChatController {
         }
         
         LocalDateTime inicio, fin;
-        try {
-            inicio = LocalDateTime.parse(startDateStr, DateTimeFormatter.ISO_DATE_TIME);
-            fin    = LocalDateTime.parse(endDateStr,   DateTimeFormatter.ISO_DATE_TIME);
-        } catch (DateTimeParseException ex) {
-            return ResponseEntity.badRequest().build();
-        }
+        inicio = LocalDateTime.parse(startDateStr, DateTimeFormatter.ISO_DATE_TIME);
+        fin    = LocalDateTime.parse(endDateStr,   DateTimeFormatter.ISO_DATE_TIME);
 
         if (inicio.isAfter(fin)) {
             return ResponseEntity.badRequest().build();
@@ -138,12 +136,8 @@ public class UserChatController {
         }
         
         LocalDateTime inicio, fin;
-        try {
-            inicio = LocalDateTime.parse(startDateStr, DateTimeFormatter.ISO_DATE_TIME);
-            fin    = LocalDateTime.parse(endDateStr,   DateTimeFormatter.ISO_DATE_TIME);
-        } catch (DateTimeParseException ex) {
-            return ResponseEntity.badRequest().build();
-        }
+        inicio = LocalDateTime.parse(startDateStr, DateTimeFormatter.ISO_DATE_TIME);
+        fin    = LocalDateTime.parse(endDateStr,   DateTimeFormatter.ISO_DATE_TIME);
 
         if (inicio.isAfter(fin)) {
             return ResponseEntity.badRequest().build();
@@ -161,6 +155,29 @@ public class UserChatController {
 
         UserChatFullDto patched = userchatService.userUpdate(id, updates);
         return ResponseEntity.ok(patched);
+    }
+
+    // ================== Solicitar información de un ticket ==================
+    @GetMapping("/user/ticket/info")
+    public ResponseEntity<Map<String, Object>> getTicketInfo(
+            @RequestParam("whatsappPhone") String whatsAppPhone,
+            @RequestParam("ticketId") String ticketId) throws IOException {
+
+        boolean hasValidSolution = userchatService.userRequestTicketInfo(whatsAppPhone, ticketId);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("message", "Se consultó correctamente el detalle del ticket.");
+        response.put("hasSolution", hasValidSolution);
+
+        return ResponseEntity.ok(response);
+    }
+
+    // ================== Enviar lista de tickets a WhatsApp ==================
+    @GetMapping("/user/tickets/open")
+    public ResponseEntity<List<UserTicketDto>> sendTicketListToWhatsApp(
+            @RequestParam("whatsappPhone") String whatsAppPhone) throws JsonProcessingException {
+            List<UserTicketDto> ticketList = userchatService.userRequestTicketList(whatsAppPhone);
+            return ResponseEntity.ok(ticketList);
     }
 
 }

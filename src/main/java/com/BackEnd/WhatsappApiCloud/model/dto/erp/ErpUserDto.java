@@ -23,5 +23,5 @@ public class ErpUserDto implements Serializable {
     private String emailInstitucional;
     private String emailPersonal;
     private String sexo;
-    private List<RolUserDto> rolesUsuario;
+    private List<ErpRolUserDto> rolesUsuario;
 }
