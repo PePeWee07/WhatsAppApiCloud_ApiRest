@@ -442,12 +442,12 @@ public class GlpiServiceImpl implements GlpiService {
                 String contentNote = request.getContent();
                 Long status = glpiServerClient.getTicketById(ticketId).status();
 
-                // Verificar que el ticket le pertenece
-                // Long id = Long.valueOf(ticketId);
-                // if (!userTicketRepository.existsByWhatsappPhoneAndId(whatsAppPhone, id)) {
-                //     throw new ServerClientException(
-                //         "El ticket " + ticketId + " no te pertenece.");
-                // }
+                //Verificar que el ticket le pertenece
+                Long id = Long.valueOf(ticketId);
+                if (!userTicketRepository.existsByWhatsappPhoneAndId(whatsAppPhone, id)) {
+                    throw new ServerClientException(
+                        "El ticket " + ticketId + " no te pertenece.");
+                }
                 
                 if (status == 5L) {
                         if (_acepted) {
