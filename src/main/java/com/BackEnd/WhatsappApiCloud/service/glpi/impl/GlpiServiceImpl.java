@@ -5,12 +5,16 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import java.io.File;
 import java.nio.file.Files;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 import org.jsoup.Jsoup;
 import org.jsoup.parser.Parser;
@@ -55,45 +59,6 @@ public class GlpiServiceImpl implements GlpiService {
                                 this.userChatRepository = userChatRepository;
                                 this.userTicketRepository = userTicketRepository;
         }
-        
-        private List<String> extractMediaIdsFromLinks(Link[] links) {
-        List<String> mediaIds = new ArrayList<>();
-        Arrays.stream(links)
-                .filter(link -> "Document_Item".equals(link.rel()))
-                .forEach(link -> {
-                        List<Document_Item> documentItems = glpiServerClient.getDocumentItems(link.href());
-                        documentItems.forEach(documentItem -> {
-                        Arrays.stream(documentItem.links())
-                                .filter(docLink -> "Document".equals(docLink.rel()))
-                                .forEach(docLink -> {
-                                        try {
-                                                byte[] fileData = glpiServerClient.downloadDocument(docLink.href());
-
-                                                Tika tika = new Tika();
-                                                String contentType = tika.detect(fileData);
-
-                                                if (!isMimeTypeAllowed(contentType)) {
-                                                        return;
-                                                }
-
-                                                String extension = getExtensionFromDocumentId(documentItem.documents_id());
-
-                                                File tempFile = File.createTempFile("document", extension);
-                                                Files.write(tempFile.toPath(), fileData);
-
-                                                String mediaId = apiWhatsappService.uploadMedia(tempFile);
-                                                mediaIds.add(mediaId);
-
-                                                tempFile.delete();
-                                        } catch (Exception e) {
-                                                logger.error("Error procesando documento del GLPI: " + e.getMessage(), e);
-                                                mediaIds.add("Error");
-                                        }
-                                });
-                        });
-                });
-        return mediaIds;
-        }
 
         private String getExtensionFromDocumentId(String documentsId) {
                 int lastDotIndex = documentsId.lastIndexOf('.');
@@ -114,6 +79,47 @@ public class GlpiServiceImpl implements GlpiService {
                                 "image/jpeg", "image/png", "image/webp", "video/mp4", "video/3gpp");
                 return allowedMimeTypes.contains(mimeType);
         }
+        
+        private List<MediaFileDto> extractMediaIdsFromLinks(Link[] links) {
+        List<MediaFileDto> mediaFiles = new ArrayList<>();
+        Arrays.stream(links)
+                .filter(link -> "Document_Item".equals(link.rel()))
+                .forEach(link -> {
+                        List<Document_Item> documentItems = glpiServerClient.getDocumentItems(link.href());
+                        documentItems.forEach(documentItem -> {
+                        Arrays.stream(documentItem.links())
+                                .filter(docLink -> "Document".equals(docLink.rel()))
+                                .forEach(docLink -> {
+                                        try {
+                                                byte[] fileData = glpiServerClient.downloadDocument(docLink.href());
+
+                                                Tika tika = new Tika();
+                                                String contentType = tika.detect(fileData);
+
+                                                if (!isMimeTypeAllowed(contentType)) {
+                                                        mediaFiles.add(new MediaFileDto("Error", documentItem.documents_id(), contentType));
+                                                        return;
+                                                }
+
+                                                String extension = getExtensionFromDocumentId(documentItem.documents_id());
+
+                                                File tempFile = File.createTempFile("document", extension);
+                                                Files.write(tempFile.toPath(), fileData);
+
+                                                String mediaId = apiWhatsappService.uploadMedia(tempFile);
+                                                mediaFiles.add(new TicketInfoDto.MediaFileDto(mediaId, documentItem.documents_id(), contentType));
+
+                                                tempFile.delete();
+                                        } catch (Exception e) {
+                                                logger.error("Error procesando documento del GLPI: "+ documentItem + e.getMessage(), e);
+                                                mediaFiles.add(new TicketInfoDto.MediaFileDto("Error", "unknown", "unknown"));
+                                        }
+                                });
+                        });
+                });
+                return mediaFiles;
+        }
+
 
         private String cleanHtmlForWhatsApp(String rawHtml) {
                 // 1) Parseamos y decodificamos entidades
@@ -166,6 +172,60 @@ public class GlpiServiceImpl implements GlpiService {
                 if (text != null && !text.isEmpty()) {
                         sb.append(text).append("\n\n");
                 }
+        }
+
+
+
+        
+        // Filtra los documentos de un ticket
+        private static final DateTimeFormatter GLPI_DATETIME_FMT =
+        DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        public List<MediaFileDto> filterDocuments(
+            List<DocumentGlpi> docs,
+            String targetUserId,
+            String referenceDateStr
+        ) {
+                LocalDateTime ref = LocalDateTime.parse(referenceDateStr, GLPI_DATETIME_FMT);
+                LocalDateTime before = ref.minusMinutes(5);
+                LocalDateTime after  = ref.plusMinutes(5);
+
+                return docs.stream()
+                .filter(doc -> {
+                        String docUser = doc.users_id() == null
+                        ? ""
+                        : doc.users_id().toString();
+                        if (!targetUserId.equals(docUser)) {
+                        return false;
+                        }
+                        LocalDateTime docDate = LocalDateTime.parse(
+                        doc.date_creation(), GLPI_DATETIME_FMT
+                        );
+                        return !docDate.isBefore(before) && !docDate.isAfter(after);
+                })
+                .map(doc -> {
+                        try {
+                                byte[] data = glpiServerClient.downloadDocumentById(doc.id());
+
+                                if (!isMimeTypeAllowed(doc.mime())) {
+                                        return new TicketInfoDto.MediaFileDto("Error", doc.filename(), doc.mime());
+                                }
+
+                                String ext = doc.filename().contains(".")
+                                        ? doc.filename().substring(doc.filename().lastIndexOf('.'))
+                                        : ".tmp";
+                                File tmp = File.createTempFile("glpi_doc_", ext);
+                                Files.write(tmp.toPath(), data);
+
+                                String mediaId = apiWhatsappService.uploadMedia(tmp);
+                                tmp.delete();
+
+                                return new TicketInfoDto.MediaFileDto(mediaId, doc.filename(), doc.mime());
+                        } catch (Exception e) {
+                                logger.error("Error procesando documento del GLPI: "+ doc + e.getMessage(), e);
+                                return new TicketInfoDto.MediaFileDto("Error", "unknown", "unknown");
+                        }
+                })
+                .collect(Collectors.toList());
         }
 
 
@@ -263,27 +323,40 @@ public class GlpiServiceImpl implements GlpiService {
                 // 6) Si fue solucionado
                 List<TicketSolutionDto> solutionDto = new ArrayList<>();
                 if (glpiTicket.solvedate() != null) {
+                        // Solucion
                         List<TicketSolution> glpiSolutions = glpiServerClient.getTicketSolutionById(glpiTicket.id());
-                       solutionDto = glpiSolutions.stream()
-                        .map(solution -> {
-                                String formatted = cleanHtmlForWhatsApp(solution.content());
+                        solutionDto = glpiSolutions.stream()
+                                .map(solution -> {
+                                        String formatted = cleanHtmlForWhatsApp(solution.content());
 
-                                String solutionStatus = solution.status() == 1L ? "None"
-                                                : solution.status() == 2L ? "En espera"
-                                                : solution.status() == 3L ? "Aceptado"
-                                                : solution.status() == 4L ? "Rechazado"
-                                                : "Indefinido";
+                                        String solutionStatus = solution.status() == 1L ? "None"
+                                                        : solution.status() == 2L ? "En espera"
+                                                        : solution.status() == 3L ? "Aceptado"
+                                                        : solution.status() == 4L ? "Rechazado"
+                                                        : "Indefinido";
 
-                                List<String> mediaIds = extractMediaIdsFromLinks(solution.links());
+                                        List<MediaFileDto> fromLinks = Optional.ofNullable(extractMediaIdsFromLinks(solution.links()))
+                                                .orElse(Collections.emptyList());
 
-                                return new TicketSolutionDto(
-                                formatted,
-                                solution.date_creation(),
-                                solutionStatus,
-                                mediaIds.isEmpty() ? null : mediaIds
-                                );
-                        })
-                        .collect(Collectors.toList());
+                                        // Busco Documentos anexados
+                                        String solDate   = solution.date_creation();
+                                        String solUserId = (String) solution.users_id();
+
+                                        List<MediaFileDto> fromDocs = filterDocuments(Arrays.asList(glpiTicket._documents()), solUserId, solDate);
+                                        System.out.println("Docuemnto desde el ticket: " + fromDocs); //! debug
+
+                                        List<MediaFileDto> mediaFiles = new ArrayList<>(fromLinks);
+                                        mediaFiles.addAll(fromDocs);
+                                        System.out.println("media Files: " + mediaFiles); //! debug
+
+                                        return new TicketSolutionDto(
+                                        formatted,
+                                        solution.date_creation(),
+                                        solutionStatus,
+                                        mediaFiles
+                                        );
+                                })
+                                .collect(Collectors.toList());
                 }
 
                 // 7) Seguimientos (_notes)
@@ -291,12 +364,13 @@ public class GlpiServiceImpl implements GlpiService {
                 List<NoteDto> notes = rawNotes.stream()
                         .map(n -> {
                         String content = cleanHtmlForWhatsApp(n.content());
-                        List<String> mediaIds = extractMediaIdsFromLinks(n.links());
+                        List<MediaFileDto> mediaFiles = Optional.ofNullable(extractMediaIdsFromLinks(n.links()))
+                                        .orElse(Collections.emptyList());
 
                         return new NoteDto(
                                 n.date_creation(),
                                 content,
-                                mediaIds.isEmpty() ? null : mediaIds
+                                mediaFiles
                                 );
                         }).collect(Collectors.toList());
 

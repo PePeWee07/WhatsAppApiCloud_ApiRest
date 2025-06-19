@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.BackEnd.WhatsappApiCloud.exception.UserNotFoundException;
 import com.BackEnd.WhatsappApiCloud.model.dto.erp.ErpUserDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.TicketInfoDto;
+import com.BackEnd.WhatsappApiCloud.model.dto.glpi.TicketInfoDto.MediaFileDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.user.ChatSessionDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.user.UserChatFullDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.user.UserTicketDto;
@@ -431,7 +432,7 @@ public class UserChatServiceImpl implements UserchatService {
         // 3) Recuperar la info limpia del ticket
         TicketInfoDto info = glpiService.getInfoTicketById(ticketId);
 
-        System.out.println("INFO: " + info); //! DEBUG
+        // System.out.println("INFO: " + info.solutions()); //! DEBUG
 
         // 4) Construir un mensaje resumen
         StringBuilder sb = new StringBuilder();
@@ -470,16 +471,24 @@ public class UserChatServiceImpl implements UserchatService {
                 sb.append(solution.content()).append("\n");
 
                 // Enviar imágenes asociadas a la solución
-                if (solution.mediaIds() != null && !solution.mediaIds().isEmpty()) {
-                    for (String mediaId : solution.mediaIds()) {
-                        if ("Error".equals(mediaId)) {
-                            sb.append("\n⚠️ _Uno de los documentos de la solución no se pudo enviar porque su formato no es compatible._\n");
-                            continue;
-                        }
-
-                        apiWhatsappService.sendImageMessageById(whatsAppPhone, mediaId, "Solución del Ticket");
-                        apiWhatsappService.deleteMediaById(mediaId);
+                for (MediaFileDto media : solution.mediaFiles()) {
+                    System.out.println("INFO-MEDIA: " + media); //! DEBUG
+                    if ("Error".equals(media.mediaId())) {
+                        sb.append("\n⚠️ _El archivo '").append(media.name()).append("' no se pudo enviar porque su formato no es compatible._\n");
+                        continue;
                     }
+
+                    if (media.mimeType().startsWith("image/")) {
+                        apiWhatsappService.sendImageMessageById(whatsAppPhone, media.mediaId(), "Solución del Ticket");
+                    } else if (
+                        media.mimeType().startsWith("application/") ||
+                        "text/plain".equals(media.mimeType()) ||
+                        "text/csv".equals(media.mimeType())
+                    ) {
+                        apiWhatsappService.sendDocumentMessageById(whatsAppPhone, media.mediaId(), "Solución del Ticket", media.name());
+                    }
+
+                    apiWhatsappService.deleteMediaById(media.mediaId());
                 }
             }
         }
@@ -492,16 +501,19 @@ public class UserChatServiceImpl implements UserchatService {
             sb.append(lastNote.content()).append("\n");
 
             // Enviar imágenes asociadas al seguimiento
-            if (lastNote.mediaIds() != null && !lastNote.mediaIds().isEmpty()) {
-                for (String mediaId : lastNote.mediaIds()) {
-                    if ("Error".equals(mediaId)) {
-                        sb.append("\n⚠️ _Uno de los documentos de la solución no se pudo enviar porque su formato no es compatible._\n");
-                        continue;
-                    }
-
-                    apiWhatsappService.sendImageMessageById(whatsAppPhone, mediaId, "Seguimiento del Ticket");
-                    apiWhatsappService.deleteMediaById(mediaId);
+            for (MediaFileDto media : lastNote.mediaFiles()) {
+                if ("Error".equals(media.mediaId())) {
+                    sb.append("\n⚠️ _El archivo '").append(media.name()).append("' no se pudo enviar porque su formato no es compatible._\n");
+                    continue;
                 }
+
+                if (media.mimeType().startsWith("image/")) {
+                    apiWhatsappService.sendImageMessageById(whatsAppPhone, media.mediaId(), "Archivo adjunto");
+                } else if (media.mimeType().startsWith("application/")) {
+                    apiWhatsappService.sendDocumentMessageById(whatsAppPhone, media.mediaId(), "Seguimiento del Ticket", media.name());
+                } 
+
+                apiWhatsappService.deleteMediaById(media.mediaId());
             }
         }
 

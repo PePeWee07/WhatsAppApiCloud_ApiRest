@@ -270,7 +270,7 @@ public class GlpiServerClient {
         }
     }
 
-    // ---------- Descargar Docuemnt_itens ----------
+    // ---------- Descargar Docuemnt_itens por link ----------
     public byte[] downloadDocument(String documentHref) {
         String session = getSessionTokenGlpi();
 
@@ -299,6 +299,35 @@ public class GlpiServerClient {
             throw new ServerClientException("Error genérico al descargar documento: " + e.getMessage(), e);
         }
     }
+
+
+    // ---------- Descargar Docuemnt_itens por id ----------
+    public byte[] downloadDocumentById(Long docId) {
+        String session = getSessionTokenGlpi();
+
+        try {
+            return apiClient.get()
+                .uri(uriBuilder -> uriBuilder
+                            .path("/Document/" + docId)
+                            .queryParam("alt", "media")
+                            .build())
+                .header("Session-Token", session)
+                .retrieve()
+                .body(byte[].class);
+        } catch (RestClientResponseException ex) {
+            String body = ex.getResponseBodyAsString();
+            if (ex.getStatusCode().value() == 404) {
+                throw new GlpiNotFoundException("Documento no encontrado en GLPI con URL: " + docId);
+            }
+            String msg = String.format("HTTP %d al descargar documento: %s", ex.getStatusCode(), body);
+            logger.error(msg, ex);
+            throw new ServerClientException(msg, ex);
+        } catch (RestClientException e) {
+            logger.error("Error genérico al descargar documento: " + e.getMessage(), e);
+            throw new ServerClientException("Error genérico al descargar documento: " + e.getMessage(), e);
+        }
+    }
+
 
     // ---------- Obtener solucion del Ticket ----------
     public List<TicketSolution> getTicketSolutionById(Long ticketId) {
