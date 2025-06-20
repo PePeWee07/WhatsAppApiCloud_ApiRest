@@ -30,6 +30,7 @@ import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.BackEnd.WhatsappApiCloud.exception.ApiInfoException;
+import com.BackEnd.WhatsappApiCloud.exception.ErpNotFoundException;
 import com.BackEnd.WhatsappApiCloud.exception.ServerClientException;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestMessages;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestMessagesFactory;
@@ -217,34 +218,39 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     // ======================================================
     @Transactional
     private ResponseWhatsapp handleWaitingForCedula(UserChatEntity user, String messageText, String waId, LocalDateTime timeNow) {
+        ErpUserDto dto;
+        try {
+            dto = erpJsonServerClient.getUser(messageText);
+        } catch (ErpNotFoundException e) {
+            user.setLastInteraction(timeNow);
+            user.setLimitQuestions(user.getLimitQuestions() - 1);
+            userChatRepository.save(user);
+            return sendMessage(new MessageBody(
+                waId,
+                "No encontramos tu número de identificación en nuestro sistema. " +
+                "Te quedan " + user.getLimitQuestions() + " intentos."
+            ));
+        } catch (ServerClientException e) {
+            logger.warn("ERP no disponible al buscar identificación {}: {}", messageText, e.getMessage());
+            return sendMessage(new MessageBody(
+                waId,
+                "Disculpa, nuestro servicio de verificación está temporalmente fuera de línea. " +
+                "Por favor inténtalo de nuevo en unos minutos."
+            ));
+        }
 
-        ErpUserDto dto = erpJsonServerClient.getUser(messageText);
-        
-        //! ========= FALLO DE ERP O IDENTIFICACIÓN NO EXISTE =========
         if (dto == null || dto.getIdentificacion() == null) {
             user.setLastInteraction(timeNow);
             user.setLimitQuestions(user.getLimitQuestions() - 1);
-
-            if (user.getLimitQuestions() <= 0) {
-                user.setBlock(true);
-                user.setBlockingReason("Identificación no encontrada en ERP");
-                userChatRepository.save(user);
-                return sendMessage(new MessageBody(waId,
-                    "Lo sentimos, no encontramos tu registro tras varios intentos. "
-                + "Por seguridad hemos bloqueado tu acceso. "
-                + "Si crees que es un error, escribe a soportetic@ucacue.edu.ec"
-                ));
-            } else {
-                userChatRepository.save(user);
-                return sendMessage(new MessageBody(waId,
-                    "No encontramos tu número de identificación. "
-                + "Te quedan " + user.getLimitQuestions() + " intentos. "
-                + "Por favor, inténtalo de nuevo."
-                ));
-            }
+            userChatRepository.save(user);
+            return sendMessage(new MessageBody(
+                waId,
+                "No encontramos tu número de identificación. " +
+                "Te quedan " + user.getLimitQuestions() + " intentos."
+            ));
         }
 
-        //! ========= SI LO ENCONTRÓ EN ERP =========
+        // Encontró el usuario en el ERP
         user.setIdentificacion(dto.getIdentificacion());
         user.setLastInteraction(timeNow);
         user.setConversationState(ConversationState.READY);
@@ -253,8 +259,10 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         user.setNextResetDate(null);
         userChatRepository.save(user);
 
-        return sendMessage(new MessageBody(waId,
-            "¡Hola 👋, " + dto.getNombres() + " " + dto.getApellidos() + "! ¿En qué puedo ayudarte hoy?"));
+        return sendMessage(new MessageBody(
+            waId,
+            "¡Hola �, " + dto.getNombres() + " " + dto.getApellidos() + "! ¿En qué puedo ayudarte hoy?"
+        ));
     }
 
 
@@ -434,15 +442,18 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     user.setConversationState(ConversationState.NEW);
                     userChatRepository.save(user);
                     return sendMessage(new MessageBody(waId,
-                        "¡Ups! Algo inesperado ocurrió. Reiniciemos. \n"
+                        "¡Ups! 🫢 Algo inesperado ocurrió. Reiniciemos. \n"
                     + "Por favor, Escribe un mensaje para comenzar."));
                 }
             }
         } catch (ApiInfoException e) {
             return handleApiInfoException(e, waId);
         } catch (Exception e) {
-            logger.error("Error al procesar mensaje de usuario: " + e);
-            return sendMessage(new MessageBody(waId, "Ha ocurrido un error inesperado 😕. Por favor, inténtalo nuevamente más tarde."));
+            logger.error("Error al procesar mensaje de usuario: ", e);
+            return sendMessage(new MessageBody(
+                waId,
+                "Ha ocurrido un error inesperado 😟. Por favor, inténtalo nuevamente más tarde."
+            ));
         }
     }
 
