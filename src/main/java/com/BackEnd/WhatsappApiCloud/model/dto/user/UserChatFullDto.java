@@ -32,6 +32,7 @@ public class UserChatFullDto {
     private boolean block;
     private String blockingReason;
     private int validQuestionCount;
+    private String identificacion;
 
     // Mapeamos chatSessions a un sub‐DTO sencillo:
     private List<ChatSessionDto> chatSessions;

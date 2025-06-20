@@ -95,6 +95,7 @@ public class UserChatServiceImpl implements UserchatService {
 
         UserChatFullDto fullDto = new UserChatFullDto();
         fullDto.setId(user.getId());
+        fullDto.setIdentificacion(user.getIdentificacion());
         fullDto.setWhatsappPhone(user.getWhatsappPhone());
         fullDto.setThreadId(user.getThreadId());
         fullDto.setLimitQuestions(user.getLimitQuestions());
@@ -134,6 +135,7 @@ public class UserChatServiceImpl implements UserchatService {
 
         UserChatFullDto fullDto = new UserChatFullDto();
         fullDto.setId(user.getId());
+        fullDto.setIdentificacion(user.getIdentificacion());
         fullDto.setWhatsappPhone(user.getWhatsappPhone());
         fullDto.setThreadId(user.getThreadId());
         fullDto.setLimitQuestions(user.getLimitQuestions());
@@ -184,6 +186,7 @@ public class UserChatServiceImpl implements UserchatService {
 
                 UserChatFullDto fullDto = new UserChatFullDto();
                 fullDto.setId(user.getId());
+                fullDto.setIdentificacion(user.getIdentificacion());
                 fullDto.setWhatsappPhone(user.getWhatsappPhone());
                 fullDto.setThreadId(user.getThreadId());
                 fullDto.setLimitQuestions(user.getLimitQuestions());
@@ -239,6 +242,7 @@ public class UserChatServiceImpl implements UserchatService {
 
                 UserChatFullDto fullDto = new UserChatFullDto();
                 fullDto.setId(user.getId());
+                fullDto.setIdentificacion(user.getIdentificacion());
                 fullDto.setWhatsappPhone(user.getWhatsappPhone());
                 fullDto.setThreadId(user.getThreadId());
                 fullDto.setLimitQuestions(user.getLimitQuestions());
@@ -292,6 +296,7 @@ public class UserChatServiceImpl implements UserchatService {
 
                 UserChatFullDto fullDto = new UserChatFullDto();
                 fullDto.setId(user.getId());
+                fullDto.setIdentificacion(user.getIdentificacion());
                 fullDto.setWhatsappPhone(user.getWhatsappPhone());
                 fullDto.setThreadId(user.getThreadId());
                 fullDto.setLimitQuestions(user.getLimitQuestions());
