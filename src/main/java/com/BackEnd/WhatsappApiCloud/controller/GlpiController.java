@@ -3,7 +3,6 @@ package com.BackEnd.WhatsappApiCloud.controller;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.CreateTicket;
-import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.responseCreateTicketSuccess;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.SolutionDecisionRequest;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.TicketInfoDto;
 import com.BackEnd.WhatsappApiCloud.service.glpi.GlpiService;
@@ -33,11 +32,11 @@ public class GlpiController {
     }
 
     @PostMapping("/ticket")
-    public ResponseEntity<responseCreateTicketSuccess> createTicket(
+    public ResponseEntity<Object> createTicket(
             @RequestBody CreateTicket payload,
             @RequestParam("whatsappPhone") String whatsAppPhone) {
 
-        responseCreateTicketSuccess resp = glpiService.createTicket(payload, whatsAppPhone);
+        Object resp = glpiService.createTicket(payload, whatsAppPhone);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(resp);

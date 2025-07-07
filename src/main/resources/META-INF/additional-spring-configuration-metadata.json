@@ -118,5 +118,20 @@
     "name": "erp.api.data-uri",
     "type": "java.lang.String",
     "description": "A description for 'erp.api.data-uri'"
+  },
+  {
+    "name": "baseurl.ai.service",
+    "type": "java.lang.String",
+    "description": "A description for 'baseurl.ai.service'"
+  },
+  {
+    "name": "uri.ai.service",
+    "type": "java.lang.String",
+    "description": "A description for 'uri.ai.service'"
+  },
+  {
+    "name": "ai.service.api.key",
+    "type": "java.lang.String",
+    "description": "A description for 'ai.service.api.key'"
   }
 ]}

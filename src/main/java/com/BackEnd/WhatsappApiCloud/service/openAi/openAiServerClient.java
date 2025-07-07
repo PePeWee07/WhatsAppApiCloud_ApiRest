@@ -27,9 +27,9 @@ public class openAiServerClient {
     private final String uriOpenAiServer;
 
     public openAiServerClient(
-       @Value("${baseurl.aiserver}") String baseUrlOpenAiServer,
-       @Value("${uri.aiserver}") String uriOpenAiServer,
-       @Value("${service.api.key.openai}") String apiKeyOpenAI
+       @Value("${baseurl.ai.service}") String baseUrlOpenAiServer,
+       @Value("${uri.ai.service}") String uriOpenAiServer,
+       @Value("${ai.service.api.key}") String apiKeyOpenAI
     ) {
         this.uriOpenAiServer = uriOpenAiServer;
         this.restClient = RestClient.builder()

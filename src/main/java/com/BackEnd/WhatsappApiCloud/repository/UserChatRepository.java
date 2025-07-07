@@ -23,7 +23,7 @@ public interface UserChatRepository extends JpaRepository<UserChatEntity, Long> 
     @EntityGraph(attributePaths = "chatSessions")
     Optional<UserChatEntity> findByWhatsappPhone(String whatsappPhone);
 
-    Page<UserChatEntity> findByThreadIdIsNotNullAndLastInteractionBetween(
+    Page<UserChatEntity> findByPreviousResponseIdIsNotNullAndLastInteractionBetween(
             LocalDateTime inicio,
             LocalDateTime fin,
             Pageable pageable);

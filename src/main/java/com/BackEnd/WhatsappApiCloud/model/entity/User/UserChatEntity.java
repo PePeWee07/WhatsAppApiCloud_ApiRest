@@ -43,8 +43,8 @@ public class UserChatEntity {
     @Column(name = "whatsapp_phone", unique = true, nullable = false)
     private String whatsappPhone;
 
-    @Column(name = "thread_id")
-    private String threadId;
+    @Column(name = "previous_response_id")
+    private String previousResponseId;
 
     @Column(name = "limit_questions")
     private int limitQuestions;

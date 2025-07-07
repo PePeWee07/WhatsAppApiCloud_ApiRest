@@ -3,7 +3,6 @@ package com.BackEnd.WhatsappApiCloud.controller;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -17,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.BackEnd.WhatsappApiCloud.exception.BadRequestException;
+import com.BackEnd.WhatsappApiCloud.model.dto.glpi.TicketInfoDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.user.UserChatFullDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.user.UserTicketDto;
 import com.BackEnd.WhatsappApiCloud.service.userChat.UserchatService;
@@ -159,17 +159,13 @@ public class UserChatController {
 
     // ================== Solicitar información de un ticket ==================
     @GetMapping("/user/ticket/info")
-    public ResponseEntity<Map<String, Object>> getTicketInfo(
+    public ResponseEntity<TicketInfoDto> getTicketInfo(
             @RequestParam("whatsappPhone") String whatsAppPhone,
             @RequestParam("ticketId") String ticketId) throws IOException {
 
-        boolean hasValidSolution = userchatService.userRequestTicketInfo(whatsAppPhone, ticketId);
+        TicketInfoDto tikcetInfo = userchatService.userRequestTicketInfo(whatsAppPhone, ticketId);;
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("message", "Se consultó correctamente el detalle del ticket.");
-        response.put("hasSolution", hasValidSolution);
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(tikcetInfo);
     }
 
     // ================== Enviar lista de tickets a WhatsApp ==================
@@ -177,7 +173,7 @@ public class UserChatController {
     public ResponseEntity<List<UserTicketDto>> sendTicketListToWhatsApp(
             @RequestParam("whatsappPhone") String whatsAppPhone) throws JsonProcessingException {
             List<UserTicketDto> ticketList = userchatService.userRequestTicketList(whatsAppPhone);
-            return ResponseEntity.ok(ticketList);
+            return ResponseEntity.ok().body(ticketList);
     }
 
 }

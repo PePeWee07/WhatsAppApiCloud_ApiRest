@@ -261,7 +261,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
         return sendMessage(new MessageBody(
             waId,
-            "¡Hola �, " + dto.getNombres() + " " + dto.getApellidos() + "! ¿En qué puedo ayudarte hoy?"
+            "¡Hola 🫡, " + dto.getNombres() + " " + dto.getApellidos() + "! ¿En qué puedo ayudarte hoy?"
         ));
     }
 
@@ -357,7 +357,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             userDto.getNombres() + " " + userDto.getApellidos(),
             waId,
             userRoles,
-            user.getThreadId(),
+            user.getPreviousResponseId(),
             user.getIdentificacion(),
             userDto.getEmailInstitucional(),
             userDto.getEmailPersonal(),
@@ -366,7 +366,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
         AnswersOpenIADto data = openAiServerClient.getOpenAiData(question);
 
-        user.setThreadId(data.thread_id());
+        user.setPreviousResponseId(data.previousResponseId());
         user.setLimitQuestions(user.getLimitQuestions() - 1);
         user.setLastInteraction(timeNow);
         user.setValidQuestionCount(user.getValidQuestionCount() + 1);

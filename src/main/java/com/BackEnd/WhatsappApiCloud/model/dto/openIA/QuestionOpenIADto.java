@@ -7,7 +7,7 @@ public record QuestionOpenIADto(
         String name,
         String phone,
         List<String> roles,
-        String thread_id,
+        String previousResponseId,
         String identificacion,
         String emailInstitucional,
         String emailPersonal,

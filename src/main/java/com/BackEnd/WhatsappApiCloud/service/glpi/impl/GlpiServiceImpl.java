@@ -16,13 +16,6 @@ import java.nio.file.Files;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-import org.jsoup.Jsoup;
-import org.jsoup.parser.Parser;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.nodes.Node;
-import org.jsoup.nodes.TextNode;
-
 import org.apache.tika.Tika;
 
 import org.springframework.stereotype.Service;
@@ -39,6 +32,7 @@ import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
 import com.BackEnd.WhatsappApiCloud.repository.UserTicketRepository;
 import com.BackEnd.WhatsappApiCloud.service.glpi.GlpiServerClient;
 import com.BackEnd.WhatsappApiCloud.service.glpi.GlpiService;
+import com.BackEnd.WhatsappApiCloud.service.glpi.HtmlCleaner;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
 
 @Service
@@ -120,63 +114,6 @@ public class GlpiServiceImpl implements GlpiService {
                 return mediaFiles;
         }
 
-
-        private String cleanHtmlForWhatsApp(String rawHtml) {
-                // 1) Parseamos y decodificamos entidades
-                Document doc = Jsoup.parse(Parser.unescapeEntities(rawHtml, false));
-                doc.outputSettings().prettyPrint(false);
-
-                StringBuilder sb = new StringBuilder();
-
-                // 2) Recorremos sólo los hijos directos de <body>
-                for (Node node : doc.body().childNodes()) {
-                        if (node instanceof Element) {
-                        Element el = (Element) node;
-                        switch (el.tagName()) {
-                                case "p":
-                                // párrafos TOP-level
-                                appendParagraph(sb, el.text());
-                                break;
-                                case "div":
-                                // tu contenedor de contenido GLPi
-                                if (el.hasClass("item_content")) {
-                                        Element rich = el.selectFirst("div.rich_text_container");
-                                        if (rich != null) {
-                                        // 2.1) Dentro, sólo los <p> directos
-                                        for (Element p : rich.select("> p")) {
-                                                appendParagraph(sb, p.text());
-                                        }
-                                        // 2.2) Después, sólo el <ul> para los ítems
-                                        Element ul = rich.selectFirst("ul");
-                                        if (ul != null) {
-                                                for (Element li : ul.select("> li")) {
-                                                sb.append("* ").append(li.text().trim()).append("\n");
-                                                }
-                                                sb.append("\n");
-                                        }
-                                        }
-                                }
-                                break;
-                        }
-                        } else if (node instanceof TextNode) {
-                        // texto suelto fuera de etiquetas
-                        String t = ((TextNode) node).text().trim();
-                        appendParagraph(sb, t);
-                        }
-                }
-
-                return sb.toString().trim();
-        }
-
-        private void appendParagraph(StringBuilder sb, String text) {
-                if (text != null && !text.isEmpty()) {
-                        sb.append(text).append("\n\n");
-                }
-        }
-
-
-
-        
         // Filtra los documentos de un ticket
         private static final DateTimeFormatter GLPI_DATETIME_FMT =
         DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -227,7 +164,6 @@ public class GlpiServiceImpl implements GlpiService {
                 })
                 .collect(Collectors.toList());
         }
-
 
         @Override
         public TicketInfoDto getInfoTicketById(String ticketId) {
@@ -296,7 +232,7 @@ public class GlpiServiceImpl implements GlpiService {
                                         : glpiTicket.status() == 4L ? "En espera"
                                                 : glpiTicket.status() == 5L ? "Resuelto"
                                                         : glpiTicket.status() == 6L ? "Cerrado" : "Indefinido",
-                cleanHtmlForWhatsApp(glpiTicket.content()),
+                HtmlCleaner.cleanHtmlForWhatsApp(glpiTicket.content()),
                 glpiTicket.urgency() == 1L ? "Muy baja"
                         : glpiTicket.urgency() == 2L ? "Baja"
                                 : glpiTicket.urgency() == 3L ? "Media"
@@ -327,7 +263,7 @@ public class GlpiServiceImpl implements GlpiService {
                         List<TicketSolution> glpiSolutions = glpiServerClient.getTicketSolutionById(glpiTicket.id());
                         solutionDto = glpiSolutions.stream()
                                 .map(solution -> {
-                                        String formatted = cleanHtmlForWhatsApp(solution.content());
+                                        String formatted = HtmlCleaner.cleanHtmlForWhatsApp(solution.content());
 
                                         String solutionStatus = solution.status() == 1L ? "None"
                                                         : solution.status() == 2L ? "En espera"
@@ -363,7 +299,7 @@ public class GlpiServiceImpl implements GlpiService {
                 List<TicketFollowUp> rawNotes = glpiServerClient.TicketWithNotes(glpiTicket.id());
                 List<NoteDto> notes = rawNotes.stream()
                         .map(n -> {
-                        String content = cleanHtmlForWhatsApp(n.content());
+                        String content = HtmlCleaner.cleanHtmlForWhatsApp(n.content());
                         List<MediaFileDto> mediaFiles = Optional.ofNullable(extractMediaIdsFromLinks(n.links()))
                                         .orElse(Collections.emptyList());
 
@@ -386,7 +322,7 @@ public class GlpiServiceImpl implements GlpiService {
 
         @Override
         @Transactional
-        public responseCreateTicketSuccess createTicket(CreateTicket payload, String whatsAppPhone) {
+        public Object createTicket(CreateTicket payload, String whatsAppPhone) {
 
                 UserChatEntity user = userChatRepository.findByWhatsappPhone(whatsAppPhone)
                         .orElseThrow(() -> new ServerClientException("Usuario no encontrado para el número de WhatsApp: " + whatsAppPhone));
@@ -414,10 +350,25 @@ public class GlpiServiceImpl implements GlpiService {
                 entity.setId(glpiTicket.id());
                 entity.setWhatsappPhone(whatsAppPhone);
                 entity.setName(glpiTicket.name());
+                Long status = glpiTicket.status();
+                String statusStr = switch (status.intValue()) {
+                                case 1 -> "Nuevo";
+                                case 2 -> "En curso (Asignado)";
+                                case 3 -> "En curso (Planificado)";
+                                case 4 -> "En espera";
+                                case 5 -> "Resuelto";
+                                case 6 -> "Cerrado";
+                                default -> "Indefinido";
+                        };
+                entity.setStatus(statusStr);
                 entity.setUserChat(user);
                 userTicketRepository.save(entity);
 
-                return response;
+                return Map.of(
+                                                "id", glpiTicket.id(),
+                                                "Titulo", glpiTicket.name(),
+                                                "correo_de_envio", String.join(",", payload.input()._users_id_requester_notif().alternative_email())
+                );
         }
 
         @Override

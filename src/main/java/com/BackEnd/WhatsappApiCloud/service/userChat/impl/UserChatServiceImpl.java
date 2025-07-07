@@ -97,7 +97,7 @@ public class UserChatServiceImpl implements UserchatService {
         fullDto.setId(user.getId());
         fullDto.setIdentificacion(user.getIdentificacion());
         fullDto.setWhatsappPhone(user.getWhatsappPhone());
-        fullDto.setThreadId(user.getThreadId());
+        fullDto.setPreviousResponseId(user.getPreviousResponseId());
         fullDto.setLimitQuestions(user.getLimitQuestions());
         fullDto.setFirstInteraction(user.getFirstInteraction());
         fullDto.setLastInteraction(user.getLastInteraction());
@@ -137,7 +137,7 @@ public class UserChatServiceImpl implements UserchatService {
         fullDto.setId(user.getId());
         fullDto.setIdentificacion(user.getIdentificacion());
         fullDto.setWhatsappPhone(user.getWhatsappPhone());
-        fullDto.setThreadId(user.getThreadId());
+        fullDto.setPreviousResponseId(user.getPreviousResponseId());
         fullDto.setLimitQuestions(user.getLimitQuestions());
         fullDto.setFirstInteraction(user.getFirstInteraction());
         fullDto.setLastInteraction(user.getLastInteraction());
@@ -188,7 +188,7 @@ public class UserChatServiceImpl implements UserchatService {
                 fullDto.setId(user.getId());
                 fullDto.setIdentificacion(user.getIdentificacion());
                 fullDto.setWhatsappPhone(user.getWhatsappPhone());
-                fullDto.setThreadId(user.getThreadId());
+                fullDto.setPreviousResponseId(user.getPreviousResponseId());
                 fullDto.setLimitQuestions(user.getLimitQuestions());
                 fullDto.setFirstInteraction(user.getFirstInteraction());
                 fullDto.setLastInteraction(user.getLastInteraction());
@@ -225,7 +225,7 @@ public class UserChatServiceImpl implements UserchatService {
         sort = "desc".equalsIgnoreCase(direction) ? sort.descending() : sort.ascending();
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        Page<UserChatEntity> pageLocal = repo.findByThreadIdIsNotNullAndLastInteractionBetween(inicio, fin, pageable);
+        Page<UserChatEntity> pageLocal = repo.findByPreviousResponseIdIsNotNullAndLastInteractionBetween(inicio, fin, pageable);
 
         List<UserChatFullDto> dtos = pageLocal.getContent().stream()
             .map(user -> {
@@ -244,7 +244,7 @@ public class UserChatServiceImpl implements UserchatService {
                 fullDto.setId(user.getId());
                 fullDto.setIdentificacion(user.getIdentificacion());
                 fullDto.setWhatsappPhone(user.getWhatsappPhone());
-                fullDto.setThreadId(user.getThreadId());
+                fullDto.setPreviousResponseId(user.getPreviousResponseId());
                 fullDto.setLimitQuestions(user.getLimitQuestions());
                 fullDto.setFirstInteraction(user.getFirstInteraction());
                 fullDto.setLastInteraction(user.getLastInteraction());
@@ -298,7 +298,7 @@ public class UserChatServiceImpl implements UserchatService {
                 fullDto.setId(user.getId());
                 fullDto.setIdentificacion(user.getIdentificacion());
                 fullDto.setWhatsappPhone(user.getWhatsappPhone());
-                fullDto.setThreadId(user.getThreadId());
+                fullDto.setPreviousResponseId(user.getPreviousResponseId());
                 fullDto.setLimitQuestions(user.getLimitQuestions());
                 fullDto.setFirstInteraction(user.getFirstInteraction());
                 fullDto.setLastInteraction(user.getLastInteraction());
@@ -331,10 +331,10 @@ public class UserChatServiceImpl implements UserchatService {
         UserChatEntity user = repo.findById(id)
             .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado con id " + id));
 
-        if (updates.containsKey("threadId")) {
-            Object threadVal = updates.get("threadId");
+        if (updates.containsKey("previousResponseId")) {
+            Object threadVal = updates.get("previousResponseId");
             if (threadVal instanceof String) {
-                user.setThreadId((String) threadVal);
+                user.setPreviousResponseId((String) threadVal);
             }
         }
         if (updates.containsKey("limitQuestions")) {
@@ -384,7 +384,7 @@ public class UserChatServiceImpl implements UserchatService {
         UserChatFullDto fullDto = new UserChatFullDto();
         fullDto.setId(userEntity.getId());
         fullDto.setWhatsappPhone(userEntity.getWhatsappPhone());
-        fullDto.setThreadId(userEntity.getThreadId());
+        fullDto.setPreviousResponseId(userEntity.getPreviousResponseId());
         fullDto.setLimitQuestions(userEntity.getLimitQuestions());
         fullDto.setFirstInteraction(userEntity.getFirstInteraction());
         fullDto.setLastInteraction(userEntity.getLastInteraction());
@@ -420,7 +420,7 @@ public class UserChatServiceImpl implements UserchatService {
 
     // ============ Usuario solicita info del Ticket ============
     @Override
-    public boolean userRequestTicketInfo(String whatsAppPhone, String ticketId) throws IOException {
+    public TicketInfoDto userRequestTicketInfo(String whatsAppPhone, String ticketId) throws IOException {
 
         // 1) Verificar que el usuario existe
         repo.findByWhatsappPhone(whatsAppPhone)
@@ -436,8 +436,6 @@ public class UserChatServiceImpl implements UserchatService {
 
         // 3) Recuperar la info limpia del ticket
         TicketInfoDto info = glpiService.getInfoTicketById(ticketId);
-
-        // System.out.println("INFO: " + info.solutions()); //! DEBUG
 
         // 4) Construir un mensaje resumen
         StringBuilder sb = new StringBuilder();
@@ -471,13 +469,12 @@ public class UserChatServiceImpl implements UserchatService {
 
             if (solution != null) {
                 hasValidSolution = true;
-                sb.append("\n").append("> *Solucionado:*\n");
+                sb.append("\n").append("> *Solución:*\n");
                 sb.append("`Fecha de resolución:` ").append(solution.date_creation()).append("\n\n");
                 sb.append(solution.content()).append("\n");
 
                 // Enviar imágenes asociadas a la solución
                 for (MediaFileDto media : solution.mediaFiles()) {
-                    System.out.println("INFO-MEDIA: " + media); //! DEBUG
                     if ("Error".equals(media.mediaId())) {
                         sb.append("\n⚠️ _El archivo '").append(media.name()).append("' no se pudo enviar porque su formato no es compatible._\n");
                         continue;
@@ -533,10 +530,10 @@ public class UserChatServiceImpl implements UserchatService {
             apiWhatsappService.sendMessage(new MessageBody(whatsAppPhone, message));
         }
 
-        return hasValidSolution;
+        return info;
     }
    
-    // ============ Usuario solicita info del Ticket ============
+    // ============ Usuario solicita sus Tickets abiertos ============
     @Override
     @Transactional
     public List<UserTicketDto> userRequestTicketList(String whatsAppPhone) throws JsonProcessingException {

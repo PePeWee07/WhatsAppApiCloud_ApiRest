@@ -22,7 +22,7 @@ public class UserChatFullDto {
     // --- Campos de la entidad local (UserChatEntity) ---
     private Long id;
     private String whatsappPhone;
-    private String threadId;
+    private String previousResponseId;
     private int limitQuestions;
     private LocalDateTime firstInteraction;
     private LocalDateTime lastInteraction;
