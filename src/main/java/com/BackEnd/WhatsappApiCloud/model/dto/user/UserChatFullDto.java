@@ -35,7 +35,7 @@ public class UserChatFullDto {
     private String identificacion;
 
     // Mapeamos chatSessions a un sub‐DTO sencillo:
-    private List<ChatSessionDto> chatSessions;
+    private List<UserChatSessionDto> chatSessions;
     private List<UserTicketDto> userTickets;
 
     // ----- Datos nominales directamente con ErpUserDto -----

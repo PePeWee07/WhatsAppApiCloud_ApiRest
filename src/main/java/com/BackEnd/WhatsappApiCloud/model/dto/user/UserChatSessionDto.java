@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public  class ChatSessionDto {
+public  class UserChatSessionDto {
     private Long id;
     private String whatsappPhone;
     private int messageCount;

@@ -19,7 +19,7 @@ import com.BackEnd.WhatsappApiCloud.exception.UserNotFoundException;
 import com.BackEnd.WhatsappApiCloud.model.dto.erp.ErpUserDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.TicketInfoDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.TicketInfoDto.MediaFileDto;
-import com.BackEnd.WhatsappApiCloud.model.dto.user.ChatSessionDto;
+import com.BackEnd.WhatsappApiCloud.model.dto.user.UserChatSessionDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.user.UserChatFullDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.user.UserTicketDto;
 import com.BackEnd.WhatsappApiCloud.model.entity.glpi.UserTicketEntity;
@@ -82,8 +82,8 @@ public class UserChatServiceImpl implements UserchatService {
         UserChatEntity user = repo.findByIdentificacion(identificacion)
             .orElseThrow(() -> new UserNotFoundException("No se encontro el usuario con identificacion: " + identificacion));
             
-            List<ChatSessionDto> sesionesDto = user.getChatSessions().stream()
-            .map(cs -> new ChatSessionDto(
+            List<UserChatSessionDto> sesionesDto = user.getChatSessions().stream()
+            .map(cs -> new UserChatSessionDto(
                 cs.getId(),
                 cs.getWhatsappPhone(),
                 cs.getMessageCount(),
@@ -123,8 +123,8 @@ public class UserChatServiceImpl implements UserchatService {
         UserChatEntity user = repo.findByWhatsappPhone(whatsAppPhone)
             .orElseThrow(() -> new UserNotFoundException("No se encontro el usuario con whatsAppPhone: " + whatsAppPhone));
         
-        List<ChatSessionDto> sesionesDto = user.getChatSessions().stream()
-        .map(cs -> new ChatSessionDto(
+        List<UserChatSessionDto> sesionesDto = user.getChatSessions().stream()
+        .map(cs -> new UserChatSessionDto(
                 cs.getId(),
                 cs.getWhatsappPhone(),
                 cs.getMessageCount(),
@@ -173,8 +173,8 @@ public class UserChatServiceImpl implements UserchatService {
 
         List<UserChatFullDto> dtos = pageLocal.getContent().stream()
             .map(user -> { 
-                List<ChatSessionDto> sesionesDto = user.getChatSessions().stream()
-                    .map(cs -> new ChatSessionDto(
+                List<UserChatSessionDto> sesionesDto = user.getChatSessions().stream()
+                    .map(cs -> new UserChatSessionDto(
                         cs.getId(),
                         cs.getWhatsappPhone(),
                         cs.getMessageCount(),
@@ -229,8 +229,8 @@ public class UserChatServiceImpl implements UserchatService {
 
         List<UserChatFullDto> dtos = pageLocal.getContent().stream()
             .map(user -> {
-                List<ChatSessionDto> sesionesDto = user.getChatSessions().stream()
-                    .map(cs -> new ChatSessionDto(
+                List<UserChatSessionDto> sesionesDto = user.getChatSessions().stream()
+                    .map(cs -> new UserChatSessionDto(
                         cs.getId(),
                         cs.getWhatsappPhone(),
                         cs.getMessageCount(),
@@ -283,8 +283,8 @@ public class UserChatServiceImpl implements UserchatService {
 
         List<UserChatFullDto> dtos = pageLocal.getContent().stream()
             .map(user -> {
-                List<ChatSessionDto> sesionesDto = user.getChatSessions().stream()
-                    .map(cs -> new ChatSessionDto(
+                List<UserChatSessionDto> sesionesDto = user.getChatSessions().stream()
+                    .map(cs -> new UserChatSessionDto(
                         cs.getId(),
                         cs.getWhatsappPhone(),
                         cs.getMessageCount(),
@@ -370,8 +370,8 @@ public class UserChatServiceImpl implements UserchatService {
         UserChatEntity userEntity = repo.save(user);
         userEntity.getChatSessions().size();
 
-        List<ChatSessionDto> sesionesDto = userEntity.getChatSessions().stream()
-            .map(cs -> new ChatSessionDto(
+        List<UserChatSessionDto> sesionesDto = userEntity.getChatSessions().stream()
+            .map(cs -> new UserChatSessionDto(
                 cs.getId(),
                 cs.getWhatsappPhone(),
                 cs.getMessageCount(),

@@ -79,7 +79,7 @@ public class UserChatEntity {
            fetch = FetchType.LAZY)
     @Fetch(FetchMode.SUBSELECT)
     @JsonManagedReference
-    private List<ChatSessionEntity> chatSessions;
+    private List<UserChatSessionEntity> chatSessions;
 
     @OneToMany(mappedBy = "userChat",
            cascade = CascadeType.ALL,

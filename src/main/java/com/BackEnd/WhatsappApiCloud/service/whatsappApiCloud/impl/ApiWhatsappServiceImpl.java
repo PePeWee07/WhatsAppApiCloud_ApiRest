@@ -44,10 +44,10 @@ import com.BackEnd.WhatsappApiCloud.model.dto.openIA.QuestionOpenIADto;
 import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
 import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
-import com.BackEnd.WhatsappApiCloud.service.chatSession.ChatSessionService;
 import com.BackEnd.WhatsappApiCloud.service.erp.ErpCacheService;
 import com.BackEnd.WhatsappApiCloud.service.erp.ErpServerClient;
 import com.BackEnd.WhatsappApiCloud.service.openAi.openAiServerClient;
+import com.BackEnd.WhatsappApiCloud.service.userChat.UserChatSessionService;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
 import com.BackEnd.WhatsappApiCloud.util.ConversationState;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -89,7 +89,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     @Autowired
     openAiServerClient openAiServerClient;
     @Autowired
-    ChatSessionService chatSessionService;
+    UserChatSessionService chatSessionService;
     @Autowired
     ErpCacheService erpCacheService;
 
@@ -138,7 +138,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             throw new ServerClientException("Error inesperado al enviar mensaje", e);
         }
     }
-
 
 
     // ======================================================
