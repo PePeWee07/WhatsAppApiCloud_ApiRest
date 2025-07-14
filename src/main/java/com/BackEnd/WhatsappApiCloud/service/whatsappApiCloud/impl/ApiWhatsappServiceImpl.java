@@ -47,6 +47,7 @@ import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
 import com.BackEnd.WhatsappApiCloud.service.erp.ErpCacheService;
 import com.BackEnd.WhatsappApiCloud.service.erp.ErpServerClient;
 import com.BackEnd.WhatsappApiCloud.service.openAi.openAiServerClient;
+import com.BackEnd.WhatsappApiCloud.service.userChat.ChatHistoryService;
 import com.BackEnd.WhatsappApiCloud.service.userChat.UserChatSessionService;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
 import com.BackEnd.WhatsappApiCloud.util.ConversationState;
@@ -92,6 +93,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     UserChatSessionService chatSessionService;
     @Autowired
     ErpCacheService erpCacheService;
+    @Autowired
+    ChatHistoryService chatHistoryService;
 
     // ======================================================
     // Constructor para inicializar el cliente REST
@@ -364,6 +367,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         );
 
         AnswersOpenIADto data = openAiServerClient.getOpenAiData(question);
+        chatHistoryService.saveHistory(data, waId);
 
         user.setPreviousResponseId(data.previousResponseId());
         user.setLimitQuestions(user.getLimitQuestions() - 1);

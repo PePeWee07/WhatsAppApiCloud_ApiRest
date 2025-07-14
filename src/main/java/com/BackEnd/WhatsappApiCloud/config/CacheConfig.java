@@ -20,10 +20,9 @@ public class CacheConfig {
 
     @Bean
     public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
-        // 1) Creamos un serializador genérico JSON usando Jackson
         GenericJackson2JsonRedisSerializer jacksonSerializer = new GenericJackson2JsonRedisSerializer();
 
-        // 2) Configuración de caché “erpUserCache” con TTL de 60 minutos y JSON
+        // Configuración de caché “erpUserCache” con TTL de 60 minutos y JSON
         RedisCacheConfiguration erpConfig = RedisCacheConfiguration.defaultCacheConfig()
             .entryTtl(Duration.ofMinutes(60))
             .serializeValuesWith(

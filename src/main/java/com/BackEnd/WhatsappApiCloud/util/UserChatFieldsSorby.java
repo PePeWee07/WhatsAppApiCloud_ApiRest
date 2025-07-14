@@ -6,7 +6,7 @@ public class UserChatFieldsSorby {
     public static final Set<String> ALLOWED_SORT_FIELDS = Set.of(
         "id",
         "whatsappPhone",
-        "threadId",
+        "previousResponseId",
         "limitQuestions",
         "firstInteraction",
         "lastInteraction",

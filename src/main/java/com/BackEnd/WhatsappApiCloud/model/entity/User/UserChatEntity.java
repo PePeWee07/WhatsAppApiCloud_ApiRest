@@ -88,6 +88,14 @@ public class UserChatEntity {
     @JsonManagedReference
     private List<UserTicketEntity> tickets;
 
+    @OneToMany(
+              mappedBy = "userChat",
+              cascade = CascadeType.ALL,
+              fetch = FetchType.LAZY)
+    @Fetch(FetchMode.SUBSELECT)
+    @JsonManagedReference
+    private List<ChatTurnEntity> turns;
+
     // ----- Campo ERP básico -----
 
     @Column(name = "identificacion")
