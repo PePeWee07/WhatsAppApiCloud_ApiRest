@@ -13,9 +13,7 @@ public interface ChatTurnRepository extends JpaRepository<ChatTurnEntity, Long> 
     @EntityGraph(attributePaths = {"messages", "toolCalls"})
     List<ChatTurnEntity> findByWhatsappPhoneOrderByCreatedAtAsc(String whatsappPhone);
 
-    Page<ChatTurnEntity> findByWhatsappPhoneOrderByCreatedAtAsc(
-        String whatsappPhone,
-        Pageable pageable
-    );
+    @EntityGraph(attributePaths = {"messages", "toolCalls"})
+    Page<ChatTurnEntity> findByWhatsappPhoneOrderByCreatedAtAsc(String whatsappPhone, Pageable pageable);
 
 }

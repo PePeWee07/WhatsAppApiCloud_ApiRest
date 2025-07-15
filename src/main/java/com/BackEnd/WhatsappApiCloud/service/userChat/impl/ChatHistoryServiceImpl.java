@@ -20,6 +20,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -129,39 +132,34 @@ public class ChatHistoryServiceImpl implements ChatHistoryService {
         }
     }
 
-    
+
     @Override
     @Transactional(readOnly = true)
-    public List<ConversationBlockDto> getConversationBlocks(String whatsappPhone) {
-        List<ChatTurnEntity> turns = turnRepo.findByWhatsappPhoneOrderByCreatedAtAsc(whatsappPhone);
-        List<ConversationBlockDto> blocks = new ArrayList<>();
+    public Page<ConversationBlockDto> getConversationBlocks(
+            String whatsappPhone, int page, int size) {
 
+        List<ChatTurnEntity> turns = turnRepo.findByWhatsappPhoneOrderByCreatedAtAsc(whatsappPhone);
+
+        // Grupo en bloques “pregunta + invocaciones de tools + respuesta final”
+        List<ConversationBlockDto> allBlocks = new ArrayList<>();
         String currentUserMsg = null;
         List<ChatToolCallDto> currentCalls = new ArrayList<>();
 
-        // Variables auxiliares del turno que inicia cada bloque
-        int     auxIn = 0, auxOut = 0, auxTot = 0;
-        String  auxMeta = null, auxModel = null,
-                auxPid = null, auxPvars = null, auxPver = null,
-                auxRid = null, auxPrevRid = null,
-                auxReasoning = null;
+        // Variables auxiliares
+        int auxIn = 0, auxOut = 0, auxTot = 0;
+        String auxMeta = null, auxModel = null, auxPid = null,
+            auxPvars = null, auxPver = null, auxRid = null,
+            auxPrevRid = null, auxReasoning = null;
         Instant auxCreated = null;
 
         for (ChatTurnEntity turn : turns) {
-            // 1) Buscamos primer mensaje de usuario
-            ChatMessageEntity userMsgEntity = null;
-            for (ChatMessageEntity m : turn.getMessages()) {
-                if ("user".equals(m.getRole())) {
-                    userMsgEntity = m;
-                    break;
-                }
-            }
+            ChatMessageEntity userMsgEntity = turn.getMessages().stream()
+                .filter(m -> "user".equals(m.getRole()))
+                .findFirst().orElse(null);
+
             if (userMsgEntity != null) {
-                // Iniciar nuevo bloque
                 currentUserMsg = userMsgEntity.getContent();
                 currentCalls.clear();
-
-                // Capturar todos los campos del turno
                 auxIn        = turn.getInputTokens();
                 auxOut       = turn.getOutputTokens();
                 auxTot       = turn.getTotalTokens();
@@ -176,48 +174,47 @@ public class ChatHistoryServiceImpl implements ChatHistoryService {
                 auxReasoning = turn.getReasoning();
             }
 
-            // 2) Acumular todas las llamadas a función de este turno
-            for (ChatToolCallEntity call : turn.getToolCalls()) {
+            turn.getToolCalls().forEach(call ->
                 currentCalls.add(new ChatToolCallDto(
                     call.getCallId(),
                     call.getToolName(),
                     call.getArguments(),
                     call.getOutput()
-                ));
-            }
+                ))
+            );
 
-            // 3) Buscamos primer mensaje de la IA
-            ChatMessageEntity iaMsgEntity = null;
-            for (ChatMessageEntity m : turn.getMessages()) {
-                if ("assistant".equals(m.getRole())) {
-                    iaMsgEntity = m;
-                    break;
-                }
-            }
-            
+            ChatMessageEntity iaMsgEntity = turn.getMessages().stream()
+                .filter(m -> "assistant".equals(m.getRole()))
+                .findFirst().orElse(null);
+
             if (iaMsgEntity != null && currentUserMsg != null) {
-                // Cerramos el bloque
-                blocks.add(new ConversationBlockDto(
-                    // — campos del turno
+                allBlocks.add(new ConversationBlockDto(
                     auxIn, auxOut, auxTot,
                     auxMeta, auxModel,
                     auxPid, auxPvars, auxPver,
                     auxRid, auxPrevRid,
                     auxCreated, auxReasoning,
-                    // — agrupación
                     currentUserMsg,
                     List.copyOf(currentCalls),
                     iaMsgEntity.getContent()
                 ));
-                // Reiniciar para el siguiente bloque
                 currentUserMsg = null;
                 currentCalls.clear();
             }
         }
 
-        return blocks;
+        // Paginación de los bloques
+        int total = allBlocks.size();
+        int from  = page * size;
+        int to    = Math.min(from + size, total);
+        List<ConversationBlockDto> pageBlocks =
+            (from <= to) ? allBlocks.subList(from, to) : List.of();
+
+        return new PageImpl<>(
+        pageBlocks,
+        PageRequest.of(page, size),
+        total
+        );
     }
-
-
 
 }
