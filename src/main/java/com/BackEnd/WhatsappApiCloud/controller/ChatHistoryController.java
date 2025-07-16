@@ -7,7 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/chat")
+@RequestMapping("/api/v1")
 public class ChatHistoryController {
 
     private final ChatHistoryService historyService;
