@@ -18,10 +18,12 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Map;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -135,12 +137,11 @@ public class ChatHistoryServiceImpl implements ChatHistoryService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<ConversationBlockDto> getConversationBlocks(
-            String whatsappPhone, int page, int size) {
+    public Page<ConversationBlockDto> getConversationBlocks(String whatsappPhone, int page, int size) {
+        // Trae todos los turns en orden ASC para agruparlos correctamente
+        List<ChatTurnEntity> turns = turnRepo.findByWhatsappPhoneOrderByCreatedAtAsc(whatsappPhone);
 
-        List<ChatTurnEntity> turns = turnRepo.findByWhatsappPhoneOrderByCreatedAtDesc(whatsappPhone);
-
-        // Grupo en bloques “pregunta + invocaciones de tools + respuesta final”
+        // 2) Agrupa en bloques tal cual ya tienes…
         List<ConversationBlockDto> allBlocks = new ArrayList<>();
         String currentUserMsg = null;
         List<ChatToolCallDto> currentCalls = new ArrayList<>();
@@ -203,17 +204,20 @@ public class ChatHistoryServiceImpl implements ChatHistoryService {
             }
         }
 
-        // Paginación de los bloques
-        int total = allBlocks.size();
-        int from  = page * size;
-        int to    = Math.min(from + size, total);
+        // Ahora invierte la lista de bloques para que el bloque más nuevo quede al inicio
+        Collections.reverse(allBlocks);
+
+        // Aplica paginación sobre la lista invertida
+        int total      = allBlocks.size();
+        int fromIndex  = page * size;
+        int toIndex    = Math.min(fromIndex + size, total);
         List<ConversationBlockDto> pageBlocks =
-            (from <= to) ? allBlocks.subList(from, to) : List.of();
+            (fromIndex < toIndex) ? allBlocks.subList(fromIndex, toIndex) : List.of();
 
         return new PageImpl<>(
-        pageBlocks,
-        PageRequest.of(page, size),
-        total
+            pageBlocks,
+            PageRequest.of(page, size, Sort.by("createdAt").descending()),
+            total
         );
     }
 

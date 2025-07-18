@@ -9,5 +9,5 @@ import com.BackEnd.WhatsappApiCloud.model.entity.user.ChatTurnEntity;
 
 public interface ChatTurnRepository extends JpaRepository<ChatTurnEntity, Long> {
     @EntityGraph(attributePaths = {"messages", "toolCalls"})
-    List<ChatTurnEntity> findByWhatsappPhoneOrderByCreatedAtDesc(String whatsappPhone);
+    List<ChatTurnEntity> findByWhatsappPhoneOrderByCreatedAtAsc(String whatsappPhone);
 }
