@@ -216,7 +216,7 @@ public class UserChatServiceImpl implements UserchatService {
         return new PageImpl<>(dtos, pageable, pageLocal.getTotalElements());
     }
 
-    // ============ Paginar usuarios por ultima interaccion ============
+    //! (Eliminar) ============  Paginar usuarios por ultima interaccion  ============
     @Override
     @Transactional(readOnly = true)
     public Page<UserChatFullDto> tablefindByLastInteraction(int page, int size, String sortBy, String direction, LocalDateTime inicio, LocalDateTime fin) {
@@ -270,7 +270,7 @@ public class UserChatServiceImpl implements UserchatService {
         return new PageImpl<>(dtos, pageable, pageLocal.getTotalElements());
     }
 
-    // ============ Paginar usuarios por chatSession(Start) ===========
+    // ============ Paginar usuarios por chatSession ===========
     @Override
     @Transactional(readOnly = true)
     public Page<UserChatFullDto> tablefindByChatSessionStart(int page, int size, String sortBy, String direction, LocalDateTime inicio, LocalDateTime fin) {
@@ -279,7 +279,7 @@ public class UserChatServiceImpl implements UserchatService {
         sort = "desc".equalsIgnoreCase(direction) ? sort.descending() : sort.ascending();
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        Page<UserChatEntity> pageLocal = repo.findDistinctByChatSessionsStartTimeBetween(inicio, fin, pageable);
+        Page<UserChatEntity> pageLocal = repo.findByChatSessionsOverlapping(inicio, fin, pageable);
 
         List<UserChatFullDto> dtos = pageLocal.getContent().stream()
             .map(user -> {
