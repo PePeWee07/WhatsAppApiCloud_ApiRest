@@ -430,6 +430,10 @@ public class GlpiServiceImpl implements GlpiService {
         @Override
         public Object createNoteForTicket( Long ticketId, String contentNote, String whatsAppPhone) {
 
+                // Actualiza el Status del ticket(En progreso)
+                RequestUpdateStatus updateStatus = new RequestUpdateStatus(new InputUpdate(2L));
+                glpiServerClient.updateTicketStatusById(ticketId, updateStatus);
+
                 // Verificar que el ticket le pertenece
                 Long id = Long.valueOf(ticketId);
                 if (!userTicketRepository.existsByWhatsappPhoneAndId(whatsAppPhone, id)) {
