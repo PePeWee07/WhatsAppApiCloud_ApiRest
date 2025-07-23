@@ -393,7 +393,7 @@ public class GlpiServiceImpl implements GlpiService {
                 String contentNote = request.getContent();
                 Long status = glpiServerClient.getTicketById(ticketId).status();
 
-                //Verificar que el ticket le pertenece
+                // Verificar que el ticket le pertenece
                 Long id = Long.valueOf(ticketId);
                 if (!userTicketRepository.existsByWhatsappPhoneAndId(whatsAppPhone, id)) {
                     throw new ServerClientException(
@@ -425,6 +425,21 @@ public class GlpiServiceImpl implements GlpiService {
                         return Map.of("message", "El ticket aún no tiene solución.");
                 }
 
+        }
+
+        @Override
+        public Object createNoteForTicket( Long ticketId, String contentNote, String whatsAppPhone) {
+
+                // Verificar que el ticket le pertenece
+                Long id = Long.valueOf(ticketId);
+                if (!userTicketRepository.existsByWhatsappPhoneAndId(whatsAppPhone, id)) {
+                    throw new ServerClientException(
+                        "El ticket " + ticketId + " ya fue cerrado o no tienes acceso al el.");
+                }
+
+                CreateNoteForTicket note = new CreateNoteForTicket(new InputFollowup("Ticket", ticketId, contentNote));
+                glpiServerClient.createNoteForTicket(note);
+                return Map.of("message", "El Seguimiento se envió exitosamente.");
         }
         
 }

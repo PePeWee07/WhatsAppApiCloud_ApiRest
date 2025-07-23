@@ -47,5 +47,14 @@ public class GlpiController {
         Object resp = glpiService.refusedOrAcceptedSolutionTicket(request, whatsAppPhone);
         return ResponseEntity.status(HttpStatus.OK).body(resp);
     }
-    
+
+    @PostMapping("/ticket/create/note")
+    public ResponseEntity<Object> createNoteForTicket(
+            @RequestBody String contentNote,
+            @RequestParam("ticketId") Long ticketId,
+            @RequestParam("whatsappPhone") String whatsAppPhone) {
+
+        Object resp = glpiService.createNoteForTicket(ticketId, contentNote, whatsAppPhone);
+        return ResponseEntity.status(HttpStatus.OK).body(resp);
+    }  
 }

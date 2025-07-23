@@ -325,6 +325,7 @@ public class UserChatServiceImpl implements UserchatService {
         return new PageImpl<>(dtos, pageable, pageLocal.getTotalElements());
     }
 
+    // ============ Actualizar Usuario ============
     @Override
     @Transactional
     public UserChatFullDto userUpdate(Long id, Map<String, Object> updates) {
@@ -407,6 +408,7 @@ public class UserChatServiceImpl implements UserchatService {
         return fullDto;
     }
 
+    // ============ Fragmentar mensajes largos ============
     private List<String> splitMessage(String message, int maxLength) {
         List<String> parts = new ArrayList<>();
         int start = 0;
