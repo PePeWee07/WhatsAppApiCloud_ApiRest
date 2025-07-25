@@ -50,6 +50,8 @@ import com.BackEnd.WhatsappApiCloud.model.dto.openIA.AnswersOpenIADto;
 import com.BackEnd.WhatsappApiCloud.model.dto.openIA.QuestionOpenIADto;
 import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
+import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.TemplateMessageLog;
+import com.BackEnd.WhatsappApiCloud.repository.TemplateMessageLogRepository;
 import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
 import com.BackEnd.WhatsappApiCloud.service.erp.ErpCacheService;
 import com.BackEnd.WhatsappApiCloud.service.erp.ErpServerClient;
@@ -104,6 +106,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     ErpCacheService erpCacheService;
     @Autowired
     ChatHistoryService chatHistoryService;
+    @Autowired
+    private TemplateMessageLogRepository logRepo;
 
     // ======================================================
     // Constructor para inicializar el cliente REST
@@ -633,7 +637,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         String mediaId = loadTemplateMediaId();
 
         try {
-            // si expiró ó nunca existió, recargamos
             getMediaMetadata(mediaId);
         } catch (MediaNotFoundException ex) {
             mediaId = evictAndReloadTemplateMediaId();
@@ -648,7 +651,25 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             "Encuesta enviada por la Universidad Católica de Cuenca.",
             "TAKE_SURVEY"
         );
-        return NewResponseBuilder(tpl, "/messages");
+        ResponseWhatsapp resp = NewResponseBuilder(tpl, "/messages");
+
+        // 3) extraemos el wamid de la respuesta
+        String wamid = null;
+        if (resp != null && resp.messages() != null && !resp.messages().isEmpty()) {
+            wamid = resp.messages().get(0).id();
+        }
+
+        // 4) guardamos el log
+        TemplateMessageLog templateLog = new TemplateMessageLog();
+        templateLog.setToPhone(toPhoneNumber);
+        templateLog.setTemplateName(TEMPLATE_NAME);
+        templateLog.setSentAt(LocalDateTime.now());
+        templateLog.setWamid(wamid != null ? wamid : "UNKNOWN");
+        // opcional: almacena el JSON completo de respuesta
+        templateLog.setResponsePayload(resp == null ? null : null);
+        logRepo.save(templateLog);
+
+        return resp;
     }
 
     
