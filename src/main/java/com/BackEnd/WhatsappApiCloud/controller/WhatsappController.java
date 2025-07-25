@@ -6,6 +6,8 @@ import java.io.IOException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.media.ResponseMediaMetadata;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppDataDto;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
@@ -144,4 +147,22 @@ public class WhatsappController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
+
+    @GetMapping("/media/{mediaId}")
+    public ResponseEntity<ResponseMediaMetadata> getMediaMetadata(@PathVariable String mediaId) {
+        ResponseMediaMetadata meta = apiWhatsappService.getMediaMetadata(mediaId);
+        return ResponseEntity.ok(meta);
+    }
+
+    @PostMapping("/template-feedback")
+    public ResponseEntity<ResponseWhatsapp> sendFeedbackTemplate(
+            @RequestParam("to") String toPhoneNumber) {
+
+        ResponseWhatsapp response = apiWhatsappService.sendTemplatefeedback(toPhoneNumber);
+        if (response == null) {
+            return ResponseEntity.status(500).build();
+        }
+        return ResponseEntity.ok(response);
+    }
+
 }

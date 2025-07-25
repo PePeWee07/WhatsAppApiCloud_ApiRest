@@ -483,13 +483,13 @@ public class UserChatServiceImpl implements UserchatService {
                     }
 
                     if (media.mimeType().startsWith("image/")) {
-                        apiWhatsappService.sendImageMessageById(whatsAppPhone, media.mediaId(), "Solución del Ticket");
+                        apiWhatsappService.sendImageMessageById(whatsAppPhone, media.mediaId(), "📎Adjunto de la solución del ticket");
                     } else if (
                         media.mimeType().startsWith("application/") ||
                         "text/plain".equals(media.mimeType()) ||
                         "text/csv".equals(media.mimeType())
                     ) {
-                        apiWhatsappService.sendDocumentMessageById(whatsAppPhone, media.mediaId(), "Solución del Ticket", media.name());
+                        apiWhatsappService.sendDocumentMessageById(whatsAppPhone, media.mediaId(), "📎Adjunto de la solución del ticket", media.name());
                     }
 
                     apiWhatsappService.deleteMediaById(media.mediaId());
@@ -512,9 +512,13 @@ public class UserChatServiceImpl implements UserchatService {
                 }
 
                 if (media.mimeType().startsWith("image/")) {
-                    apiWhatsappService.sendImageMessageById(whatsAppPhone, media.mediaId(), "Archivo adjunto");
-                } else if (media.mimeType().startsWith("application/")) {
-                    apiWhatsappService.sendDocumentMessageById(whatsAppPhone, media.mediaId(), "Seguimiento del Ticket", media.name());
+                    apiWhatsappService.sendImageMessageById(whatsAppPhone, media.mediaId(), "📎Adjunto al seguimiento del ticket");
+                } else if (
+                        media.mimeType().startsWith("application/") ||
+                        "text/plain".equals(media.mimeType()) ||
+                        "text/csv".equals(media.mimeType())
+                    ) {
+                    apiWhatsappService.sendDocumentMessageById(whatsAppPhone, media.mediaId(), "📎Adjunto al seguimiento del ticket", media.name());
                 } 
 
                 apiWhatsappService.deleteMediaById(media.mediaId());

@@ -3,6 +3,7 @@ package com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud;
 import java.io.File;
 import java.io.IOException;
 
+import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.media.ResponseMediaMetadata;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppDataDto;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
@@ -20,5 +21,7 @@ public interface ApiWhatsappService {
      Boolean deleteMediaById(String mediaId) throws IOException;
      ResponseWhatsapp sendImageMessageById(String toPhoneNumber, String mediaId, String caption) throws JsonProcessingException;
      ResponseWhatsapp sendDocumentMessageById(String toPhoneNumber, String documentId, String caption, String filename);
+     ResponseMediaMetadata getMediaMetadata(String mediaId);
+     ResponseWhatsapp sendTemplatefeedback(String toPhoneNumber);
 
 }

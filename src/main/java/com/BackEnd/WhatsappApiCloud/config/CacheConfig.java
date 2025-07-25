@@ -29,9 +29,17 @@ public class CacheConfig {
                 RedisSerializationContext.SerializationPair.fromSerializer(jacksonSerializer)
             )
             .disableCachingNullValues();
+        
+        // Cache para mediaId (30 días)
+        RedisCacheConfiguration mediaConfig = RedisCacheConfiguration.defaultCacheConfig()
+            .entryTtl(Duration.ofDays(29))
+            .serializeValuesWith(RedisSerializationContext.SerializationPair
+                .fromSerializer(jacksonSerializer))
+            .disableCachingNullValues();
 
         Map<String, RedisCacheConfiguration> cacheConfigs = new HashMap<>();
         cacheConfigs.put("erpUserCache", erpConfig);
+        cacheConfigs.put("mediaIdCache", mediaConfig);
 
         return RedisCacheManager.builder(connectionFactory)
                 .withInitialCacheConfigurations(cacheConfigs)

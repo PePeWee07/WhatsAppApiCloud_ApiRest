@@ -115,6 +115,14 @@ public class GlobalExceptionHandler {
             .body(Map.of("error", ex.getMessage()));
     }
 
+    @ExceptionHandler(MediaNotFoundException.class)
+    public ResponseEntity<Map<String,String>> handleMediaNotFound(MediaNotFoundException ex) {
+        return ResponseEntity
+            .status(HttpStatus.NOT_FOUND)
+            .body(Map.of("error", ex.getMessage()));
+    }
+
+
     // Manejador genérico para cualquier otra excepción no contemplada
     // @ExceptionHandler(Exception.class)
     // public ResponseEntity<Map<String,String>> handleAnyException(Exception ex) {

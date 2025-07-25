@@ -7,6 +7,7 @@ import org.apache.tika.Tika;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.Duration;
@@ -18,7 +19,11 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -31,10 +36,12 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.BackEnd.WhatsappApiCloud.exception.ApiInfoException;
 import com.BackEnd.WhatsappApiCloud.exception.ErpNotFoundException;
+import com.BackEnd.WhatsappApiCloud.exception.MediaNotFoundException;
 import com.BackEnd.WhatsappApiCloud.exception.ServerClientException;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestMessages;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestMessagesFactory;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestWhatsappAsRead;
+import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.media.ResponseMediaMetadata;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppDataDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.erp.ErpUserDto;
@@ -56,6 +63,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,6 +74,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     private static final Logger logger = LoggerFactory.getLogger(ApiWhatsappServiceImpl.class);
 
     private final RestClient restClient;
+    private final RestClient restMediaClient;
     private final ObjectMapper objectMapper;
 
     @Value("${restricted.roles}")
@@ -110,6 +119,12 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     .baseUrl(urlBase + version + "/" + identifier)
                     .defaultHeader("Authorization", "Bearer " + token)
                     .build();
+
+        restMediaClient = RestClient.builder()
+                          .baseUrl(urlBase + version)
+                          .defaultHeader("Authorization", "Bearer " + token)
+                          .build();
+
         this.objectMapper = objectMapper;
     }
 
@@ -583,6 +598,59 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
+    private static final String TEMPLATE_NAME               = "feedback_de_catia";
+    private static final String TEMPLATE_IMAGE_CLASSPATH   = "templates/catia_feedback.png";
+    // 1) Método auxiliar que extrae el recurso embebido y lo vuelca a un File temporal
+    private File getTemplateImageFile() {
+        try {
+            Resource res = new ClassPathResource(TEMPLATE_IMAGE_CLASSPATH);
+            // al empaquetarse en un JAR ClassPathResource.getFile() falla, así que
+            // mejor leer el stream y volcarlo a un tmp
+            InputStream is = res.getInputStream();
+            String ext = ".png";
+            File tmp = File.createTempFile("tpl_", ext);
+            Files.copy(is, tmp.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            return tmp;
+        } catch (IOException e) {
+            throw new IllegalStateException(
+                "No se pudo cargar la plantilla de feedback desde classpath: "
+                + TEMPLATE_IMAGE_CLASSPATH, e);
+        }
+    }
+
+    @Cacheable(cacheNames="mediaIdCache", key="'" + TEMPLATE_NAME + "'")
+    public String loadTemplateMediaId() {
+        return uploadMedia(getTemplateImageFile());
+    }
+
+    @CacheEvict(cacheNames="mediaIdCache", key="'" + TEMPLATE_NAME + "'")
+    public String evictAndReloadTemplateMediaId() {
+        return loadTemplateMediaId();
+    }
+
+    @Override
+    public ResponseWhatsapp sendTemplatefeedback(String toPhoneNumber) {
+        String mediaId = loadTemplateMediaId();
+
+        try {
+            // si expiró ó nunca existió, recargamos
+            getMediaMetadata(mediaId);
+        } catch (MediaNotFoundException ex) {
+            mediaId = evictAndReloadTemplateMediaId();
+        }
+
+        RequestMessages tpl = RequestMessagesFactory.buildTemplateMessage(
+            toPhoneNumber,
+            TEMPLATE_NAME,
+            "es",
+            mediaId,
+            "Catia",
+            "Encuesta enviada por la Universidad Católica de Cuenca.",
+            "TAKE_SURVEY"
+        );
+        return NewResponseBuilder(tpl, "/messages");
+    }
+
     
     // ============= Enviar una imagen por URL como mensaje ================
     public ResponseWhatsapp sendImageMessageByUrl(String toPhoneNumber, String imageUrl) {
@@ -628,4 +696,29 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
+    // ============== Obtener Media ============
+    @Override
+    public ResponseMediaMetadata getMediaMetadata(String mediaId) {
+        try {
+            String body = restMediaClient.get()
+                .uri("/{mediaId}", mediaId)
+                .retrieve()
+                .body(String.class);
+            return objectMapper.readValue(body, ResponseMediaMetadata.class);
+
+        } catch (RestClientResponseException e) {
+             if (e.getStatusCode().value() == 400) {
+                    throw new MediaNotFoundException(
+                    "media_id no encontrado o expirado: " + mediaId,
+                    e
+                    );
+                }
+                throw new ServerClientException(
+                "Error al consultar metadata de media_id: " + e.getResponseBodyAsString(),
+                e
+                );
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("No se pudo parsear JSON de metadata de media", e);
+        }
+    }
 }

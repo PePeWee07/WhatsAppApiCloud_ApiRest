@@ -1,6 +1,12 @@
 package com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage;
 
+import java.util.List;
+import java.util.Map;
+
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.media.*;
+import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.templates.ComponentParameter;
+import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.templates.RequestTemplate;
+import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.templates.TemplateComponent;
 
 public class RequestMessagesFactory {
 
@@ -38,6 +44,77 @@ public class RequestMessagesFactory {
         RequestMessages req = base(to, "sticker");
         req.setSticker(new RequestMediaLink(url));
         return req;
+    }
+
+    /**
+     * Construye un mensaje de tipo plantilla (template).
+     */
+    public static RequestMessages buildTemplateMessage(
+            String to,
+            String templateName,
+            String languageCode,
+            String headerMediaId,
+            String bodyText,
+            String footerText,
+            String buttonPayload
+    ) {
+        RequestMessages msg = base(to, "template");
+
+        // Header
+        TemplateComponent header = TemplateComponent.builder()
+            .type("header")
+            .parameters(List.of(
+                ComponentParameter.builder()
+                    .type("image")
+                    .image(Map.of("id", headerMediaId))
+                    .build()
+            ))
+            .build();
+
+        // Body
+        TemplateComponent body = TemplateComponent.builder()
+            .type("body")
+            .parameters(List.of(
+                ComponentParameter.builder()
+                    .type("text")
+                    .text(bodyText)
+                    .build()
+            ))
+            .build();
+
+        // Footer
+        TemplateComponent footer = TemplateComponent.builder()
+            .type("footer")
+            .parameters(List.of(
+                ComponentParameter.builder()
+                    .type("text")
+                    .text(footerText)
+                    .build()
+            ))
+            .build();
+
+        // Button
+        TemplateComponent button = TemplateComponent.builder()
+            .type("button")
+            .sub_type("FLOW")
+            .index("0")
+            .parameters(List.of(
+                ComponentParameter.builder()
+                    .type("payload")
+                    .payload(buttonPayload)
+                    .build()
+            ))
+            .build();
+
+        // Montamos el objeto template
+        RequestTemplate tpl = RequestTemplate.builder()
+            .name(templateName)
+            .language(Map.of("code", languageCode))
+            .components(List.of(header, body, footer, button))
+            .build();
+
+        msg.setTemplate(tpl);
+        return msg;
     }
 
     private static RequestMessages base(String to, String type) {
