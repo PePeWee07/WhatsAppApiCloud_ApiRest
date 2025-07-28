@@ -37,7 +37,7 @@ public class TemplateMessageLog {
     @Column(name = "answer", length = 700)
     private String answer;
 
-    @Column(name = "response_payload", columnDefinition = "TEXT")
-    private String responsePayload;
+    @Column(name = "message_status")
+    private String messageStatus;
     
 }

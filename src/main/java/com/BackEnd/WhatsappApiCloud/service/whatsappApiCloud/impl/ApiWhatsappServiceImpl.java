@@ -14,6 +14,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -43,6 +44,7 @@ import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.Reques
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestWhatsappAsRead;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.media.ResponseMediaMetadata;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
+import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsappMessage;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppDataDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.erp.ErpUserDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.erp.ErpRolUserDto;
@@ -604,12 +606,10 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
     private static final String TEMPLATE_NAME               = "feedback_de_catia";
     private static final String TEMPLATE_IMAGE_CLASSPATH   = "templates/catia_feedback.png";
-    // 1) Método auxiliar que extrae el recurso embebido y lo vuelca a un File temporal
+    //Método auxiliar que extrae el recurso embebido y lo vuelca a un File temporal
     private File getTemplateImageFile() {
         try {
             Resource res = new ClassPathResource(TEMPLATE_IMAGE_CLASSPATH);
-            // al empaquetarse en un JAR ClassPathResource.getFile() falla, así que
-            // mejor leer el stream y volcarlo a un tmp
             InputStream is = res.getInputStream();
             String ext = ".png";
             File tmp = File.createTempFile("tpl_", ext);
@@ -655,8 +655,12 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
         // 3) extraemos el wamid de la respuesta
         String wamid = null;
+        String messageStatus = "";
         if (resp != null && resp.messages() != null && !resp.messages().isEmpty()) {
-            wamid = resp.messages().get(0).id();
+            ResponseWhatsappMessage msg = resp.messages().get(0);
+            wamid         = msg.id();
+            messageStatus = Optional.ofNullable(msg.messageStatus()).orElse("UNKNOWN");
+
         }
 
         // 4) guardamos el log
@@ -665,8 +669,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         templateLog.setTemplateName(TEMPLATE_NAME);
         templateLog.setSentAt(LocalDateTime.now());
         templateLog.setWamid(wamid != null ? wamid : "UNKNOWN");
-        // opcional: almacena el JSON completo de respuesta
-        templateLog.setResponsePayload(resp == null ? null : null);
+        templateLog.setMessageStatus(messageStatus);
         logRepo.save(templateLog);
 
         return resp;
