@@ -49,9 +49,22 @@ public class WhatsAppDataDto {
         Optional<Text> text,
         String type,
         Optional<Image> image,
+        Optional<Sticker> sticker,
         Optional<Reaction> reaction,
         Optional<Location> location,
-        Optional<Sticker> sticker
+        Object interactive,
+        Context context
+    ) {}
+
+    public record Context (
+        String from,
+        String id,
+        Optional<ReferredProduct> referred_product
+    ) {}
+
+    public record ReferredProduct(
+        String catalog_id,
+        String product_retailer_id
     ) {}
 
     public record Text(

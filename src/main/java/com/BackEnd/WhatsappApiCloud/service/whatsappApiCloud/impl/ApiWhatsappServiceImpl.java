@@ -11,9 +11,12 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -421,14 +424,43 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     public ResponseWhatsapp handleUserMessage(WhatsAppDataDto.WhatsAppMessage message) {
         LocalDateTime timeNow = LocalDateTime.now();
 
-        // Marcar el mensaje como leído
-        String wamid = message.entry().get(0).changes().get(0).value().messages().get(0).id();
-        markAsRead(new RequestWhatsappAsRead("whatsapp", "read", wamid));
-        
         // Extraer datos básicos del mensaje
-        var messageType = message.entry().get(0).changes().get(0).value().messages().get(0).type();
-        var waId = message.entry().get(0).changes().get(0).value().contacts().get(0).wa_id();
-        var messageOptionalText = message.entry().get(0).changes().get(0).value().messages().get(0).text();
+        var changeValue = message.entry().get(0).changes().get(0).value();
+        String wamid            = changeValue.messages().get(0).id();
+        String messageType      = changeValue.messages().get(0).type();
+        String waId             = changeValue.contacts().get(0).wa_id();
+        var messageOptionalText = changeValue.messages().get(0).text();
+
+        // Marcar el mensaje como leído
+        markAsRead(new RequestWhatsappAsRead("whatsapp", "read", wamid));
+
+        // Para obtener respuesta de la plantilla de msg
+        if (messageType.equals("interactive")) {
+            var msg = changeValue.messages().get(0);
+            var ctx = msg.context();
+            Object rawInteractive = msg.interactive();
+            String ts = msg.timestamp();
+
+            long epochSec = Long.parseLong(ts);
+            LocalDateTime answeredAt = LocalDateTime.ofInstant(
+                Instant.ofEpochSecond(epochSec),
+                ZoneId.systemDefault()
+            );
+
+            if (ctx != null && rawInteractive instanceof Map<?,?> interactiveMap) {
+                Object nfmObj = interactiveMap.get("nfm_reply");
+                if (nfmObj instanceof Map<?,?> nfmMap) {
+                    String parentWamid  = ctx.id();
+                    String answerJson   = (String) nfmMap.get("response_json");
+                    logRepo.findByWamid(parentWamid).ifPresent(log -> {
+                        log.setAnswer(answerJson);
+                        log.setAnsweredAt(answeredAt);
+                        logRepo.save(log);
+                    });
+                }
+            }
+            return null;
+        }
 
         if (messageOptionalText.isEmpty() || !messageType.equals("text")) {
             logger.warn("El mensaje no contiene texto válido.");

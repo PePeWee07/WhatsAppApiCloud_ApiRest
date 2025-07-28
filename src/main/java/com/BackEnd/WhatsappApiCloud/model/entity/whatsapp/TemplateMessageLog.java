@@ -31,6 +31,9 @@ public class TemplateMessageLog {
     @Column(name = "sent_at", nullable = false)
     private LocalDateTime sentAt;
 
+    @Column(name = "answered_at")
+    private LocalDateTime answeredAt;
+
     @Column(name = "wamid", nullable = false, length = 200)
     private String wamid;
 
