@@ -7,6 +7,7 @@ import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 
 import com.BackEnd.WhatsappApiCloud.model.entity.glpi.UserTicketEntity;
+import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.TemplateMessageLog;
 import com.BackEnd.WhatsappApiCloud.util.ConversationState;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
@@ -96,8 +97,12 @@ public class UserChatEntity {
     @JsonManagedReference
     private List<ChatTurnEntity> turns;
 
-    // ----- Campo ERP básico -----
+    @OneToMany(mappedBy = "userChat", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @Fetch(FetchMode.SUBSELECT)
+    @JsonManagedReference
+    private List<TemplateMessageLog> templateLogs;
 
+    // ----- Campo ERP básico -----
     @Column(name = "identificacion")
     private String identificacion;
 }

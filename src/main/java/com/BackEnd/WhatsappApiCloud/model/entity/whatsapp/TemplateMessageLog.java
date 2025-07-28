@@ -9,6 +9,9 @@ import lombok.ToString;
 
 import java.time.LocalDateTime;
 
+import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 @Getter
 @Setter
 @NoArgsConstructor
@@ -42,5 +45,15 @@ public class TemplateMessageLog {
 
     @Column(name = "message_status")
     private String messageStatus;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(
+        name = "to_phone",
+        referencedColumnName = "whatsapp_phone",
+        insertable = false,
+        updatable = false
+    )
+    @JsonBackReference
+    private UserChatEntity userChat;
     
 }
