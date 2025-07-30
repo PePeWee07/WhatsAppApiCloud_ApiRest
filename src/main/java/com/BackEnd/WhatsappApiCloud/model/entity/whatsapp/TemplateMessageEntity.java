@@ -18,8 +18,8 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 @AllArgsConstructor
 @ToString
 @Entity
-@Table(name = "template_message_log")
-public class TemplateMessageLog {
+@Table(name = "template_message")
+public class TemplateMessageEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

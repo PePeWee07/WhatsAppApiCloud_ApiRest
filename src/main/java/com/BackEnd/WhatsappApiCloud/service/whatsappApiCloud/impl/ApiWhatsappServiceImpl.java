@@ -28,6 +28,8 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -42,6 +44,7 @@ import com.BackEnd.WhatsappApiCloud.exception.ApiInfoException;
 import com.BackEnd.WhatsappApiCloud.exception.ErpNotFoundException;
 import com.BackEnd.WhatsappApiCloud.exception.MediaNotFoundException;
 import com.BackEnd.WhatsappApiCloud.exception.ServerClientException;
+import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.TemplateMessageDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestMessages;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestMessagesFactory;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestWhatsappAsRead;
@@ -55,8 +58,8 @@ import com.BackEnd.WhatsappApiCloud.model.dto.openIA.AnswersOpenIADto;
 import com.BackEnd.WhatsappApiCloud.model.dto.openIA.QuestionOpenIADto;
 import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
-import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.TemplateMessageLog;
-import com.BackEnd.WhatsappApiCloud.repository.TemplateMessageLogRepository;
+import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.TemplateMessageEntity;
+import com.BackEnd.WhatsappApiCloud.repository.TemplateMessageRepository;
 import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
 import com.BackEnd.WhatsappApiCloud.service.erp.ErpCacheService;
 import com.BackEnd.WhatsappApiCloud.service.erp.ErpServerClient;
@@ -83,6 +86,9 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     private final RestClient restClient;
     private final RestClient restMediaClient;
     private final ObjectMapper objectMapper;
+
+    private static final String TEMPLATE_NAME               = "feedback_de_catia";
+    private static final String TEMPLATE_IMAGE_CLASSPATH   = "templates/catia_feedback.png";
 
     @Value("${restricted.roles}")
     private String restrictedRol;
@@ -112,11 +118,9 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     @Autowired
     ChatHistoryService chatHistoryService;
     @Autowired
-    private TemplateMessageLogRepository logRepo;
+    private TemplateMessageRepository templateMsgRepo;
 
-    // ======================================================
-    // Constructor para inicializar el cliente REST
-    // ======================================================
+    // ================ Constructor para inicializar el cliente REST =====================
     public ApiWhatsappServiceImpl(
         @Value("${Phone-Number-ID}") String identifier,
         @Value("${whatsapp.token}") String token,
@@ -137,9 +141,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         this.objectMapper = objectMapper;
     }
 
-    // ======================================================
-    // Constructor de mensajes de respuesta
-    // ======================================================
+    // ================ Constructor de mensajes de respuesta ==========================
     private ResponseWhatsapp NewResponseBuilder(RequestMessages requestBody, String uri) {
         try {
             String response = restClient.post()
@@ -167,9 +169,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     }
 
 
-    // ======================================================
-    // Envio de mensaje
-    // ======================================================
+    // =================== Envio de mensaje ==========================
     @Override
     public ResponseWhatsapp sendMessage(MessageBody payload) {
         try {
@@ -189,9 +189,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     }
 
     
-    // ======================================================
-    // Mensaje leído
-    // ======================================================
+    // ================ Mensaje leído ===========================
     public void markAsRead(RequestWhatsappAsRead request) {
         restClient.post().
             uri("/messages")
@@ -202,9 +200,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     }
 
 
-    // ======================================================
-    // Crear Usuario
-    // ======================================================
+    // =================== Crear Usuario ============================
     private UserChatEntity createNewUser(String waId, LocalDateTime timeNow) {
         UserChatEntity newUser = new UserChatEntity();
         newUser.setIdentificacion("Anonymus");
@@ -219,9 +215,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     }
 
 
-    // ======================================================
-    // Enviar mensaje de bienvenida
-    // ======================================================
+    // =============== Enviar mensaje de bienvenida ====================
     private ResponseWhatsapp sendWelcomeMessage(UserChatEntity user, String waId) {
         String welcomeMessage = "";
         try {
@@ -239,9 +233,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     }
 
 
-    // ======================================================
-    // Estado "WAITING_FOR_CEDULA"
-    // ======================================================
+    // ============== Estado "WAITING_FOR_CEDULA" ====================
     @Transactional
     private ResponseWhatsapp handleWaitingForCedula(UserChatEntity user, String messageText, String waId, LocalDateTime timeNow) {
         ErpUserDto dto;
@@ -292,9 +284,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     }
 
 
-    // ======================================================
-    // Verificar si el rol del usuario está denegado
-    // ======================================================
+    // ================= Verificar si el rol del usuario está denegado =================
     private boolean allRolesAreRestricted(List<ErpRolUserDto> rolesUsuarioDto) {
         if (rolesUsuarioDto == null || rolesUsuarioDto.isEmpty()) {
             return true;
@@ -313,9 +303,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     }
 
 
-    // ======================================================
-    // Estado "READY"
-    // ======================================================
+    // ================ Estado "READY" =========================
     @Transactional
     private ResponseWhatsapp handleReadyState(UserChatEntity user, String messageText, String waId, LocalDateTime timeNow) throws JsonProcessingException {
             
@@ -402,9 +390,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         return sendMessage(new MessageBody(waId, data.answer()));
     }
 
-    // ======================================================
-    // LLegada de Exepeciones Informativas o Moderación de IA
-    // ======================================================
+    // ================ LLegada de Exepeciones Informativas o Moderación de IA ===================
     private ResponseWhatsapp handleApiInfoException(ApiInfoException e, String waId) {
         userChatRepository.findByWhatsappPhone(waId).ifPresent(user -> {
             if (e.getModeration() != null) {
@@ -417,9 +403,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     }
 
 
-    // ======================================================
-    // Recibir y enviar respuesta automática
-    // ======================================================
+    // =================== Recibir y enviar respuesta automática ======================
     @Override
     public ResponseWhatsapp handleUserMessage(WhatsAppDataDto.WhatsAppMessage message) {
         LocalDateTime timeNow = LocalDateTime.now();
@@ -452,10 +436,10 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 if (nfmObj instanceof Map<?,?> nfmMap) {
                     String parentWamid  = ctx.id();
                     String answerJson   = (String) nfmMap.get("response_json");
-                    logRepo.findByWamid(parentWamid).ifPresent(log -> {
+                    templateMsgRepo.findByWamid(parentWamid).ifPresent(log -> {
                         log.setAnswer(answerJson);
                         log.setAnsweredAt(answeredAt);
-                        logRepo.save(log);
+                        templateMsgRepo.save(log);
                     });
                 }
             }
@@ -636,10 +620,10 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
-    private static final String TEMPLATE_NAME               = "feedback_de_catia";
-    private static final String TEMPLATE_IMAGE_CLASSPATH   = "templates/catia_feedback.png";
-    //Método auxiliar que extrae el recurso embebido y lo vuelca a un File temporal
+
+    // ============== Enviar plantilla de mensaje ==================
     private File getTemplateImageFile() {
+        // Extrae el recurso embebido y lo vuelca a un File temporal
         try {
             Resource res = new ClassPathResource(TEMPLATE_IMAGE_CLASSPATH);
             InputStream is = res.getInputStream();
@@ -649,8 +633,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             return tmp;
         } catch (IOException e) {
             throw new IllegalStateException(
-                "No se pudo cargar la plantilla de feedback desde classpath: "
-                + TEMPLATE_IMAGE_CLASSPATH, e);
+                "No se pudo cargar la plantilla de feedback desde classpath: " + TEMPLATE_IMAGE_CLASSPATH, e);
         }
     }
 
@@ -696,18 +679,47 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
 
         // 4) guardamos el log
-        TemplateMessageLog templateLog = new TemplateMessageLog();
-        templateLog.setToPhone(toPhoneNumber);
-        templateLog.setTemplateName(TEMPLATE_NAME);
-        templateLog.setSentAt(LocalDateTime.now());
-        templateLog.setWamid(wamid != null ? wamid : "UNKNOWN");
-        templateLog.setMessageStatus(messageStatus);
-        logRepo.save(templateLog);
+        TemplateMessageEntity templateMessage = new TemplateMessageEntity();
+        templateMessage.setToPhone(toPhoneNumber);
+        templateMessage.setTemplateName(TEMPLATE_NAME);
+        templateMessage.setSentAt(LocalDateTime.now());
+        templateMessage.setWamid(wamid != null ? wamid : "UNKNOWN");
+        templateMessage.setMessageStatus(messageStatus);
+        templateMsgRepo.save(templateMessage);
 
         return resp;
     }
 
+
+    // ============== Obtener resultados de plantillas ==================
+    @Override
+    public Page<TemplateMessageDto> getResponsesTemplate(Pageable pageable) {
+        return templateMsgRepo.findAll(pageable).map(this::templateMessageEntitytoDto);
+    }
+
+
+    // ============== Obtener resultado de plantilla por WhatsAppPhone ==================
+    @Override
+    public List<TemplateMessageDto> listResponseTemplateByPhone(String WhatsAppPhone) {
+        return templateMsgRepo.findByToPhone(WhatsAppPhone).stream()
+            .map(this::templateMessageEntitytoDto)
+            .collect(Collectors.toList());
+    }
+
+    private TemplateMessageDto templateMessageEntitytoDto(TemplateMessageEntity log) {
+        return new TemplateMessageDto(
+            log.getId(),
+            log.getToPhone(),
+            log.getTemplateName(),
+            log.getSentAt(),
+            log.getAnsweredAt(),
+            log.getWamid(),
+            log.getAnswer(),
+            log.getMessageStatus()
+        );
+    }
     
+
     // ============= Enviar una imagen por URL como mensaje ================
     public ResponseWhatsapp sendImageMessageByUrl(String toPhoneNumber, String imageUrl) {
         try {

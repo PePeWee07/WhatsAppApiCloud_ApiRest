@@ -2,7 +2,12 @@ package com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
+import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.TemplateMessageDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.media.ResponseMediaMetadata;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppDataDto;
@@ -23,5 +28,7 @@ public interface ApiWhatsappService {
      ResponseWhatsapp sendDocumentMessageById(String toPhoneNumber, String documentId, String caption, String filename);
      ResponseMediaMetadata getMediaMetadata(String mediaId);
      ResponseWhatsapp sendTemplatefeedback(String toPhoneNumber);
+     Page<TemplateMessageDto>  getResponsesTemplate(Pageable pageable);
+     List<TemplateMessageDto> listResponseTemplateByPhone(String WhatsAppPhone);
 
 }

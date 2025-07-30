@@ -2,7 +2,12 @@ package com.BackEnd.WhatsappApiCloud.controller;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -15,6 +20,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.TemplateMessageDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.media.ResponseMediaMetadata;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppDataDto;
@@ -28,15 +34,14 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 public class WhatsappController {
 
     private final ApiWhatsappService apiWhatsappService;
+    private static final int MAX_PAGE_SIZE = 100;
 
     public WhatsappController(ApiWhatsappService apiWhatsappService) {
         this.apiWhatsappService = apiWhatsappService;
     }
 
     
-    // ======================================================
-    //   Enviar mensaje a un usuario de WhatsApp especifico
-    // ======================================================
+    // =================== Enviar mensaje a un usuario de WhatsApp especifico ===================
     @PostMapping("/send")
     public ResponseEntity<ResponseWhatsapp> enviar(@RequestBody MessageBody payload) {
         try {
@@ -48,9 +53,7 @@ public class WhatsappController {
     }
 
 
-    // ======================================================
-    //   Recibir mensaje de un usuario de WhatsApp
-    // ======================================================
+    // ================ Recibir mensaje de un usuario de WhatsApp ========================
     @PostMapping("/receive")
     public ResponseWhatsapp receiveMessage(@RequestBody WhatsAppDataDto.WhatsAppMessage message) throws JsonProcessingException {
         if(message.entry().get(0).changes().get(0).value().messages() != null){
@@ -61,9 +64,7 @@ public class WhatsappController {
     }
 
 
-    // ======================================================
-    //   Cargar archivo multimedia a server de WhatsApp
-    // ======================================================
+    // ================= Cargar archivo multimedia a server de WhatsApp =======================
     @PostMapping("/upload-media-file")
     public ResponseEntity<?> uploadMedia(@RequestParam("file") MultipartFile file) {
         try {
@@ -84,9 +85,8 @@ public class WhatsappController {
         }
     }
 
-    // ======================================================
-    //   Eliminar un archvio multimedia del server de WhatsApp
-    // ======================================================
+
+    // =============== Eliminar un archvio multimedia del server de WhatsApp ==================
     @DeleteMapping("/delete-media-file")
     public ResponseEntity<?> deleteMedia(@RequestParam("mediaId") String mediaId) {
         try {
@@ -106,9 +106,7 @@ public class WhatsappController {
     }
 
     
-    // ======================================================
-    //   Enviar imagen por ID con texto a un usuario de WhatsApp
-    // ======================================================
+    // ============ Enviar imagen por ID con texto a un usuario de WhatsApp =========================
     @PostMapping("/send-image-by-id")
     public ResponseEntity<ResponseWhatsapp> sendImageByIdWithText(
             @RequestParam("toPhoneNumber") String toPhoneNumber,
@@ -127,9 +125,7 @@ public class WhatsappController {
     }
 
 
-    // ======================================================
-    //   Enviar docuemnto por ID con texto a un usuario de WhatsApp
-    // ======================================================
+    // =============== Enviar documento por ID con texto a un usuario de WhatsApp ==================
     @PostMapping("/send-document-by-id")
     public ResponseEntity<ResponseWhatsapp> sendDocumentByIdWithText(
             @RequestParam("toPhoneNumber") String toPhoneNumber,
@@ -148,12 +144,16 @@ public class WhatsappController {
         }
     }
 
+
+    // ================ Obtener datos del archivo multimedia por ID =======================
     @GetMapping("/media/{mediaId}")
     public ResponseEntity<ResponseMediaMetadata> getMediaMetadata(@PathVariable String mediaId) {
         ResponseMediaMetadata meta = apiWhatsappService.getMediaMetadata(mediaId);
         return ResponseEntity.ok(meta);
     }
 
+
+    // ================ Enviar plantilla de feedback_de_catia =======================
     @PostMapping("/template-feedback")
     public ResponseEntity<ResponseWhatsapp> sendFeedbackTemplate(
             @RequestParam("to") String toPhoneNumber) {
@@ -163,6 +163,31 @@ public class WhatsappController {
             return ResponseEntity.status(500).build();
         }
         return ResponseEntity.ok(response);
+    }
+
+    // ================ Obtener respuestas de un template por numero =======================
+    @GetMapping("/template/{toPhone}")
+    public ResponseEntity<List<TemplateMessageDto>> getTemplateByPhone(@PathVariable String toPhone) {
+        List<TemplateMessageDto> list = apiWhatsappService.listResponseTemplateByPhone(toPhone);
+        if (list.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(list);
+    }
+
+
+    // ================ Obtner todas las respuestas de los templates =======================
+     @GetMapping("/template/all")
+    public ResponseEntity<Page<TemplateMessageDto>> getAll(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int pageSize,
+            @RequestParam(defaultValue = "sentAt") String sort,
+            @RequestParam(defaultValue = "desc") String dir
+    ) {
+        int size = Math.min(pageSize, MAX_PAGE_SIZE);
+        Sort.Direction d = Sort.Direction.fromString(dir);
+        Pageable pg = PageRequest.of(page, size, Sort.by(d, sort));
+        return ResponseEntity.ok(apiWhatsappService.getResponsesTemplate(pg));
     }
 
 }
