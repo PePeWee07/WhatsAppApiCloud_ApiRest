@@ -12,8 +12,10 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.BackEnd.WhatsappApiCloud.exception.UserNotFoundException;
 import com.BackEnd.WhatsappApiCloud.model.dto.erp.ErpUserDto;
@@ -421,20 +423,57 @@ public class UserChatServiceImpl implements UserchatService {
     }
 
     // ============ Usuario solicita info del Ticket ============
+    private void linkTicket(UserChatEntity user, TicketInfoDto infoGlpi) {
+        UserTicketEntity t = new UserTicketEntity();
+        t.setId(infoGlpi.ticket().id());
+        t.setWhatsappPhone(user.getWhatsappPhone());
+        t.setName(infoGlpi.ticket().name());
+        t.setStatus(infoGlpi.ticket().status().toString());
+        t.setUserChat(user);
+        userTicketRepository.save(t);
+    }
+
     @Override
+    @Transactional
     public TicketInfoDto userRequestTicketInfo(String whatsAppPhone, String ticketId) throws IOException {
 
         // 1) Verificar que el usuario existe
-        repo.findByWhatsappPhone(whatsAppPhone)
-            .orElseThrow(() -> new UserNotFoundException(
-                "Usuario no encontrado para el número: " + whatsAppPhone));
+        UserChatEntity user = repo.findByWhatsappPhone(whatsAppPhone)
+            .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado para el número: " + whatsAppPhone));
 
         // 2) Verificar que el ticket le pertenece
-        // Long id = Long.valueOf(ticketId);
-        // if (!userTicketRepository.existsByWhatsappPhoneAndId(whatsAppPhone, id)) {
-        //     throw new ServerClientException(
-        //         "El ticket " + ticketId + " no pertenece al usuario " + whatsAppPhone);
-        // }
+        UserChatFullDto emailsUser = findByWhatsappPhone(whatsAppPhone);
+        String emailIns = emailsUser.getErpUser().getEmailInstitucional();
+        String emailPer = emailsUser.getErpUser().getEmailPersonal();
+
+        // Comprobar si ticket esta vinculado al usuario
+        Long id = Long.valueOf(ticketId);
+        boolean alreadyLinked = userTicketRepository.existsByWhatsappPhoneAndId(whatsAppPhone, id);
+
+        //  Si no está vinculado por WhatsApp, comprobamos por correo
+        if (!alreadyLinked) {
+            TicketInfoDto glpiInfo = glpiService.getInfoTicketById(ticketId);
+            String requester = glpiInfo.requester_email();
+
+            // tal ves crado por correo institucional
+            if (emailIns != null && !emailIns.isBlank() && requester.equals(emailIns)) {
+                System.out.println("EMAIL-Institucional: " + emailIns);
+                linkTicket(user, glpiInfo);
+                alreadyLinked = true;
+            }
+            // tal ves crado por correo personal
+            else if (emailPer != null && !emailPer.isBlank() && requester.equals(emailPer)) {
+                System.out.println("EMAIL-Personal: " + emailPer);
+                linkTicket(user, glpiInfo);
+                alreadyLinked = true;
+            }
+        }
+
+        if (!alreadyLinked) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "El ticket " + ticketId + " no te pertenece"
+            );
+        }
 
         // 3) Recuperar la info limpia del ticket
         TicketInfoDto info = glpiService.getInfoTicketById(ticketId);

@@ -103,6 +103,14 @@ public class GlpiDto {
                         Link[] links) {
         }
 
+        public record Usermail(
+                Long   id,
+                Long   users_id,
+                Long   is_default,
+                Long   is_dynamic,
+                String email,
+                Link[] links
+        ){}
         public record Ticket(
                         Long id,
                         String entities_id,

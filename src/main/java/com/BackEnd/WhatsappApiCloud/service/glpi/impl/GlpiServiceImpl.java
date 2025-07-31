@@ -22,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.BackEnd.WhatsappApiCloud.exception.ServerClientException;
+import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.*;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.SolutionDecisionRequest;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.TicketInfoDto;
@@ -114,7 +115,7 @@ public class GlpiServiceImpl implements GlpiService {
                 return mediaFiles;
         }
 
-        // Filtra los documentos de un ticket
+        // ========= Filtra los documentos de un ticket =========
         private static final DateTimeFormatter GLPI_DATETIME_FMT =
         DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         public List<MediaFileDto> filterDocuments(
@@ -179,11 +180,28 @@ public class GlpiServiceImpl implements GlpiService {
                                 .orElseThrow(() -> new ServerClientException("No se encontró el enlace del ticket."));
 
                 // 2) Solicitante (type=1)
-                String requester = userTickets.stream()
-                                .filter(t -> t.type() == 1)
-                                .map(UserTicket::alternative_email)
-                                .findFirst()
-                                .orElse("—sin solicitante—");
+                Optional<GlpiDto.UserTicket> maybeRequester = userTickets.stream()
+                .filter(t -> t.type() == 1)
+                .findFirst();
+                String requester = "";
+                if (maybeRequester.isPresent()) {
+                        GlpiDto.UserTicket ticket = maybeRequester.get();
+                        Long userId = ticket.users_id();
+
+                        if (userId == 0L) {
+                                String altEmail = ticket.alternative_email();
+                                requester = altEmail;
+                        } else {
+                                List<Usermail> mailList = glpiServerClient.getEmailUser(userId);
+                                Optional<Usermail> maybeMail = mailList.stream().findFirst();
+                                requester = maybeMail
+                                .map(Usermail::email)
+                                .orElse("unknown");    
+                        }
+                } 
+                // No se encontro solicitante type = 1
+                else { requester = "—sin solicitante—"; }
+
 
                 // 3) Observadores (type=3)
                 List<String> watchers = userTickets.stream()
@@ -385,7 +403,6 @@ public class GlpiServiceImpl implements GlpiService {
                         };
         }
 
-
         @Override
         public Object refusedOrAcceptedSolutionTicket(SolutionDecisionRequest request, String whatsAppPhone) {
                 Boolean _acepted = request.getAccepted();
@@ -393,11 +410,15 @@ public class GlpiServiceImpl implements GlpiService {
                 String contentNote = request.getContent();
                 Long status = glpiServerClient.getTicketById(ticketId).status();
 
+                // Verificar si ticket esta Cerrado
+                if (status == 6L) {
+                        throw new ServerClientException("El ticket " + ticketId + " está cerrado.");
+                }
+
                 // Verificar que el ticket le pertenece
                 Long id = Long.valueOf(ticketId);
                 if (!userTicketRepository.existsByWhatsappPhoneAndId(whatsAppPhone, id)) {
-                    throw new ServerClientException(
-                        "El ticket " + ticketId + " no te pertenece.");
+                        throw new ServerClientException("El ticket " + ticketId + " no te pertenece.");
                 }
                 
                 if (status == 5L) {

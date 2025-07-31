@@ -114,6 +114,34 @@ public class GlpiServerClient {
         }
     }
 
+    // ----- Obtener el email de un usuario de la base de datos del GLPI -----
+    public List<Usermail> getEmailUser(Long userId) {
+        String sessionToken = getSessionTokenGlpi();
+
+        try {
+            Usermail[] response = apiClient.get()
+                    .uri("/User/" + userId + "/Useremail")
+                    .header("Session-Token", sessionToken)
+                    .retrieve()
+                    .body(Usermail[].class);
+
+            return Arrays.asList(response);
+        } catch (RestClientResponseException ex) {
+            String body = ex.getResponseBodyAsString();
+            if (ex.getStatusCode().value() == 404) {
+                throw new GlpiNotFoundException("No se encontró email del usuario: " + userId);
+            }
+            String msg = String.format("No se encontró email del usuario: ", ex.getStatusCode().value(), body);
+            logger.error(msg, ex);
+            throw new ServerClientException(msg, ex);
+
+        } catch (RestClientException ex) {
+            logger.error("Error genérico al obtener email de usuario: " + ex.getMessage(), ex);
+            throw new ServerClientException("Error genérico al obtener email de usuario: " + ex.getMessage(), ex);
+        }        
+    }
+
+
     // ---------- Obtener datos del usuario ----------
     public UserGlpi getUserByLink(String urlUser) {
         String sessionToken = getSessionTokenGlpi();
