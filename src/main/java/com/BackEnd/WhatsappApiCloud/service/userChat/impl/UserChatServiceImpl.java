@@ -442,41 +442,39 @@ public class UserChatServiceImpl implements UserchatService {
             .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado para el número: " + whatsAppPhone));
 
         // 2) Verificar que el ticket le pertenece
+        Long id = Long.valueOf(ticketId);
+        boolean alreadyLinked = userTicketRepository.existsByWhatsappPhoneAndId(whatsAppPhone, id);
+        
         UserChatFullDto emailsUser = findByWhatsappPhone(whatsAppPhone);
         String emailIns = emailsUser.getErpUser().getEmailInstitucional();
         String emailPer = emailsUser.getErpUser().getEmailPersonal();
 
-        // Comprobar si ticket esta vinculado al usuario
-        Long id = Long.valueOf(ticketId);
-        boolean alreadyLinked = userTicketRepository.existsByWhatsappPhoneAndId(whatsAppPhone, id);
+        TicketInfoDto info = glpiService.getInfoTicketById(ticketId);
 
-        //  Si no está vinculado por WhatsApp, comprobamos por correo
-        if (!alreadyLinked) {
-            TicketInfoDto glpiInfo = glpiService.getInfoTicketById(ticketId);
-            String requester = glpiInfo.requester_email();
-
-            // tal ves crado por correo institucional
-            if (emailIns != null && !emailIns.isBlank() && requester.equals(emailIns)) {
-                System.out.println("EMAIL-Institucional: " + emailIns);
-                linkTicket(user, glpiInfo);
-                alreadyLinked = true;
-            }
-            // tal ves crado por correo personal
-            else if (emailPer != null && !emailPer.isBlank() && requester.equals(emailPer)) {
-                System.out.println("EMAIL-Personal: " + emailPer);
-                linkTicket(user, glpiInfo);
-                alreadyLinked = true;
-            }
-        }
-
-        if (!alreadyLinked) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                "El ticket " + ticketId + " no te pertenece"
+        // Comprobar si ya esta cerrado
+        if ("Cerrado".equals(info.ticket().status())) {
+            throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "El ticket " + ticketId + " ya fue cerrado"
             );
         }
 
-        // 3) Recuperar la info limpia del ticket
-        TicketInfoDto info = glpiService.getInfoTicketById(ticketId);
+
+        // 3) Si no está vinculado por WhatsApp, comprobamos por correo
+        if (!alreadyLinked) {
+            String requester = info.requester_email();
+            if (emailIns != null && !emailIns.isBlank() && requester.equals(emailIns)) {
+                linkTicket(user, info);
+                alreadyLinked = true;
+            }
+            else if (emailPer != null && !emailPer.isBlank() && requester.equals(emailPer)) {
+                linkTicket(user, info);
+                alreadyLinked = true;
+            }
+        }
+        if (!alreadyLinked) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,"El ticket " + ticketId + " no te pertenece");
+        } 
 
         // 4) Construir un mensaje resumen
         StringBuilder sb = new StringBuilder();
