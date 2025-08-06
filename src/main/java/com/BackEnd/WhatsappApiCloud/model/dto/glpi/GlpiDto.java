@@ -2,6 +2,8 @@ package com.BackEnd.WhatsappApiCloud.model.dto.glpi;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+
 public class GlpiDto {
 
         public record UserTicket(
@@ -258,6 +260,8 @@ public class GlpiDto {
         public record CreateTicket (
                 InputCreateTicket input
         ) {}
+
+        @JsonInclude(JsonInclude.Include.NON_NULL)
         public record InputCreateTicket(
                 String name,
                 String content,
@@ -265,11 +269,18 @@ public class GlpiDto {
                 Long requesttypes_id,
                 Long _users_id_requester,
                 UserIdRequesterNotif _users_id_requester_notif,
+                List<Long> _users_id_observer,
+                UserIdObserverNotif _users_id_observer_notif,
                 Long users_id_lastupdater
         ) {}
 
         public record UserIdRequesterNotif(
                 Long use_notification,
+                List<String> alternative_email
+        ) {}
+
+        public record UserIdObserverNotif(
+                List<Long> use_notification,
                 List<String> alternative_email
         ) {}
 

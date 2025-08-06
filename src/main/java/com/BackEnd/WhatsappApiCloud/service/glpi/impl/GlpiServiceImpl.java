@@ -356,6 +356,11 @@ public class GlpiServiceImpl implements GlpiService {
                                         payload.input()._users_id_requester_notif().use_notification(),
                                         payload.input()._users_id_requester_notif().alternative_email()
                                 ),
+                                payload.input()._users_id_observer(),
+                                new UserIdObserverNotif(
+                                        payload.input()._users_id_observer_notif().use_notification(),
+                                        payload.input()._users_id_observer_notif().alternative_email()
+                                ),
                                 payload.input().users_id_lastupdater()
                         )
                 );
