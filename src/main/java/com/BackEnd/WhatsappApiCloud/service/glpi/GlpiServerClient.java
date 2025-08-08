@@ -3,11 +3,14 @@ package com.BackEnd.WhatsappApiCloud.service.glpi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
+import org.springframework.http.MediaType;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,10 +38,12 @@ public class GlpiServerClient {
     private String sessionToken = null;
     private Instant sessionCreatedAt = Instant.MIN;
     private static final Duration REFRESH_AFTER = Duration.ofMinutes(21);
+    private final ObjectMapper objectMapper;
 
     public GlpiServerClient(
             @Value("${baseurl.glpi}") String baseUrlGlpiServer,
-            @Value("${glpi.app_token}") String appTokenGlpi) {
+            @Value("${glpi.app_token}") String appTokenGlpi,
+            ObjectMapper objectMapper) {
         this.apiClient = RestClient.builder()
                 .baseUrl(baseUrlGlpiServer)
                 .defaultHeader("Content-Type", "application/json")
@@ -49,6 +54,7 @@ public class GlpiServerClient {
                 .defaultHeader("App-Token", appTokenGlpi)
                 .build();
         this.appTokenGlpi = appTokenGlpi;
+        this.objectMapper = objectMapper;
     }
 
     // ---------- Crear una sesión en GLPI y obtener un token de sesión ----------
@@ -140,7 +146,6 @@ public class GlpiServerClient {
             throw new ServerClientException("Error genérico al obtener email de usuario: " + ex.getMessage(), ex);
         }        
     }
-
 
     // ---------- Obtener datos del usuario ----------
     public UserGlpi getUserByLink(String urlUser) {
@@ -328,7 +333,6 @@ public class GlpiServerClient {
         }
     }
 
-
     // ---------- Descargar Docuemnt_itens por id ----------
     public byte[] downloadDocumentById(Long docId) {
         String session = getSessionTokenGlpi();
@@ -355,7 +359,6 @@ public class GlpiServerClient {
             throw new ServerClientException("Error genérico al descargar documento: " + e.getMessage(), e);
         }
     }
-
 
     // ---------- Obtener solucion del Ticket ----------
     public List<TicketSolution> getTicketSolutionById(Long ticketId) {
@@ -410,7 +413,6 @@ public class GlpiServerClient {
         }
     }
    
-
     // ---------- Edit Status Ticket ----------
     public Object updateTicketStatusById(Long ticketid, RequestUpdateStatus ticket) {
         String sessionToken = getSessionTokenGlpi();
@@ -437,7 +439,6 @@ public class GlpiServerClient {
             throw new ServerClientException("Error genérico al editar status del ticket por Id: " + e.getMessage(), e);
         }
     }
-
 
     // ---------- Edit Status Ticket Solution (No usada Glpi maneja logica rechazo al retroceder el estado del ticket) ----------
     public Object updateTicketSolutionById(Long solutionId, RequestUpdateStatus ticket) {
@@ -466,7 +467,6 @@ public class GlpiServerClient {
         }
     }
 
-
     // ---------- Crear un seguimiento al Ticket ----------
     public Object createNoteForTicket(CreateNoteForTicket note) {
         String sessionToken = getSessionTokenGlpi();
@@ -492,4 +492,89 @@ public class GlpiServerClient {
             throw new ServerClientException("Error genérico al crear seguimiento del ticket: " + e.getMessage(), e);
         }
     }
+
+    // ---------- Cargar documentos ----------
+    public UploadDocumentResponse uploadDocument(File file, String displayName, Integer entitiesId) {
+        // 0) Prechequeos
+        if (file == null || !file.exists() || file.length() == 0) {
+            throw new IllegalArgumentException("Archivo vacío o inexistente");
+        }
+        if (displayName == null || displayName.isBlank()) {
+            displayName = file.getName(); // fallback
+        }
+
+        String sessionToken = getSessionTokenGlpi();
+
+        try {
+            // 1) Construir manifest (JSON como String)
+            var req = new UploadDocumentRequest(displayName, List.of(displayName), entitiesId);
+            String manifestJson = objectMapper.writeValueAsString(new UploadDocumentManifest(req));
+
+            // 2) Multipart/form-data
+            var form = new org.springframework.util.LinkedMultiValueMap<String, Object>();
+            form.add("uploadManifest", manifestJson);
+            form.add("filename[0]", new org.springframework.core.io.FileSystemResource(file));
+
+            // 3) POST /Document
+            UploadDocumentResponse resp = apiClient.post()
+                .uri("/Document") // asegúrate que baseurl.glpi termina en /apirest.php
+                .header("Session-Token", sessionToken)
+                .contentType(org.springframework.http.MediaType.MULTIPART_FORM_DATA)
+                .body(form)
+                .retrieve()
+                .body(UploadDocumentResponse.class);
+
+            // 4) Validar que GLPI devolvió id válido
+            if (resp == null || resp.id() <= 0) {
+                throw new IllegalStateException("Respuesta inválida de GLPI /Document");
+            }
+            return resp;
+
+        } catch (org.springframework.web.client.RestClientResponseException ex) {
+            String body = ex.getResponseBodyAsString();
+            String msg = "HTTP %d al subir documento: %s".formatted(ex.getStatusCode().value(), body);
+            logger.error(msg, ex);
+            throw new ServerClientException(msg, ex);
+
+        } catch (Exception e) {
+            logger.error("Error genérico al subir documento: " + e.getMessage(), e);
+            throw new ServerClientException("Error genérico al subir documento: " + e.getMessage(), e);
+        }
+    }
+
+
+    public LinkDocumentItemResponse linkDocumentToTicket(long documentsId, long ticketId) {
+        String sessionToken = getSessionTokenGlpi();
+
+        var req = new LinkDocumentItemRequest(
+                new LinkDocumentItemRequest.Input("Ticket", ticketId, documentsId)
+        );
+
+        try {
+            LinkDocumentItemResponse resp = apiClient.post()
+                    .uri("/Document_Item") // asegúrate que baseurl.glpi termina en /apirest.php
+                    .header("Session-Token", sessionToken)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(req)
+                    .retrieve()
+                    .body(LinkDocumentItemResponse.class);
+
+            if (resp == null || resp.id() <= 0) {
+                throw new IllegalStateException("Respuesta inválida de GLPI /Document_Item");
+            }
+            return resp;
+
+        } catch (RestClientResponseException ex) {
+            String body = ex.getResponseBodyAsString();
+            String msg = "HTTP %d al enlazar documento: %s"
+                    .formatted(ex.getStatusCode().value(), body);
+            logger.error(msg, ex);
+            throw new ServerClientException(msg, ex);
+
+        } catch (RestClientException e) {
+            logger.error("Error genérico al enlazar documento: " + e.getMessage(), e);
+            throw new ServerClientException("Error genérico al enlazar documento: " + e.getMessage(), e);
+        }
+    }
+
 }

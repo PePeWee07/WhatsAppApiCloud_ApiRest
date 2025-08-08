@@ -12,7 +12,10 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -28,13 +31,16 @@ import com.BackEnd.WhatsappApiCloud.model.dto.glpi.SolutionDecisionRequest;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.TicketInfoDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.TicketInfoDto.*;
 import com.BackEnd.WhatsappApiCloud.model.entity.glpi.UserTicketEntity;
+import com.BackEnd.WhatsappApiCloud.model.entity.user.AttachmentEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
+import com.BackEnd.WhatsappApiCloud.repository.AttachmentRepository;
 import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
 import com.BackEnd.WhatsappApiCloud.repository.UserTicketRepository;
 import com.BackEnd.WhatsappApiCloud.service.glpi.GlpiServerClient;
 import com.BackEnd.WhatsappApiCloud.service.glpi.GlpiService;
 import com.BackEnd.WhatsappApiCloud.service.glpi.HtmlCleaner;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
+import com.BackEnd.WhatsappApiCloud.util.enums.AttachmentStatus;
 
 @Service
 public class GlpiServiceImpl implements GlpiService {
@@ -46,13 +52,15 @@ public class GlpiServiceImpl implements GlpiService {
         private final UserTicketRepository userTicketRepository;
 
         private final ApiWhatsappService apiWhatsappService;
+        private final AttachmentRepository attachmentRepository;
 
         public GlpiServiceImpl(GlpiServerClient glpiServerClient, ApiWhatsappService apiWhatsappService, 
-                        UserChatRepository userChatRepository, UserTicketRepository userTicketRepository) {
+                        UserChatRepository userChatRepository, UserTicketRepository userTicketRepository, AttachmentRepository attachmentRepository) {
                                 this.apiWhatsappService = apiWhatsappService;
                                 this.glpiServerClient = glpiServerClient;
                                 this.userChatRepository = userChatRepository;
                                 this.userTicketRepository = userTicketRepository;
+                                this.attachmentRepository = attachmentRepository;
         }
 
         private String getExtensionFromDocumentId(String documentsId) {
@@ -338,6 +346,52 @@ public class GlpiServiceImpl implements GlpiService {
                                 notes);
         }
 
+
+        private void attachRecentWhatsappMediaToTicket(String waId, long ticketId, int minutesWindow) {
+                Instant cutoff = Instant.now().minus(Duration.ofMinutes(minutesWindow));
+
+                List<AttachmentEntity> list = attachmentRepository
+                        .findByWhatsappPhoneAndAttachmentStatusAndTimestampAfter(
+                        waId, AttachmentStatus.UNUSED, cutoff
+                        );
+
+                for (AttachmentEntity att : list) {
+                        File tmp = null;
+                        try {
+                                // Nombre “bonito”: usa caption si vino, sino cae al id
+                                String hint = (att.getCaption() != null && !att.getCaption().isBlank())
+                                                ? att.getCaption()
+                                                : "wa_" + att.getAttachmentID();
+
+                                // 1) Descargar desde WhatsApp a temp
+                                tmp = apiWhatsappService.downloadMediaToTemp(att.getAttachmentID(), hint);
+
+                                // 2) Subir a GLPI como Document
+                                var up = glpiServerClient.uploadDocument(tmp, tmp.getName(), 0);
+                                long docId = up.id();
+
+                                // 3) Enlazar Document ↔ Ticket
+                                glpiServerClient.linkDocumentToTicket(docId, ticketId);
+
+                                // 4) Marcar como usado y guardar trazas
+                                att.setAttachmentStatus(AttachmentStatus.USED);
+                                att.setTicketId(Long.valueOf(ticketId));
+                                att.setGpliDocuemntId(Long.valueOf(docId));
+                                attachmentRepository.save(att);
+
+                        } catch (Exception ex) {
+                                logger.error("Error adjuntando media {} al ticket {}: {}",att.getAttachmentID(), ticketId, ex.getMessage(), ex);
+                        // Continúa con los demás adjuntos; no tumba todo por uno
+                        } finally {
+                                if (tmp != null && tmp.exists()) {
+                                        try { Files.deleteIfExists(tmp.toPath()); } catch (IOException ignore) {}
+                                }
+                        }
+                }
+        }
+
+
+
         @Override
         @Transactional
         public Object createTicket(CreateTicket payload, String whatsAppPhone) {
@@ -345,28 +399,51 @@ public class GlpiServiceImpl implements GlpiService {
                 UserChatEntity user = userChatRepository.findByWhatsappPhone(whatsAppPhone)
                         .orElseThrow(() -> new ServerClientException("Usuario no encontrado para el número de WhatsApp: " + whatsAppPhone));
 
+                // --- Requester notif
+                UserIdRequesterNotif safeReqNotif = new UserIdRequesterNotif(
+                        payload.input()._users_id_requester_notif().use_notification(),
+                        payload.input()._users_id_requester_notif().alternative_email()
+                );
+
+
+                // --- Observers (opcionales)
+                var obsIds = payload.input()._users_id_observer(); // puede ser null
+                var obsNotifIn = payload.input()._users_id_observer_notif(); // puede ser null
+
+                // Si no hay observadores o el bloque notif viene null, no lo mandes
+                List<Long> safeObsIds = (obsIds == null || obsIds.isEmpty()) ? null : obsIds;
+                UserIdObserverNotif safeObsNotif = null;
+
+                if (safeObsIds != null && obsNotifIn != null) {
+                        if (obsNotifIn.use_notification() != null
+                                && obsNotifIn.alternative_email() != null
+                                && obsNotifIn.use_notification().size() == obsNotifIn.alternative_email().size()
+                                && obsNotifIn.use_notification().size() == safeObsIds.size()) {
+
+                                safeObsNotif = new UserIdObserverNotif(
+                                        obsNotifIn.use_notification(),
+                                        obsNotifIn.alternative_email()
+                                );
+                        } else {
+                                throw new ServerClientException("Los arrays de observadores no coinciden en longitud (ids/use_notification/emails).");
+                        }
+                }
+
                 CreateTicket ticketToCreate = new CreateTicket(
                         new InputCreateTicket(
-                                payload.input().name(),
-                                payload.input().content(),
-                                payload.input().entities_id(),
-                                payload.input().requesttypes_id(),
-                                payload.input()._users_id_requester(),
-                                new UserIdRequesterNotif(
-                                        payload.input()._users_id_requester_notif().use_notification(),
-                                        payload.input()._users_id_requester_notif().alternative_email()
-                                ),
-                                payload.input()._users_id_observer(),
-                                new UserIdObserverNotif(
-                                        payload.input()._users_id_observer_notif().use_notification(),
-                                        payload.input()._users_id_observer_notif().alternative_email()
-                                ),
-                                payload.input().users_id_lastupdater()
+                        payload.input().name(),
+                        payload.input().content(),
+                        payload.input().entities_id(),
+                        payload.input().requesttypes_id(),
+                        payload.input()._users_id_requester(),
+                        safeReqNotif,
+                        safeObsIds,
+                        safeObsNotif,
+                        payload.input().users_id_lastupdater()
                         )
                 );
 
                 responseCreateTicketSuccess response = glpiServerClient.createTicket(ticketToCreate);
-
                 Ticket glpiTicket = glpiServerClient.getTicketById(response.id());
 
                 UserTicketEntity entity = new UserTicketEntity();
@@ -387,10 +464,13 @@ public class GlpiServiceImpl implements GlpiService {
                 entity.setUserChat(user);
                 userTicketRepository.save(entity);
 
+                // Adjuntar archivos recientes de WhatsApp al ticket
+                attachRecentWhatsappMediaToTicket(whatsAppPhone, glpiTicket.id(), 15);
+
                 return Map.of(
-                                                "id", glpiTicket.id(),
-                                                "Titulo", glpiTicket.name(),
-                                                "correo_de_envio", String.join(",", payload.input()._users_id_requester_notif().alternative_email())
+                        "id", glpiTicket.id(),
+                        "Titulo", glpiTicket.name(),
+                        "correo_de_envio", String.join(",", payload.input()._users_id_requester_notif().alternative_email())
                 );
         }
 

@@ -15,6 +15,8 @@ import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 
+import jakarta.annotation.Nullable;
+
 public interface ApiWhatsappService {
 
      // ======================================================
@@ -30,5 +32,6 @@ public interface ApiWhatsappService {
      ResponseWhatsapp sendTemplatefeedback(String toPhoneNumber);
      Page<TemplateMessageDto>  getResponsesTemplate(Pageable pageable);
      List<TemplateMessageDto> listResponseTemplateByPhone(String WhatsAppPhone);
+     File downloadMediaToTemp(String mediaId, @Nullable String filenameHint) throws IOException;
 
 }

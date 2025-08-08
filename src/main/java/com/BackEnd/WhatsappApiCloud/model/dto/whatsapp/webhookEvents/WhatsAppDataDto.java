@@ -48,6 +48,7 @@ public class WhatsAppDataDto {
         String timestamp,
         Optional<Text> text,
         String type,
+        Optional<Document> document,
         Optional<Image> image,
         Optional<Sticker> sticker,
         Optional<Reaction> reaction,
@@ -73,6 +74,14 @@ public class WhatsAppDataDto {
 
     public record Image(
         String caption,
+        String mime_type,
+        String sha256,
+        String id
+    ) {}
+
+    public record Document(
+        String caption,
+        String filename,
         String mime_type,
         String sha256,
         String id

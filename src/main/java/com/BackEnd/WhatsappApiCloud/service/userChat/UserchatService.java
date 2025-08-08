@@ -20,4 +20,5 @@ public interface UserchatService {
     UserChatFullDto findByWhatsappPhone(String whatsappPhone);
     TicketInfoDto userRequestTicketInfo(String whatsAppPhone, String ticketId) throws JsonProcessingException, IOException;
     List<UserTicketDto> userRequestTicketList(String whatsAppPhone) throws JsonProcessingException;
+    Object updateUserStateToWaitingAttachments(String whatsappPhone);
 }

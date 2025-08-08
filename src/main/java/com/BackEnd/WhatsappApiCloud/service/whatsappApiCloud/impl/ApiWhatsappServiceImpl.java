@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -56,9 +57,11 @@ import com.BackEnd.WhatsappApiCloud.model.dto.erp.ErpUserDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.erp.ErpRolUserDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.openIA.AnswersOpenIADto;
 import com.BackEnd.WhatsappApiCloud.model.dto.openIA.QuestionOpenIADto;
+import com.BackEnd.WhatsappApiCloud.model.entity.user.AttachmentEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.TemplateMessageEntity;
+import com.BackEnd.WhatsappApiCloud.repository.AttachmentRepository;
 import com.BackEnd.WhatsappApiCloud.repository.TemplateMessageRepository;
 import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
 import com.BackEnd.WhatsappApiCloud.service.erp.ErpCacheService;
@@ -67,10 +70,15 @@ import com.BackEnd.WhatsappApiCloud.service.openAi.openAiServerClient;
 import com.BackEnd.WhatsappApiCloud.service.userChat.ChatHistoryService;
 import com.BackEnd.WhatsappApiCloud.service.userChat.UserChatSessionService;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
-import com.BackEnd.WhatsappApiCloud.util.ConversationState;
+import com.BackEnd.WhatsappApiCloud.util.enums.AttachmentStatus;
+import com.BackEnd.WhatsappApiCloud.util.enums.ConversationState;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import jakarta.annotation.Nullable;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
@@ -85,6 +93,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
     private final RestClient restClient;
     private final RestClient restMediaClient;
+    private final RestClient restMediaDownloadClient;
     private final ObjectMapper objectMapper;
 
     private static final String TEMPLATE_NAME               = "feedback_de_catia";
@@ -105,6 +114,9 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     @Value("${WELCOME_MESSAGE_FILE}")
     private String welcomeMessageFile;
 
+    @PersistenceContext
+    private EntityManager em;
+
     @Autowired
     UserChatRepository userChatRepository;
     @Autowired
@@ -119,6 +131,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     ChatHistoryService chatHistoryService;
     @Autowired
     private TemplateMessageRepository templateMsgRepo;
+    @Autowired
+    private AttachmentRepository attachmentRepository;
 
     // ================ Constructor para inicializar el cliente REST =====================
     public ApiWhatsappServiceImpl(
@@ -137,6 +151,10 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                           .baseUrl(urlBase + version)
                           .defaultHeader("Authorization", "Bearer " + token)
                           .build();
+        
+        restMediaDownloadClient = RestClient.builder()
+            .defaultHeader("Authorization", "Bearer " + token)
+            .build();
 
         this.objectMapper = objectMapper;
     }
@@ -279,7 +297,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
         return sendMessage(new MessageBody(
             waId,
-            "¡Hola 🫡, " + dto.getNombres() + " " + dto.getApellidos() + "! ¿En qué puedo ayudarte hoy?"
+            "¡Hola 😊, " + dto.getNombres() + " " + dto.getApellidos() + "! ¿En qué puedo ayudarte hoy?"
         ));
     }
 
@@ -380,6 +398,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
         AnswersOpenIADto data = openAiServerClient.getOpenAiData(question);
         chatHistoryService.saveHistory(data, waId);
+        user = userChatRepository.findByWhatsappPhone(waId).orElse(user); // Refrescar datos "lost update" para estado WAITING_ATTACHMENTS
 
         user.setPreviousResponseId(data.previousResponseId());
         user.setLimitQuestions(user.getLimitQuestions() - 1);
@@ -446,23 +465,16 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             return null;
         }
 
-        if (messageOptionalText.isEmpty() || !messageType.equals("text")) {
-            logger.warn("El mensaje no contiene texto válido.");
+        //! Buscar el usuario o crearlo si no existe
+        UserChatEntity user = userChatRepository.findByWhatsappPhone(waId)
+            .orElseGet(() -> createNewUser(waId, timeNow));
+
+        //! Verificar si el usuario ya está bloqueado
+        if (user.isBlock()) {
             return null;
         }
 
-        String messageText = messageOptionalText.get().body();
-
         try {
-            //! Buscar el usuario o crearlo si no existe
-            UserChatEntity user = userChatRepository.findByWhatsappPhone(waId)
-                    .orElseGet(() -> createNewUser(waId, timeNow));
-
-            //! Verificar si el usuario ya está bloqueado
-            if (user.isBlock()) {
-                return null;
-            }
-
             //! Verificar el estado de la conversación
             switch (user.getConversationState()) {
 
@@ -471,11 +483,76 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 }
 
                 case ASKED_FOR_CEDULA: {
+                    if (messageOptionalText.isEmpty() || !messageType.equals("text")) {
+                        return null;
+                    }
+                    String messageText = messageOptionalText.get().body();
                     return handleWaitingForCedula(user, messageText, waId, timeNow);
                 }
 
                 case READY: {
+                    if (messageOptionalText.isEmpty() || !messageType.equals("text")) {
+                        return null;
+                    }
+                    String messageText = messageOptionalText.get().body();
                     return handleReadyState(user, messageText, waId, timeNow);
+                }
+
+                case WAITING_ATTACHMENTS: {
+                    //! Devolver estado READY y pasarle el mensjae a CATIA al momento de recibir un mensaje de texto
+                    if (messageType.equals("text")) {
+                        String messageText = messageOptionalText.get().body();
+                        user.setConversationState(ConversationState.READY);
+                        userChatRepository.save(user);
+                        return handleReadyState(user, messageText, waId, timeNow);
+                    }
+
+                    // Guardar IMAGEN
+                    if (messageType.equals("image")) {
+                        var msg = changeValue.messages().get(0);
+                        var img = msg.image().get();
+
+                        AttachmentEntity att = new AttachmentEntity();
+                        att.setWhatsappPhone(waId);
+                        att.setTimestamp(Instant.ofEpochSecond(Long.parseLong(msg.timestamp())));
+                        att.setType("image");
+                        att.setMimeType(img.mime_type());
+                        att.setAttachmentID(img.id());
+                        att.setCaption(img.caption());
+                        att.setConversationState(ConversationState.WAITING_ATTACHMENTS);
+                        att.setAttachmentStatus(AttachmentStatus.UNUSED);
+
+                        attachmentRepository.save(att);
+
+                        return sendMessage(new MessageBody(
+                            waId, "🖼️ Imagen recibida. Sube más o dime si deseas continuar."
+                        ));
+                    }
+
+                    // Guardar DOCUMENTO
+                    if (messageType.equals("document")) {
+                        var msg = changeValue.messages().get(0);
+                        var doc = msg.document().get();
+
+                        AttachmentEntity att = new AttachmentEntity();
+                        att.setWhatsappPhone(waId);
+                        att.setTimestamp(Instant.ofEpochSecond(Long.parseLong(msg.timestamp())));
+                        att.setType("document");
+                        att.setMimeType(doc.mime_type());
+                        att.setAttachmentID(doc.id());
+                        att.setCaption(null);
+                        att.setConversationState(ConversationState.WAITING_ATTACHMENTS);
+                        att.setAttachmentStatus(AttachmentStatus.UNUSED);
+
+                        attachmentRepository.save(att);
+
+                        return sendMessage(new MessageBody(
+                            waId, "📎 Documento recibido. Sube más o dime si deseas continuar."
+                        ));
+                    }
+
+                    // Cualquier otro tipo: ignorar (stickers, audio, etc.)
+                    return null;
                 }
 
                 default: {
@@ -789,4 +866,110 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             throw new RuntimeException("No se pudo parsear JSON de metadata de media", e);
         }
     }
+
+
+
+
+
+
+    // ======================= WHITELIST DE MIMEs PERMITIDOS =======================
+    private static final Map<String, String> ALLOWED_MIME_TO_EXT = Map.ofEntries(
+        // Documentos (100 MB)
+        Map.entry("text/plain", ".txt"),
+        Map.entry("application/vnd.ms-excel", ".xls"),
+        Map.entry("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", ".xlsx"),
+        Map.entry("application/msword", ".doc"),
+        Map.entry("application/vnd.openxmlformats-officedocument.wordprocessingml.document", ".docx"),
+        Map.entry("application/vnd.ms-powerpoint", ".ppt"),
+        Map.entry("application/vnd.openxmlformats-officedocument.presentationml.presentation", ".pptx"),
+        Map.entry("application/pdf", ".pdf"),
+
+        // Imágenes (5 MB)
+        Map.entry("image/jpeg", ".jpg"),   // cubre .jpeg
+        Map.entry("image/jpg",  ".jpg"),   // por si WA manda jpg
+        Map.entry("image/png",  ".png")
+    );
+
+    // =================== NORMALIZACIÓN DE MIME ===================
+    // Limpia parámetros tipo "; charset=utf-8" y baja a minúsculas
+    private static String baseMime(String mime) {
+        return mime == null ? "" : mime.toLowerCase(Locale.ROOT).split(";", 2)[0].trim();
+    }
+
+    // =================== CHEQUEOS DE CATEGORÍA ===================
+    // ¿Es imagen permitida?
+    private static boolean isAllowedImage(String mime) {
+        String m = baseMime(mime);
+        return m.equals("image/jpeg") || m.equals("image/jpg") || m.equals("image/png");
+    }
+    // ¿Es documento permitido?
+    private static boolean isAllowedDoc(String mime) {
+        String m = baseMime(mime);
+        return m.equals("text/plain")
+            || m.equals("application/vnd.ms-excel")
+            || m.equals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+            || m.equals("application/msword")
+            || m.equals("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+            || m.equals("application/vnd.ms-powerpoint")
+            || m.equals("application/vnd.openxmlformats-officedocument.presentationml.presentation")
+            || m.equals("application/pdf");
+    }
+
+    // =================== LÍMITES DE TAMAÑO ===================
+    private static final long MAX_IMAGE = 5L * 1024 * 1024;    // 5 MB
+    private static final long MAX_DOC   = 100L * 1024 * 1024;  // 100 MB
+
+    // =================== VALIDACIÓN MIME + TAMAÑO ===================
+    private static void assertAllowedMimeAndSize(String mime, long sizeBytes) {
+        String m = baseMime(mime);
+        if (!ALLOWED_MIME_TO_EXT.containsKey(m)) {
+            throw new IllegalStateException("Formato no soportado: " + m
+                + ". Permitidos: JPG, PNG, PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT.");
+        }
+        if (isAllowedImage(m) && sizeBytes > MAX_IMAGE) {
+            throw new IllegalStateException("Imagen supera el límite de 5 MB.");
+        }
+        if (isAllowedDoc(m) && sizeBytes > MAX_DOC) {
+            throw new IllegalStateException("Documento supera el límite de 100 MB.");
+        }
+    }
+
+    // =================== UTIL DE EXTENSIÓN ===================
+    // Agrega la extensión solo si el nombre no la trae ya (case-insensitive)
+    private static String ensureExt(String name, String ext) {
+        if (ext == null || ext.isBlank()) return name;
+        String lower = name.toLowerCase(Locale.ROOT);
+        return lower.endsWith(ext.toLowerCase(Locale.ROOT)) ? name : name + ext;
+    }
+
+    // =================== SANITIZAR NOMBRE ===================
+    private static String sanitize(String s) {
+        return (s == null || s.isBlank()) ? "wa_file" : s.replaceAll("[^a-zA-Z0-9._-]", "_");
+    }
+
+    // ======== Descargar archvio multimedia de whatsapp y ponerlo en archvio temp =========
+    @Override
+    public File downloadMediaToTemp(String mediaId, @Nullable String filenameHint) throws IOException {
+        ResponseMediaMetadata meta = getMediaMetadata(mediaId);
+        String mime = baseMime(meta.mimeType());
+        Long size  = meta.fileSize() != null ? meta.fileSize() : 0L;
+
+        // valida whitelist y tamaño antes de bajar
+        assertAllowedMimeAndSize(mime, size);
+
+        byte[] bytes = restMediaDownloadClient.get()
+                .uri(meta.url())     // URL efímera (~5 min)
+                .retrieve()
+                .body(byte[].class);
+
+        // nombre final (usa pista del usuario si vino; si no, mediaId)
+        String base = sanitize((filenameHint != null && !filenameHint.isBlank()) ? filenameHint : "wa_" + mediaId);
+        String ext  = ALLOWED_MIME_TO_EXT.get(mime);  // garantizado por la whitelist
+        String finalName = ensureExt(base, ext);
+
+        File tmp = File.createTempFile("wa_", "_" + finalName);
+        Files.write(tmp.toPath(), bytes);
+        return tmp;
+    }
+
 }

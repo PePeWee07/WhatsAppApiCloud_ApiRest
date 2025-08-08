@@ -33,6 +33,7 @@ import com.BackEnd.WhatsappApiCloud.service.erp.ErpServerClient;
 import com.BackEnd.WhatsappApiCloud.service.glpi.GlpiService;
 import com.BackEnd.WhatsappApiCloud.service.userChat.UserchatService;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
+import com.BackEnd.WhatsappApiCloud.util.enums.ConversationState;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 @Service
@@ -609,5 +610,16 @@ public class UserChatServiceImpl implements UserchatService {
         }
 
         return ticketsDto;
+    }
+
+    // ============ Cambiar estado del usuario ============
+    @Override
+    @Transactional
+    public Object updateUserStateToWaitingAttachments(String whatsappPhone) {
+        UserChatEntity user = repo.findByWhatsappPhone(whatsappPhone)
+            .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado con whatsAppPhone: " + whatsappPhone));
+        user.setConversationState(ConversationState.WAITING_ATTACHMENTS);
+        repo.save(user);
+        return user.getConversationState().name();
     }
 }

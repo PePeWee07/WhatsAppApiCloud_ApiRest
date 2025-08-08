@@ -2,7 +2,9 @@ package com.BackEnd.WhatsappApiCloud.model.dto.glpi;
 
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class GlpiDto {
 
@@ -306,5 +308,63 @@ public class GlpiDto {
                 String itemtype,
                 Long items_id,
                 String content 
+        ) {}
+
+
+        // Documentos subidos a GLPI
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public record UploadDocumentResponse(
+                long id,
+                String message,
+                @JsonProperty("upload_result") UploadResult uploadResult
+        ) {}
+
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public record UploadResult(
+                List<UploadedFile> filename
+        ) {}
+
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public record UploadedFile(
+                String name,
+                long size,
+                String type,
+                String url,
+                @JsonProperty("auto_orientUrl") String autoOrientUrl,
+                String deleteUrl,
+                String deleteType,
+                String prefix,
+                String display,
+                String filesize,
+                String id
+        ) {}
+
+        @JsonInclude(JsonInclude.Include.NON_NULL)
+        public record UploadDocumentRequest(
+        String name,
+        @JsonProperty("_filename") List<String> filename,
+        @JsonProperty("entities_id") Integer entitiesId
+        ) {}
+
+        public record UploadDocumentManifest(
+        @JsonProperty("input") UploadDocumentRequest input
+        ) {}
+
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public record LinkDocumentItemRequest(
+                @JsonProperty("input") Input input
+        ) {
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public static record Input(
+                String itemtype,
+                @JsonProperty("items_id") long itemsId,
+                @JsonProperty("documents_id") long documentsId
+        ) {}
+        }
+
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public record LinkDocumentItemResponse(
+                long id,
+                String message
         ) {}
 }
