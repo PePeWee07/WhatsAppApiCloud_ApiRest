@@ -39,7 +39,7 @@ import com.BackEnd.WhatsappApiCloud.repository.UserTicketRepository;
 import com.BackEnd.WhatsappApiCloud.service.glpi.GlpiServerClient;
 import com.BackEnd.WhatsappApiCloud.service.glpi.GlpiService;
 import com.BackEnd.WhatsappApiCloud.service.glpi.HtmlCleaner;
-import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
+import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.WhatsappMediaService;
 import com.BackEnd.WhatsappApiCloud.util.enums.AttachmentStatus;
 
 @Service
@@ -51,12 +51,15 @@ public class GlpiServiceImpl implements GlpiService {
         private final UserChatRepository userChatRepository;
         private final UserTicketRepository userTicketRepository;
 
-        private final ApiWhatsappService apiWhatsappService;
+        // private final ApiWhatsappService apiWhatsappService;
+        private final WhatsappMediaService whatsappMediaService;
         private final AttachmentRepository attachmentRepository;
 
-        public GlpiServiceImpl(GlpiServerClient glpiServerClient, ApiWhatsappService apiWhatsappService, 
-                        UserChatRepository userChatRepository, UserTicketRepository userTicketRepository, AttachmentRepository attachmentRepository) {
-                                this.apiWhatsappService = apiWhatsappService;
+        public GlpiServiceImpl(GlpiServerClient glpiServerClient, 
+        // ApiWhatsappService apiWhatsappService, 
+                        UserChatRepository userChatRepository, UserTicketRepository userTicketRepository, AttachmentRepository attachmentRepository, WhatsappMediaService whatsappMediaService) {
+                                // this.apiWhatsappService = apiWhatsappService;
+                                this.whatsappMediaService = whatsappMediaService;
                                 this.glpiServerClient = glpiServerClient;
                                 this.userChatRepository = userChatRepository;
                                 this.userTicketRepository = userTicketRepository;
@@ -109,7 +112,7 @@ public class GlpiServiceImpl implements GlpiService {
                                                 File tempFile = File.createTempFile("document", extension);
                                                 Files.write(tempFile.toPath(), fileData);
 
-                                                String mediaId = apiWhatsappService.uploadMedia(tempFile);
+                                                String mediaId = whatsappMediaService.uploadMedia(tempFile);
                                                 mediaFiles.add(new TicketInfoDto.MediaFileDto(mediaId, documentItem.documents_id(), contentType));
 
                                                 tempFile.delete();
@@ -162,7 +165,7 @@ public class GlpiServiceImpl implements GlpiService {
                                 File tmp = File.createTempFile("glpi_doc_", ext);
                                 Files.write(tmp.toPath(), data);
 
-                                String mediaId = apiWhatsappService.uploadMedia(tmp);
+                                String mediaId = whatsappMediaService.uploadMedia(tmp);
                                 tmp.delete();
 
                                 return new TicketInfoDto.MediaFileDto(mediaId, doc.filename(), doc.mime());
@@ -346,50 +349,125 @@ public class GlpiServiceImpl implements GlpiService {
                                 notes);
         }
 
+        // ========= Adjunta archivos recientes de WhatsApp al ticket GLPI =========
+        // @Override
+        // public void attachRecentWhatsappMediaToTicket(String waId, long ticketId, int minutesWindow) {
+        //         // Verificar si el ticket existe y está abierto y le pertenece al usuario
+        //         if (getStatusTicket(ticketId).equals("Cerrado")) {
+        //                 throw new ServerClientException("El ticket " + ticketId + " está cerrado, no se pueden adjuntar más archivos.");
+        //         }
+        //         if (getStatusTicket(ticketId).equals("Resuelto")) {
+        //                 throw new ServerClientException("El ticket " + ticketId + " está resuelto, no se pueden adjuntar más archivos.");
+        //         }
+        //         Long id = Long.valueOf(ticketId);
+        //         if (!userTicketRepository.existsByWhatsappPhoneAndId(waId, id)) {
+        //             throw new ServerClientException(
+        //                 "El ticket " + ticketId + " no te pertenece.");
+        //         }
 
-        private void attachRecentWhatsappMediaToTicket(String waId, long ticketId, int minutesWindow) {
-                Instant cutoff = Instant.now().minus(Duration.ofMinutes(minutesWindow));
+        //         Instant cutoff = Instant.now().minus(Duration.ofMinutes(minutesWindow));
 
+        //         List<AttachmentEntity> list = attachmentRepository
+        //                 .findByWhatsappPhoneAndAttachmentStatusAndTimestampAfter(
+        //                 waId, AttachmentStatus.UNUSED, cutoff
+        //                 );
+
+        //         for (AttachmentEntity att : list) {
+        //                 File tmp = null;
+        //                 try {
+        //                         // usa caption si vino, sino cae al id
+        //                         String hint = (att.getCaption() != null && !att.getCaption().isBlank())
+        //                                         ? att.getCaption()
+        //                                         : "wa_" + att.getAttachmentID();
+
+        //                         // 1) Descargar desde WhatsApp a temp
+        //                         tmp = whatsappMediaService.downloadMediaToTemp(att.getAttachmentID(), hint);
+
+        //                         // 2) Subir a GLPI como Document
+        //                         var up = glpiServerClient.uploadDocument(tmp, tmp.getName(), 0);
+        //                         long docId = up.id();
+
+        //                         // 3) Enlazar Document ↔ Ticket
+        //                         glpiServerClient.linkDocumentToTicket(docId, ticketId);
+
+        //                         // 4) Marcar como usado y guardar trazas
+        //                         att.setAttachmentStatus(AttachmentStatus.USED);
+        //                         att.setTicketId(Long.valueOf(ticketId));
+        //                         att.setGpliDocuemntId(Long.valueOf(docId));
+        //                         attachmentRepository.save(att);
+
+        //                 } catch (Exception ex) {
+        //                         logger.error("Error adjuntando media {} al ticket {}: {}",att.getAttachmentID(), ticketId, ex.getMessage(), ex);
+        //                 } finally {
+        //                         if (tmp != null && tmp.exists()) {
+        //                                 try { Files.deleteIfExists(tmp.toPath()); } catch (IOException ignore) {}
+        //                         }
+        //                 }
+        //         }
+        // }
+
+        @Override
+        public void attachRecentWhatsappMediaToTicket(String waId, long ticketId, int minutesWindow) {
+                // Validaciones de estado/propiedad
+                String st = getStatusTicket(ticketId);
+                if ("Cerrado".equals(st))   throw new ServerClientException("El ticket " + ticketId + " está cerrado, no se pueden adjuntar más archivos.");
+                if ("Resuelto".equals(st))  throw new ServerClientException("El ticket " + ticketId + " está resuelto, no se pueden adjuntar más archivos.");
+                if (!userTicketRepository.existsByWhatsappPhoneAndId(waId, ticketId))
+                        throw new ServerClientException("El ticket " + ticketId + " no te pertenece.");
+
+                // Ventana de sesión (si existe)
+                UserChatEntity user = userChatRepository.findByWhatsappPhone(waId)
+                        .orElseThrow(() -> new ServerClientException("Usuario no encontrado: " + waId));
+
+                Instant now = Instant.now();
+                Instant sessionStart = user.getAttachStartedAt();
+                Integer ttlMin = user.getAttachTtlMinutes();
+
+                // start: si hay sesión, usa attachStartedAt; si no, usa now - minutesWindow
+                Instant start = (sessionStart != null) ? sessionStart : now.minus(Duration.ofMinutes(minutesWindow));
+
+                // end: si hay TTL, limita a (attachStartedAt + TTL); si no, usa now
+                Instant end = (sessionStart != null && ttlMin != null)
+                        ? sessionStart.plus(Duration.ofMinutes(ttlMin))
+                        : now;
+                if (end.isAfter(now)) end = now; // cap al “ahora”
+
+                // Selección en BD usando BETWEEN (evita mezclar sesiones)
                 List<AttachmentEntity> list = attachmentRepository
-                        .findByWhatsappPhoneAndAttachmentStatusAndTimestampAfter(
-                        waId, AttachmentStatus.UNUSED, cutoff
+                        .findByWhatsappPhoneAndAttachmentStatusAndTimestampBetween(
+                        waId, AttachmentStatus.UNUSED, start, end
                         );
 
                 for (AttachmentEntity att : list) {
                         File tmp = null;
                         try {
-                                // Nombre “bonito”: usa caption si vino, sino cae al id
-                                String hint = (att.getCaption() != null && !att.getCaption().isBlank())
-                                                ? att.getCaption()
-                                                : "wa_" + att.getAttachmentID();
+                        String hint = (att.getCaption() != null && !att.getCaption().isBlank())
+                                        ? att.getCaption()
+                                        : "wa_" + att.getAttachmentID();
 
-                                // 1) Descargar desde WhatsApp a temp
-                                tmp = apiWhatsappService.downloadMediaToTemp(att.getAttachmentID(), hint);
+                        // 1) Descargar desde WhatsApp a archivo temporal
+                        tmp = whatsappMediaService.downloadMediaToTemp(att.getAttachmentID(), hint);
 
-                                // 2) Subir a GLPI como Document
-                                var up = glpiServerClient.uploadDocument(tmp, tmp.getName(), 0);
-                                long docId = up.id();
+                        // 2) Subir a GLPI como Document
+                        var up = glpiServerClient.uploadDocument(tmp, tmp.getName(), 0);
+                        long docId = up.id();
 
-                                // 3) Enlazar Document ↔ Ticket
-                                glpiServerClient.linkDocumentToTicket(docId, ticketId);
+                        // 3) Enlazar Document ↔ Ticket
+                        glpiServerClient.linkDocumentToTicket(docId, ticketId);
 
-                                // 4) Marcar como usado y guardar trazas
-                                att.setAttachmentStatus(AttachmentStatus.USED);
-                                att.setTicketId(Long.valueOf(ticketId));
-                                att.setGpliDocuemntId(Long.valueOf(docId));
-                                attachmentRepository.save(att);
+                        // 4) Marcar como usado y guardar trazas
+                        att.setAttachmentStatus(AttachmentStatus.USED);
+                        att.setTicketId(ticketId);
+                        att.setGpliDocuemntId(docId);
+                        attachmentRepository.save(att);
 
                         } catch (Exception ex) {
-                                logger.error("Error adjuntando media {} al ticket {}: {}",att.getAttachmentID(), ticketId, ex.getMessage(), ex);
-                        // Continúa con los demás adjuntos; no tumba todo por uno
+                        logger.error("Error adjuntando media {} al ticket {}: {}", att.getAttachmentID(), ticketId, ex.getMessage(), ex);
                         } finally {
-                                if (tmp != null && tmp.exists()) {
-                                        try { Files.deleteIfExists(tmp.toPath()); } catch (IOException ignore) {}
-                                }
+                        if (tmp != null && tmp.exists()) try { Files.deleteIfExists(tmp.toPath()); } catch (IOException ignore) {}
                         }
                 }
         }
-
 
 
         @Override

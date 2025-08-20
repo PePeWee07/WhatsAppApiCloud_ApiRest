@@ -11,4 +11,5 @@ public interface GlpiService {
     String getStatusTicket(Long tickedId);
     Object refusedOrAcceptedSolutionTicket(SolutionDecisionRequest request, String whatsAppPhone);
     Object createNoteForTicket( Long ticketId, String contentNote, String whatsAppPhone);
+    void attachRecentWhatsappMediaToTicket(String waId, long ticketId, int minutesWindow);
 }

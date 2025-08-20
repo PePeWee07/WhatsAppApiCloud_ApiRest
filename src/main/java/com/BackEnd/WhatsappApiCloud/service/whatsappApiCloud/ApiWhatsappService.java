@@ -1,6 +1,5 @@
 package com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
@@ -15,8 +14,6 @@ import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 
-import jakarta.annotation.Nullable;
-
 public interface ApiWhatsappService {
 
      // ======================================================
@@ -24,7 +21,6 @@ public interface ApiWhatsappService {
      // ======================================================
      ResponseWhatsapp sendMessage(MessageBody payload) throws JsonProcessingException;
      ResponseWhatsapp handleUserMessage(WhatsAppDataDto.WhatsAppMessage message) throws JsonMappingException, JsonProcessingException;
-     String uploadMedia(File mediaFile) throws IOException;
      Boolean deleteMediaById(String mediaId) throws IOException;
      ResponseWhatsapp sendImageMessageById(String toPhoneNumber, String mediaId, String caption) throws JsonProcessingException;
      ResponseWhatsapp sendDocumentMessageById(String toPhoneNumber, String documentId, String caption, String filename);
@@ -32,6 +28,5 @@ public interface ApiWhatsappService {
      ResponseWhatsapp sendTemplatefeedback(String toPhoneNumber);
      Page<TemplateMessageDto>  getResponsesTemplate(Pageable pageable);
      List<TemplateMessageDto> listResponseTemplateByPhone(String WhatsAppPhone);
-     File downloadMediaToTemp(String mediaId, @Nullable String filenameHint) throws IOException;
 
 }

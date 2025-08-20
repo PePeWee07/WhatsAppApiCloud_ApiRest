@@ -1,5 +1,6 @@
 package com.BackEnd.WhatsappApiCloud.model.entity.user;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -74,6 +75,15 @@ public class UserChatEntity {
 
     @Column(name = "valid_question_count")
     private int validQuestionCount;
+
+    @Column(name = "attach_target_ticket_id")
+    private Long attachTargetTicketId;
+
+    @Column(name = "attach_started_at")
+    private Instant attachStartedAt;
+
+    @Column(name = "attach_ttl_minutes")
+    private Integer attachTtlMinutes;
 
     @OneToMany(mappedBy = "userChat",
            cascade = CascadeType.ALL,

@@ -8,5 +8,6 @@ package com.BackEnd.WhatsappApiCloud.util.enums;
 
 public enum AttachmentStatus {
     UNUSED,
-    USED
+    USED,
+    INVALID
 }

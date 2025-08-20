@@ -26,6 +26,7 @@ import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.Respo
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppDataDto;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
+import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.WhatsappMediaService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 
@@ -34,10 +35,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 public class WhatsappController {
 
     private final ApiWhatsappService apiWhatsappService;
+    private final WhatsappMediaService whatsappMediaService;
     private static final int MAX_PAGE_SIZE = 100;
 
-    public WhatsappController(ApiWhatsappService apiWhatsappService) {
+    public WhatsappController(ApiWhatsappService apiWhatsappService, WhatsappMediaService whatsappMediaService) {
         this.apiWhatsappService = apiWhatsappService;
+        this.whatsappMediaService = whatsappMediaService;
     }
 
     
@@ -71,7 +74,7 @@ public class WhatsappController {
             // Guardar temporalmente el archivo en el sistema
             File tempFile = File.createTempFile("upload_", file.getOriginalFilename());
             file.transferTo(tempFile);
-            String mediaId = apiWhatsappService.uploadMedia(tempFile);
+            String mediaId = whatsappMediaService.uploadMedia(tempFile);
             tempFile.delete();
 
             if (mediaId != null) {

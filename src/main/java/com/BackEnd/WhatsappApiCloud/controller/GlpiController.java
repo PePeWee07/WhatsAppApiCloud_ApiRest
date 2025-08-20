@@ -56,5 +56,15 @@ public class GlpiController {
 
         Object resp = glpiService.createNoteForTicket(ticketId, contentNote, whatsAppPhone);
         return ResponseEntity.status(HttpStatus.OK).body(resp);
-    }  
+    }
+    
+    @GetMapping("/ticket/{waId}/attach/recent-media")
+    public ResponseEntity<Void> attachRecentWhatsappMediaToTicket(
+            @PathVariable String waId,
+            @RequestParam("ticketId") long ticketId,
+            @RequestParam(value = "minutesWindow", defaultValue = "15") int minutesWindow) {
+
+        glpiService.attachRecentWhatsappMediaToTicket(waId, ticketId, minutesWindow);
+        return ResponseEntity.status(HttpStatus.OK).build();
+    }
 }

@@ -13,5 +13,6 @@ public enum ConversationState {
     NEW,                  
     ASKED_FOR_CEDULA,     
     READY,
-    WAITING_ATTACHMENTS
+    WAITING_ATTACHMENTS,
+    WAITING_ATTACHMENTS_FOR_TICKET_EXISTING
 }

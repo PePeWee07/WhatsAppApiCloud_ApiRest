@@ -1,6 +1,7 @@
 package com.BackEnd.WhatsappApiCloud.service.userChat.impl;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -612,14 +613,35 @@ public class UserChatServiceImpl implements UserchatService {
         return ticketsDto;
     }
 
-    // ============ Cambiar estado del usuario ============
+    // ============  Para adjuntos durante la creacion ============
     @Override
     @Transactional
-    public Object updateUserStateToWaitingAttachments(String whatsappPhone) {
+    public Object setWaitingAttachmentsState(String whatsappPhone) {
         UserChatEntity user = repo.findByWhatsappPhone(whatsappPhone)
             .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado con whatsAppPhone: " + whatsappPhone));
         user.setConversationState(ConversationState.WAITING_ATTACHMENTS);
+        user.setAttachTargetTicketId(null);
+        user.setAttachStartedAt(Instant.now());
+        user.setAttachTtlMinutes(15);
+
         repo.save(user);
         return user.getConversationState().name();
     }
+
+    // ============ Para adjuntos despues creacion ============
+    @Override
+    @Transactional
+    public Object setWaitingAttachmentsStateForExistingTicket(String whatsappPhone, Long ticketId) {
+        UserChatEntity user = repo.findByWhatsappPhone(whatsappPhone)
+            .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado con whatsAppPhone: " + whatsappPhone));
+
+        user.setConversationState(ConversationState.WAITING_ATTACHMENTS_FOR_TICKET_EXISTING);
+        user.setAttachTargetTicketId(ticketId);
+        user.setAttachStartedAt(Instant.now());
+        user.setAttachTtlMinutes(15);
+
+        repo.save(user);
+        return user.getConversationState().name();
+    }
+
 }

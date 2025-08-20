@@ -542,7 +542,7 @@ public class GlpiServerClient {
         }
     }
 
-
+    // ---------- Enlazar documento a un ticket ----------
     public LinkDocumentItemResponse linkDocumentToTicket(long documentsId, long ticketId) {
         String sessionToken = getSessionTokenGlpi();
 
@@ -552,7 +552,7 @@ public class GlpiServerClient {
 
         try {
             LinkDocumentItemResponse resp = apiClient.post()
-                    .uri("/Document_Item") // asegúrate que baseurl.glpi termina en /apirest.php
+                    .uri("/Document_Item")
                     .header("Session-Token", sessionToken)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(req)
@@ -566,8 +566,10 @@ public class GlpiServerClient {
 
         } catch (RestClientResponseException ex) {
             String body = ex.getResponseBodyAsString();
-            String msg = "HTTP %d al enlazar documento: %s"
-                    .formatted(ex.getStatusCode().value(), body);
+            if (ex.getStatusCode().value() == 404) {
+                throw new GlpiNotFoundException("Ticket no encontrado en GLPI para enlazar adjunto: " + ticketId);
+            }
+            String msg = String.format("HTTP %d para enlazar adjunto del ticket: %s", ex.getStatusCode(), body);
             logger.error(msg, ex);
             throw new ServerClientException(msg, ex);
 
