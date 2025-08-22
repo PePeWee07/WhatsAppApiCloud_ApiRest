@@ -7,15 +7,18 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.BackEnd.WhatsappApiCloud.exception.BadRequestException;
+import com.BackEnd.WhatsappApiCloud.model.dto.glpi.SolutionDecisionRequest;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.TicketInfoDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.user.UserChatFullDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.user.UserTicketDto;
@@ -161,11 +164,29 @@ public class UserChatController {
     @GetMapping("/user/ticket/info")
     public ResponseEntity<TicketInfoDto> getTicketInfo(
             @RequestParam("whatsappPhone") String whatsAppPhone,
-            @RequestParam("ticketId") String ticketId) throws IOException {
+            @RequestParam("ticketId") Long ticketId) throws IOException {
 
         TicketInfoDto tikcetInfo = userchatService.userRequestTicketInfo(whatsAppPhone, ticketId);;
 
         return ResponseEntity.ok(tikcetInfo);
+    }
+
+    // ================== Crear un seguimiento en Ticket ==================
+    @PostMapping("/user/ticket/create/note")
+    public ResponseEntity<Object> createNoteForTicket(
+            @RequestBody String contentNote,
+            @RequestParam("ticketId") Long ticketId,
+            @RequestParam("whatsappPhone") String whatsAppPhone) {
+
+        Object resp = userchatService.createNoteForTicket(ticketId, contentNote, whatsAppPhone);
+        return ResponseEntity.status(HttpStatus.OK).body(resp);
+    }
+
+    // ================== Aceptar o rechazar solucion de ticket ==================
+    @PostMapping("/user/ticket/solution/decision")
+    public ResponseEntity<Object> refusedOrAcceptedTicketSolution(@RequestBody SolutionDecisionRequest request,  @RequestParam("whatsappPhone") String whatsAppPhone) {
+        Object resp = userchatService.refusedOrAcceptedSolutionTicket(request, whatsAppPhone);
+        return ResponseEntity.status(HttpStatus.OK).body(resp);
     }
 
     // ================== Enviar lista de tickets a WhatsApp ==================
@@ -175,7 +196,6 @@ public class UserChatController {
             List<UserTicketDto> ticketList = userchatService.userRequestTicketList(whatsAppPhone);
             return ResponseEntity.ok().body(ticketList);
     }
-
 
     // ================== Cambiar estado del usuario a WAITING_SUBJECTS ==================
     @PatchMapping("/user/state/waiting-attachment")

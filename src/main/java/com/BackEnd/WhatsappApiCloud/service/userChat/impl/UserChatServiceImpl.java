@@ -18,8 +18,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.BackEnd.WhatsappApiCloud.exception.ServerClientException;
 import com.BackEnd.WhatsappApiCloud.exception.UserNotFoundException;
 import com.BackEnd.WhatsappApiCloud.model.dto.erp.ErpUserDto;
+import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.CreateNoteForTicket;
+import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.InputFollowup;
+import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.InputUpdate;
+import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.RequestUpdateStatus;
+import com.BackEnd.WhatsappApiCloud.model.dto.glpi.SolutionDecisionRequest;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.TicketInfoDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.TicketInfoDto.MediaFileDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.user.UserChatSessionDto;
@@ -31,6 +37,7 @@ import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
 import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
 import com.BackEnd.WhatsappApiCloud.repository.UserTicketRepository;
 import com.BackEnd.WhatsappApiCloud.service.erp.ErpServerClient;
+import com.BackEnd.WhatsappApiCloud.service.glpi.GlpiServerClient;
 import com.BackEnd.WhatsappApiCloud.service.glpi.GlpiService;
 import com.BackEnd.WhatsappApiCloud.service.userChat.UserchatService;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
@@ -45,14 +52,15 @@ public class UserChatServiceImpl implements UserchatService {
     private final ErpServerClient erpClient;
     private final GlpiService glpiService;
     private final ApiWhatsappService apiWhatsappService;
+    private final GlpiServerClient glpiServerClient;
 
-
-    public UserChatServiceImpl(UserChatRepository repo, ErpServerClient erpClient, UserTicketRepository  userTicketRepository, GlpiService glpiService, ApiWhatsappService apiWhatsappService) {
+    public UserChatServiceImpl(UserChatRepository repo, ErpServerClient erpClient, UserTicketRepository  userTicketRepository, GlpiService glpiService, ApiWhatsappService apiWhatsappService, GlpiServerClient glpiServerClient) {
         this.erpClient = erpClient;
         this.repo = repo;
         this.userTicketRepository = userTicketRepository;
         this.glpiService = glpiService;
         this.apiWhatsappService = apiWhatsappService;
+        this.glpiServerClient = glpiServerClient;
     }
 
     private UserTicketDto mapToUserTicketDto(UserTicketEntity ticket) {
@@ -68,7 +76,6 @@ public class UserChatServiceImpl implements UserchatService {
 
         return new UserTicketDto(ticket.getId(), ticket.getName(), status);
     }
-
 
     public List<UserTicketDto> listOpenTickets(String whatsAppPhone) {
         List<UserTicketEntity> tickets = userTicketRepository.findByWhatsappPhone(whatsAppPhone);
@@ -119,7 +126,6 @@ public class UserChatServiceImpl implements UserchatService {
 
         return fullDto;
     }
-
 
     @Override
     @Transactional(readOnly = true)
@@ -437,15 +443,14 @@ public class UserChatServiceImpl implements UserchatService {
 
     @Override
     @Transactional
-    public TicketInfoDto userRequestTicketInfo(String whatsAppPhone, String ticketId) throws IOException {
+    public TicketInfoDto userRequestTicketInfo(String whatsAppPhone, Long ticketId) throws IOException {
 
         // 1) Verificar que el usuario existe
         UserChatEntity user = repo.findByWhatsappPhone(whatsAppPhone)
             .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado para el número: " + whatsAppPhone));
 
         // 2) Verificar que el ticket le pertenece
-        Long id = Long.valueOf(ticketId);
-        boolean alreadyLinked = userTicketRepository.existsByWhatsappPhoneAndId(whatsAppPhone, id);
+        boolean alreadyLinked = userTicketRepository.existsByWhatsappPhoneAndId(whatsAppPhone, ticketId);
         
         UserChatFullDto emailsUser = findByWhatsappPhone(whatsAppPhone);
         String emailIns = emailsUser.getErpUser().getEmailInstitucional();
@@ -461,7 +466,6 @@ public class UserChatServiceImpl implements UserchatService {
             );
         }
 
-
         // 3) Si no está vinculado por WhatsApp, comprobamos por correo
         if (!alreadyLinked) {
             String requester = info.requester_email();
@@ -476,7 +480,7 @@ public class UserChatServiceImpl implements UserchatService {
         }
         if (!alreadyLinked) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,"El ticket " + ticketId + " no te pertenece");
-        } 
+        }
 
         // 4) Construir un mensaje resumen
         StringBuilder sb = new StringBuilder();
@@ -613,7 +617,7 @@ public class UserChatServiceImpl implements UserchatService {
         return ticketsDto;
     }
 
-    // ============  Para adjuntos durante la creacion ============
+    // ============  Para adjuntos durante la creacion Ticket ============
     @Override
     @Transactional
     public Object setWaitingAttachmentsState(String whatsappPhone) {
@@ -628,7 +632,7 @@ public class UserChatServiceImpl implements UserchatService {
         return user.getConversationState().name();
     }
 
-    // ============ Para adjuntos despues creacion ============
+    // ============ Para adjuntos de Ticket existentes ============
     @Override
     @Transactional
     public Object setWaitingAttachmentsStateForExistingTicket(String whatsappPhone, Long ticketId) {
@@ -643,5 +647,137 @@ public class UserChatServiceImpl implements UserchatService {
         repo.save(user);
         return user.getConversationState().name();
     }
+
+    // ============ Usuario crea un nuevo seguimiento en un Ticket ============
+    @Override
+    public Object createNoteForTicket( Long ticketId, String contentNote, String whatsAppPhone) {
+
+        // 1) Verificar que el usuario existe
+        UserChatEntity user = repo.findByWhatsappPhone(whatsAppPhone)
+            .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado para el número: " + whatsAppPhone));
+
+        // 2) Verificar que el ticket le pertenece
+        boolean alreadyLinked = userTicketRepository.existsByWhatsappPhoneAndId(whatsAppPhone, ticketId);
+        
+        UserChatFullDto emailsUser = findByWhatsappPhone(whatsAppPhone);
+        String emailIns = emailsUser.getErpUser().getEmailInstitucional();
+        String emailPer = emailsUser.getErpUser().getEmailPersonal();
+
+        TicketInfoDto info = glpiService.getInfoTicketById(ticketId);
+
+        // Comprobar si ya esta cerrado
+        if ("Cerrado".equals(info.ticket().status())) {
+            throw new ResponseStatusException(
+                HttpStatus.CONFLICT,
+                "El ticket " + ticketId + " ya fue cerrado"
+            );
+        }
+
+        // 3) Si no está vinculado por WhatsApp, comprobamos por correo
+        if (!alreadyLinked) {
+            String requester = info.requester_email();
+            if (emailIns != null && !emailIns.isBlank() && requester.equals(emailIns)) {
+                linkTicket(user, info);
+                alreadyLinked = true;
+            }
+            else if (emailPer != null && !emailPer.isBlank() && requester.equals(emailPer)) {
+                linkTicket(user, info);
+                alreadyLinked = true;
+            }
+        }
+        if (!alreadyLinked) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,"El ticket " + ticketId + " no te pertenece");
+        }
+
+        // Actualiza el Status del ticket(En progreso)
+        RequestUpdateStatus updateStatus = new RequestUpdateStatus(new InputUpdate(2L));
+        glpiServerClient.updateTicketStatusById(ticketId, updateStatus);
+
+        CreateNoteForTicket note = new CreateNoteForTicket(new InputFollowup("Ticket", ticketId, contentNote));
+        glpiServerClient.createNoteForTicket(note);
+        return Map.of("message", "El Seguimiento se envió exitosamente.");
+    }
+
+    // ============ Usuario acepta o rechaza la solución de un Ticket ============
+    @Override
+    public Object refusedOrAcceptedSolutionTicket(SolutionDecisionRequest request, String whatsAppPhone) {
+
+        Boolean _acepted = request.getAccepted();
+        Long ticketId = request.getTicketId();
+        String contentNote = request.getContent();
+        Long status = glpiServerClient.getTicketById(ticketId).status();
+
+        // 1) Verificar que el usuario existe
+        UserChatEntity user = repo.findByWhatsappPhone(whatsAppPhone)
+            .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado para el número: " + whatsAppPhone));
+
+        // 2) Verificar que el ticket le pertenece
+        Long id = ticketId;
+        boolean alreadyLinked = userTicketRepository.existsByWhatsappPhoneAndId(whatsAppPhone, id);
+        
+        UserChatFullDto emailsUser = findByWhatsappPhone(whatsAppPhone);
+        String emailIns = emailsUser.getErpUser().getEmailInstitucional();
+        String emailPer = emailsUser.getErpUser().getEmailPersonal();
+
+        TicketInfoDto info = glpiService.getInfoTicketById(id);
+
+        // 3) Si no está vinculado por WhatsApp, comprobamos por correo
+        if (!alreadyLinked) {
+            String requester = info.requester_email();
+            if (emailIns != null && !emailIns.isBlank() && requester.equals(emailIns)) {
+                linkTicket(user, info);
+                alreadyLinked = true;
+            }
+            else if (emailPer != null && !emailPer.isBlank() && requester.equals(emailPer)) {
+                linkTicket(user, info);
+                alreadyLinked = true;
+            }
+        }
+        if (!alreadyLinked) {
+            throw new ServerClientException("El ticket " + ticketId + " no te pertenece.");
+        }
+
+        // 4) Comprobar si ya esta cerrado
+        if (status == 6L) {
+                throw new ServerClientException("El ticket " + ticketId + " está cerrado.");
+        }
+                
+        if (status == 5L) {
+            if (_acepted) {
+                RequestUpdateStatus updateStatus = new RequestUpdateStatus(new InputUpdate(6L, _acepted));
+        
+                glpiServerClient.updateTicketStatusById(ticketId, updateStatus);
+                return Map.of("message", "La solución del ticket ha sido aceptada exitosamente.");
+            } else {
+                // Actualiza el Status del ticket(En progreso)
+                RequestUpdateStatus updateStatus = new RequestUpdateStatus(new InputUpdate(2L));
+                glpiServerClient.updateTicketStatusById(ticketId, updateStatus);
+
+                // GLPI se encarga de rechazar la solución automáticamente al cambiar ticket-status(5>2)  
+
+                // Enviar nuevo seguimeinto del ticket
+                CreateNoteForTicket note = new CreateNoteForTicket( new InputFollowup("Ticket", ticketId, contentNote));
+                glpiServerClient.createNoteForTicket(note);
+
+                return Map.of("message", "La solución del ticket ha sido rechazada exitosamente y se ha notificado el motivo del rechazo.");
+            }          
+        } else {
+                return Map.of("message", "El ticket aún no tiene solución.");
+        }
+    }
+
+    // ============ Cerrar sesión de adjuntos ============
+    @Override
+    @Transactional
+    public void closeAttachmentSession(String whatsappPhone) {
+        var user = repo.findByWhatsappPhone(whatsappPhone)
+            .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado: " + whatsappPhone));
+        user.setConversationState(ConversationState.READY);
+        user.setAttachTargetTicketId(null);
+        user.setAttachStartedAt(null);
+        user.setAttachTtlMinutes(null);
+        repo.save(user);
+    }
+
 
 }

@@ -94,7 +94,7 @@ public class GlpiServerClient {
     }
 
     // ----- Obtener el ticket con datos de Solicitante, Observador, Asignado -----
-    public List<UserTicket> getTicketUser(String ticketId) {
+    public List<UserTicket> getTicketUser(Long ticketId) {
         String sessionToken = getSessionTokenGlpi();
 
         try {

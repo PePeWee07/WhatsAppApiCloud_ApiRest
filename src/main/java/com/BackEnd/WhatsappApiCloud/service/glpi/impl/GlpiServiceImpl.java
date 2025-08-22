@@ -20,14 +20,12 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 import org.apache.tika.Tika;
-
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.BackEnd.WhatsappApiCloud.exception.ServerClientException;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.*;
-import com.BackEnd.WhatsappApiCloud.model.dto.glpi.SolutionDecisionRequest;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.TicketInfoDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.TicketInfoDto.*;
 import com.BackEnd.WhatsappApiCloud.model.entity.glpi.UserTicketEntity;
@@ -50,15 +48,16 @@ public class GlpiServiceImpl implements GlpiService {
 
         private final UserChatRepository userChatRepository;
         private final UserTicketRepository userTicketRepository;
-
-        // private final ApiWhatsappService apiWhatsappService;
-        private final WhatsappMediaService whatsappMediaService;
         private final AttachmentRepository attachmentRepository;
 
-        public GlpiServiceImpl(GlpiServerClient glpiServerClient, 
-        // ApiWhatsappService apiWhatsappService, 
-                        UserChatRepository userChatRepository, UserTicketRepository userTicketRepository, AttachmentRepository attachmentRepository, WhatsappMediaService whatsappMediaService) {
-                                // this.apiWhatsappService = apiWhatsappService;
+        private final WhatsappMediaService whatsappMediaService;
+
+        public GlpiServiceImpl(
+                GlpiServerClient glpiServerClient,
+                UserChatRepository userChatRepository, 
+                UserTicketRepository userTicketRepository, 
+                AttachmentRepository attachmentRepository, 
+                WhatsappMediaService whatsappMediaService) {
                                 this.whatsappMediaService = whatsappMediaService;
                                 this.glpiServerClient = glpiServerClient;
                                 this.userChatRepository = userChatRepository;
@@ -178,7 +177,7 @@ public class GlpiServiceImpl implements GlpiService {
         }
 
         @Override
-        public TicketInfoDto getInfoTicketById(String ticketId) {
+        public TicketInfoDto getInfoTicketById(Long ticketId) {
                 List<UserTicket> userTickets = glpiServerClient.getTicketUser(ticketId);
 
                 // 1) Obtener link del ticket desde el solicitante
@@ -349,63 +348,6 @@ public class GlpiServiceImpl implements GlpiService {
                                 notes);
         }
 
-        // ========= Adjunta archivos recientes de WhatsApp al ticket GLPI =========
-        // @Override
-        // public void attachRecentWhatsappMediaToTicket(String waId, long ticketId, int minutesWindow) {
-        //         // Verificar si el ticket existe y está abierto y le pertenece al usuario
-        //         if (getStatusTicket(ticketId).equals("Cerrado")) {
-        //                 throw new ServerClientException("El ticket " + ticketId + " está cerrado, no se pueden adjuntar más archivos.");
-        //         }
-        //         if (getStatusTicket(ticketId).equals("Resuelto")) {
-        //                 throw new ServerClientException("El ticket " + ticketId + " está resuelto, no se pueden adjuntar más archivos.");
-        //         }
-        //         Long id = Long.valueOf(ticketId);
-        //         if (!userTicketRepository.existsByWhatsappPhoneAndId(waId, id)) {
-        //             throw new ServerClientException(
-        //                 "El ticket " + ticketId + " no te pertenece.");
-        //         }
-
-        //         Instant cutoff = Instant.now().minus(Duration.ofMinutes(minutesWindow));
-
-        //         List<AttachmentEntity> list = attachmentRepository
-        //                 .findByWhatsappPhoneAndAttachmentStatusAndTimestampAfter(
-        //                 waId, AttachmentStatus.UNUSED, cutoff
-        //                 );
-
-        //         for (AttachmentEntity att : list) {
-        //                 File tmp = null;
-        //                 try {
-        //                         // usa caption si vino, sino cae al id
-        //                         String hint = (att.getCaption() != null && !att.getCaption().isBlank())
-        //                                         ? att.getCaption()
-        //                                         : "wa_" + att.getAttachmentID();
-
-        //                         // 1) Descargar desde WhatsApp a temp
-        //                         tmp = whatsappMediaService.downloadMediaToTemp(att.getAttachmentID(), hint);
-
-        //                         // 2) Subir a GLPI como Document
-        //                         var up = glpiServerClient.uploadDocument(tmp, tmp.getName(), 0);
-        //                         long docId = up.id();
-
-        //                         // 3) Enlazar Document ↔ Ticket
-        //                         glpiServerClient.linkDocumentToTicket(docId, ticketId);
-
-        //                         // 4) Marcar como usado y guardar trazas
-        //                         att.setAttachmentStatus(AttachmentStatus.USED);
-        //                         att.setTicketId(Long.valueOf(ticketId));
-        //                         att.setGpliDocuemntId(Long.valueOf(docId));
-        //                         attachmentRepository.save(att);
-
-        //                 } catch (Exception ex) {
-        //                         logger.error("Error adjuntando media {} al ticket {}: {}",att.getAttachmentID(), ticketId, ex.getMessage(), ex);
-        //                 } finally {
-        //                         if (tmp != null && tmp.exists()) {
-        //                                 try { Files.deleteIfExists(tmp.toPath()); } catch (IOException ignore) {}
-        //                         }
-        //                 }
-        //         }
-        // }
-
         @Override
         public void attachRecentWhatsappMediaToTicket(String waId, long ticketId, int minutesWindow) {
                 // Validaciones de estado/propiedad
@@ -468,7 +410,6 @@ public class GlpiServiceImpl implements GlpiService {
                         }
                 }
         }
-
 
         @Override
         @Transactional
@@ -566,68 +507,5 @@ public class GlpiServiceImpl implements GlpiService {
                         };
         }
 
-        @Override
-        public Object refusedOrAcceptedSolutionTicket(SolutionDecisionRequest request, String whatsAppPhone) {
-                Boolean _acepted = request.getAccepted();
-                Long ticketId = request.getTicketId();
-                String contentNote = request.getContent();
-                Long status = glpiServerClient.getTicketById(ticketId).status();
-
-                // Verificar si ticket esta Cerrado
-                if (status == 6L) {
-                        throw new ServerClientException("El ticket " + ticketId + " está cerrado.");
-                }
-
-                // Verificar que el ticket le pertenece
-                Long id = Long.valueOf(ticketId);
-                if (!userTicketRepository.existsByWhatsappPhoneAndId(whatsAppPhone, id)) {
-                        throw new ServerClientException("El ticket " + ticketId + " no te pertenece.");
-                }
-                
-                if (status == 5L) {
-                        if (_acepted) {
-                                RequestUpdateStatus updateStatus = new RequestUpdateStatus(
-                                        new InputUpdate(6L, _acepted)
-                                );
-        
-                                glpiServerClient.updateTicketStatusById(ticketId, updateStatus);
-                                return Map.of("message", "La solución del ticket ha sido aceptada exitosamente.");
-                        } else {
-                                // Actualiza el Status del ticket(En progreso)
-                                RequestUpdateStatus updateStatus = new RequestUpdateStatus(new InputUpdate(2L));
-                                glpiServerClient.updateTicketStatusById(ticketId, updateStatus);
-
-                                // GLPI se encarga de rechazar la solución automáticamente al cambiar ticket-status(5>2)  
-
-                                // Enviar nuevo seguimeinto del ticket
-                                CreateNoteForTicket note = new CreateNoteForTicket( new InputFollowup("Ticket", ticketId, contentNote));
-                                glpiServerClient.createNoteForTicket(note);
-
-                                return Map.of("message", "La solución del ticket ha sido rechazada exitosamente y se ha notificado el motivo del rechazo.");
-                        }          
-                } else {
-                        return Map.of("message", "El ticket aún no tiene solución.");
-                }
-
-        }
-
-        @Override
-        public Object createNoteForTicket( Long ticketId, String contentNote, String whatsAppPhone) {
-
-                // Actualiza el Status del ticket(En progreso)
-                RequestUpdateStatus updateStatus = new RequestUpdateStatus(new InputUpdate(2L));
-                glpiServerClient.updateTicketStatusById(ticketId, updateStatus);
-
-                // Verificar que el ticket le pertenece
-                Long id = Long.valueOf(ticketId);
-                if (!userTicketRepository.existsByWhatsappPhoneAndId(whatsAppPhone, id)) {
-                    throw new ServerClientException(
-                        "El ticket " + ticketId + " ya fue cerrado o no tienes acceso al el.");
-                }
-
-                CreateNoteForTicket note = new CreateNoteForTicket(new InputFollowup("Ticket", ticketId, contentNote));
-                glpiServerClient.createNoteForTicket(note);
-                return Map.of("message", "El Seguimiento se envió exitosamente.");
-        }
         
 }

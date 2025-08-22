@@ -511,9 +511,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     if (messageType.equals("text")) {
                         String messageText = messageOptionalText.get().body();
                         user.setConversationState(ConversationState.READY);
-                        user.setAttachTargetTicketId(null);
-                        user.setAttachStartedAt(null);
-                        user.setAttachTtlMinutes(null);
                         userChatRepository.save(user);
                         return handleReadyState(user, messageText, waId, timeNow);
                     }
@@ -570,11 +567,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 case WAITING_ATTACHMENTS_FOR_TICKET_EXISTING: {
 
                     Long ticketId = user.getAttachTargetTicketId();
-                    if (ticketId == null) {
-                        user.setConversationState(ConversationState.READY);
-                        userChatRepository.save(user);
-                        return sendMessage(new MessageBody(waId, "No tengo un ticket de destino para adjuntar los archivos. Por favor, inicia el proceso nuevamente."));
-                    }
 
                     // 0) TTL
                     boolean expired = user.getAttachStartedAt() == null || user.getAttachTtlMinutes() == null || Instant.now().isAfter(user.getAttachStartedAt().plus(Duration.ofMinutes(user.getAttachTtlMinutes())));
@@ -588,20 +580,22 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     }
 
                     // 1) Texto = finalizar y adjuntar batch
-                    if (messageType.equals("text")) {
+                    if ("text".equals(messageType)) {
                         String messageText = messageOptionalText.get().body();
-
-                        // Adjunta los UNUSED de la ventana
-                        glpiService.attachRecentWhatsappMediaToTicket(waId, ticketId, user.getAttachTtlMinutes());
-
-                        // Cierra sesión
-                        user.setConversationState(ConversationState.READY);
-                        user.setAttachTargetTicketId(null);
-                        user.setAttachStartedAt(null);
-                        user.setAttachTtlMinutes(null);
-                        userChatRepository.save(user);
+                        try {
+                            glpiService.attachRecentWhatsappMediaToTicket(waId, ticketId, user.getAttachTtlMinutes());
+                        } catch (Exception ex) {
+                            logger.error("Adjuntado falló para ticket {}: {}", ticketId, ex.getMessage(), ex);
+                        } finally {
+                            user.setConversationState(ConversationState.READY);
+                            user.setAttachTargetTicketId(null);
+                            user.setAttachStartedAt(null);
+                            user.setAttachTtlMinutes(null);
+                            userChatRepository.save(user);
+                        }
                         return handleReadyState(user, messageText, waId, timeNow);
                     }
+
 
                     // 2) Imagen
                     if ("image".equals(messageType)) {
