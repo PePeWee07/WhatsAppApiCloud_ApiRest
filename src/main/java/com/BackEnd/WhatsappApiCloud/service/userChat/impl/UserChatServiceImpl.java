@@ -13,10 +13,8 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.BackEnd.WhatsappApiCloud.exception.ServerClientException;
 import com.BackEnd.WhatsappApiCloud.exception.UserNotFoundException;
@@ -73,7 +71,6 @@ public class UserChatServiceImpl implements UserchatService {
             ticket.setStatus(status);
             userTicketRepository.save(ticket);
         }
-
         return new UserTicketDto(ticket.getId(), ticket.getName(), status);
     }
 
@@ -87,62 +84,7 @@ public class UserChatServiceImpl implements UserchatService {
             .toList();
     }
 
-    @Override
-    @Transactional(readOnly = true)
-    public UserChatFullDto findByIdentificacion(String identificacion) {
-        UserChatEntity user = repo.findByIdentificacion(identificacion)
-            .orElseThrow(() -> new UserNotFoundException("No se encontro el usuario con identificacion: " + identificacion));
-            
-            List<UserChatSessionDto> sesionesDto = user.getChatSessions().stream()
-            .map(cs -> new UserChatSessionDto(
-                cs.getId(),
-                cs.getWhatsappPhone(),
-                cs.getMessageCount(),
-                cs.getStartTime(),
-                cs.getEndTime()))
-            .collect(Collectors.toList());
-        
-        List<UserTicketDto> ticketsDto = listOpenTickets(user.getWhatsappPhone());
-
-        UserChatFullDto fullDto = new UserChatFullDto();
-        fullDto.setId(user.getId());
-        fullDto.setIdentificacion(user.getIdentificacion());
-        fullDto.setWhatsappPhone(user.getWhatsappPhone());
-        fullDto.setPreviousResponseId(user.getPreviousResponseId());
-        fullDto.setLimitQuestions(user.getLimitQuestions());
-        fullDto.setFirstInteraction(user.getFirstInteraction());
-        fullDto.setLastInteraction(user.getLastInteraction());
-        fullDto.setNextResetDate(user.getNextResetDate());
-        fullDto.setConversationState(user.getConversationState().name());
-        fullDto.setLimitStrike(user.getLimitStrike());
-        fullDto.setBlock(user.isBlock());
-        fullDto.setBlockingReason(user.getBlockingReason());
-        fullDto.setValidQuestionCount(user.getValidQuestionCount());
-        fullDto.setChatSessions(sesionesDto);
-        fullDto.setUserTickets(ticketsDto);
-        
-        ErpUserDto erpUser = erpClient.getUser(identificacion);
-        fullDto.setErpUser(erpUser);
-
-        return fullDto;
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public UserChatFullDto findByWhatsappPhone(String whatsAppPhone) {
-        UserChatEntity user = repo.findByWhatsappPhone(whatsAppPhone)
-            .orElseThrow(() -> new UserNotFoundException("No se encontro el usuario con whatsAppPhone: " + whatsAppPhone));
-        
-        List<UserChatSessionDto> sesionesDto = user.getChatSessions().stream()
-        .map(cs -> new UserChatSessionDto(
-                cs.getId(),
-                cs.getWhatsappPhone(),
-                cs.getMessageCount(),
-                cs.getStartTime(),
-                cs.getEndTime()))
-            .collect(Collectors.toList());
-        List<UserTicketDto> ticketsDto = listOpenTickets(user.getWhatsappPhone());
-
+    private UserChatFullDto buildUserChatFullDto(UserChatEntity user, List<UserChatSessionDto> sesionesDto, List<UserTicketDto> ticketsDto) {
         UserChatFullDto fullDto = new UserChatFullDto();
         fullDto.setId(user.getId());
         fullDto.setIdentificacion(user.getIdentificacion());
@@ -166,7 +108,58 @@ public class UserChatServiceImpl implements UserchatService {
             ErpUserDto erpUser = erpClient.getUser(user.getIdentificacion());
             fullDto.setErpUser(erpUser);
         }
+        return fullDto;
+    }
 
+    @Override
+    @Transactional(readOnly = true)
+    public UserChatFullDto findByIdentificacion(String identificacion) {
+        UserChatEntity user = repo.findByIdentificacion(identificacion)
+            .orElseThrow(() -> new UserNotFoundException("No se encontro el usuario con identificacion: " + identificacion));
+            
+            List<UserChatSessionDto> sesionesDto = user.getChatSessions().stream()
+            .map(cs -> new UserChatSessionDto(
+                cs.getId(),
+                cs.getWhatsappPhone(),
+                cs.getMessageCount(),
+                cs.getStartTime(),
+                cs.getEndTime()))
+            .collect(Collectors.toList());
+        
+        List<UserTicketDto> ticketsDto = listOpenTickets(user.getWhatsappPhone());
+
+        UserChatFullDto fullDto = buildUserChatFullDto(user, sesionesDto, ticketsDto);
+        
+        ErpUserDto erpUser = erpClient.getUser(identificacion);
+        fullDto.setErpUser(erpUser);
+
+        return fullDto;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public UserChatFullDto findByWhatsappPhone(String whatsAppPhone) {
+        UserChatEntity user = repo.findByWhatsappPhone(whatsAppPhone)
+            .orElseThrow(() -> new UserNotFoundException("No se encontro el usuario con whatsAppPhone: " + whatsAppPhone));
+        
+        List<UserChatSessionDto> sesionesDto = user.getChatSessions().stream()
+        .map(cs -> new UserChatSessionDto(
+                cs.getId(),
+                cs.getWhatsappPhone(),
+                cs.getMessageCount(),
+                cs.getStartTime(),
+                cs.getEndTime()))
+            .collect(Collectors.toList());
+        List<UserTicketDto> ticketsDto = listOpenTickets(user.getWhatsappPhone());
+
+        UserChatFullDto fullDto = buildUserChatFullDto(user, sesionesDto, ticketsDto);
+
+        if ("Anonymus".equals(user.getIdentificacion())) {
+            fullDto.setErpUser(null);
+        } else {
+            ErpUserDto erpUser = erpClient.getUser(user.getIdentificacion());
+            fullDto.setErpUser(erpUser);
+        }
         return fullDto;
     }
 
@@ -174,11 +167,9 @@ public class UserChatServiceImpl implements UserchatService {
     @Override
     @Transactional(readOnly = true)
     public Page<UserChatFullDto> usersTable(int page, int size, String sortBy, String direction) {
-
         Sort sort = Sort.by(sortBy);
         sort = "desc".equalsIgnoreCase(direction) ? sort.descending() : sort.ascending();
         Pageable pageable = PageRequest.of(page, size, sort);
-
         Page<UserChatEntity> pageLocal = repo.findAll(pageable);
 
         List<UserChatFullDto> dtos = pageLocal.getContent().stream()
@@ -194,22 +185,7 @@ public class UserChatServiceImpl implements UserchatService {
                 
                 List<UserTicketDto> ticketsDto = listOpenTickets(user.getWhatsappPhone());
 
-                UserChatFullDto fullDto = new UserChatFullDto();
-                fullDto.setId(user.getId());
-                fullDto.setIdentificacion(user.getIdentificacion());
-                fullDto.setWhatsappPhone(user.getWhatsappPhone());
-                fullDto.setPreviousResponseId(user.getPreviousResponseId());
-                fullDto.setLimitQuestions(user.getLimitQuestions());
-                fullDto.setFirstInteraction(user.getFirstInteraction());
-                fullDto.setLastInteraction(user.getLastInteraction());
-                fullDto.setNextResetDate(user.getNextResetDate());
-                fullDto.setConversationState(user.getConversationState().name());
-                fullDto.setLimitStrike(user.getLimitStrike());
-                fullDto.setBlock(user.isBlock());
-                fullDto.setBlockingReason(user.getBlockingReason());
-                fullDto.setValidQuestionCount(user.getValidQuestionCount());
-                fullDto.setChatSessions(sesionesDto);
-                fullDto.setUserTickets(ticketsDto);
+                UserChatFullDto fullDto = buildUserChatFullDto(user, sesionesDto, ticketsDto);
                 
                 if ("Anonymus".equals(user.getIdentificacion())) {
                     fullDto.setErpUser(null);
@@ -223,60 +199,6 @@ public class UserChatServiceImpl implements UserchatService {
             })
             .collect(Collectors.toList());
 
-        return new PageImpl<>(dtos, pageable, pageLocal.getTotalElements());
-    }
-
-    //! (Eliminar) ============  Paginar usuarios por ultima interaccion  ============
-    @Override
-    @Transactional(readOnly = true)
-    public Page<UserChatFullDto> tablefindByLastInteraction(int page, int size, String sortBy, String direction, LocalDateTime inicio, LocalDateTime fin) {
-
-        Sort sort = Sort.by(sortBy);
-        sort = "desc".equalsIgnoreCase(direction) ? sort.descending() : sort.ascending();
-        Pageable pageable = PageRequest.of(page, size, sort);
-
-        Page<UserChatEntity> pageLocal = repo.findByPreviousResponseIdIsNotNullAndLastInteractionBetween(inicio, fin, pageable);
-
-        List<UserChatFullDto> dtos = pageLocal.getContent().stream()
-            .map(user -> {
-                List<UserChatSessionDto> sesionesDto = user.getChatSessions().stream()
-                    .map(cs -> new UserChatSessionDto(
-                        cs.getId(),
-                        cs.getWhatsappPhone(),
-                        cs.getMessageCount(),
-                        cs.getStartTime(),
-                        cs.getEndTime()))
-                    .collect(Collectors.toList());
-
-                List<UserTicketDto> ticketsDto = listOpenTickets(user.getWhatsappPhone());
-
-                UserChatFullDto fullDto = new UserChatFullDto();
-                fullDto.setId(user.getId());
-                fullDto.setIdentificacion(user.getIdentificacion());
-                fullDto.setWhatsappPhone(user.getWhatsappPhone());
-                fullDto.setPreviousResponseId(user.getPreviousResponseId());
-                fullDto.setLimitQuestions(user.getLimitQuestions());
-                fullDto.setFirstInteraction(user.getFirstInteraction());
-                fullDto.setLastInteraction(user.getLastInteraction());
-                fullDto.setNextResetDate(user.getNextResetDate());
-                fullDto.setConversationState(user.getConversationState().name());
-                fullDto.setLimitStrike(user.getLimitStrike());
-                fullDto.setBlock(user.isBlock());
-                fullDto.setBlockingReason(user.getBlockingReason());
-                fullDto.setValidQuestionCount(user.getValidQuestionCount());
-                fullDto.setChatSessions(sesionesDto);
-                fullDto.setUserTickets(ticketsDto);
-                
-                if ("Anonymus".equals(user.getIdentificacion())) {
-                    fullDto.setErpUser(null);
-                } else {
-                    ErpUserDto erpUser = erpClient.getUser(user.getIdentificacion());
-                    fullDto.setErpUser(erpUser);
-                }
-
-                return fullDto;
-            })
-            .collect(Collectors.toList());
         return new PageImpl<>(dtos, pageable, pageLocal.getTotalElements());
     }
 
@@ -284,11 +206,9 @@ public class UserChatServiceImpl implements UserchatService {
     @Override
     @Transactional(readOnly = true)
     public Page<UserChatFullDto> tablefindByChatSessionStart(int page, int size, String sortBy, String direction, LocalDateTime inicio, LocalDateTime fin) {
-
         Sort sort = Sort.by(sortBy);
         sort = "desc".equalsIgnoreCase(direction) ? sort.descending() : sort.ascending();
         Pageable pageable = PageRequest.of(page, size, sort);
-
         Page<UserChatEntity> pageLocal = repo.findByChatSessionsOverlapping(inicio, fin, pageable);
 
         List<UserChatFullDto> dtos = pageLocal.getContent().stream()
@@ -304,22 +224,7 @@ public class UserChatServiceImpl implements UserchatService {
                     
                 List<UserTicketDto> ticketsDto = listOpenTickets(user.getWhatsappPhone());
 
-                UserChatFullDto fullDto = new UserChatFullDto();
-                fullDto.setId(user.getId());
-                fullDto.setIdentificacion(user.getIdentificacion());
-                fullDto.setWhatsappPhone(user.getWhatsappPhone());
-                fullDto.setPreviousResponseId(user.getPreviousResponseId());
-                fullDto.setLimitQuestions(user.getLimitQuestions());
-                fullDto.setFirstInteraction(user.getFirstInteraction());
-                fullDto.setLastInteraction(user.getLastInteraction());
-                fullDto.setNextResetDate(user.getNextResetDate());
-                fullDto.setConversationState(user.getConversationState().name());
-                fullDto.setLimitStrike(user.getLimitStrike());
-                fullDto.setBlock(user.isBlock());
-                fullDto.setBlockingReason(user.getBlockingReason());
-                fullDto.setValidQuestionCount(user.getValidQuestionCount());
-                fullDto.setChatSessions(sesionesDto);
-                fullDto.setUserTickets(ticketsDto);
+                UserChatFullDto fullDto = buildUserChatFullDto(user, sesionesDto, ticketsDto);
                 
                 if ("Anonymus".equals(user.getIdentificacion())) {
                     fullDto.setErpUser(null);
@@ -392,21 +297,7 @@ public class UserChatServiceImpl implements UserchatService {
 
         List<UserTicketDto> ticketsDto = listOpenTickets(userEntity.getWhatsappPhone());
 
-        UserChatFullDto fullDto = new UserChatFullDto();
-        fullDto.setId(userEntity.getId());
-        fullDto.setWhatsappPhone(userEntity.getWhatsappPhone());
-        fullDto.setPreviousResponseId(userEntity.getPreviousResponseId());
-        fullDto.setLimitQuestions(userEntity.getLimitQuestions());
-        fullDto.setFirstInteraction(userEntity.getFirstInteraction());
-        fullDto.setLastInteraction(userEntity.getLastInteraction());
-        fullDto.setNextResetDate(userEntity.getNextResetDate());
-        fullDto.setConversationState(userEntity.getConversationState().name());
-        fullDto.setLimitStrike(userEntity.getLimitStrike());
-        fullDto.setBlock(userEntity.isBlock());
-        fullDto.setBlockingReason(userEntity.getBlockingReason());
-        fullDto.setValidQuestionCount(userEntity.getValidQuestionCount());
-        fullDto.setChatSessions(sesionesDto);
-        fullDto.setUserTickets(ticketsDto);
+        UserChatFullDto fullDto = buildUserChatFullDto(userEntity, sesionesDto, ticketsDto);
 
         if ("Anonymus".equals(userEntity.getIdentificacion())) {
             fullDto.setErpUser(null); // Asignar null para usuarios "Anonymus"
@@ -441,48 +332,46 @@ public class UserChatServiceImpl implements UserchatService {
         userTicketRepository.save(t);
     }
 
-    @Override
-    @Transactional
-    public TicketInfoDto userRequestTicketInfo(String whatsAppPhone, Long ticketId) throws IOException {
-
-        // 1) Verificar que el usuario existe
+    // ============ Verificacion de pertenencia ============
+    private TicketInfoDto validateAndLinkTicket(String whatsAppPhone, Long ticketId) {
         UserChatEntity user = repo.findByWhatsappPhone(whatsAppPhone)
             .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado para el número: " + whatsAppPhone));
 
-        // 2) Verificar que el ticket le pertenece
         boolean alreadyLinked = userTicketRepository.existsByWhatsappPhoneAndId(whatsAppPhone, ticketId);
-        
+        TicketInfoDto info = glpiService.getInfoTicketById(ticketId);
+
+        if ("Cerrado".equals(info.ticket().status())) {
+            throw new ServerClientException("El ticket " + ticketId + " está cerrado.");
+        }
+
         UserChatFullDto emailsUser = findByWhatsappPhone(whatsAppPhone);
         String emailIns = emailsUser.getErpUser().getEmailInstitucional();
         String emailPer = emailsUser.getErpUser().getEmailPersonal();
 
-        TicketInfoDto info = glpiService.getInfoTicketById(ticketId);
-
-        // Comprobar si ya esta cerrado
-        if ("Cerrado".equals(info.ticket().status())) {
-            throw new ResponseStatusException(
-                HttpStatus.CONFLICT,
-                "El ticket " + ticketId + " ya fue cerrado"
-            );
-        }
-
-        // 3) Si no está vinculado por WhatsApp, comprobamos por correo
         if (!alreadyLinked) {
             String requester = info.requester_email();
             if (emailIns != null && !emailIns.isBlank() && requester.equals(emailIns)) {
                 linkTicket(user, info);
                 alreadyLinked = true;
-            }
-            else if (emailPer != null && !emailPer.isBlank() && requester.equals(emailPer)) {
+            } else if (emailPer != null && !emailPer.isBlank() && requester.equals(emailPer)) {
                 linkTicket(user, info);
                 alreadyLinked = true;
             }
         }
-        if (!alreadyLinked) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,"El ticket " + ticketId + " no te pertenece");
-        }
 
-        // 4) Construir un mensaje resumen
+        if (!alreadyLinked) {
+            throw new ServerClientException("El ticket " + ticketId + " no te pertenece.");
+        }
+        return info;
+    }
+
+    @Override
+    @Transactional
+    public TicketInfoDto userRequestTicketInfo(String whatsAppPhone, Long ticketId) throws IOException {
+        // 1) Verificar que el usuario existe
+        TicketInfoDto info = validateAndLinkTicket(whatsAppPhone, ticketId);
+
+        // 2) Construir un mensaje resumen
         StringBuilder sb = new StringBuilder();
         sb.append(" > *Información del Ticket*\n");
         sb.append("`ID:` ").append(info.ticket().id()).append("\n");
@@ -494,7 +383,7 @@ public class UserChatServiceImpl implements UserchatService {
             sb.append("`Fecha de cierre:` ").append(info.ticket().closedate()).append("\n");
         }
 
-        // 4.1) Información de técnicos asignados
+        // 2.1) Información de técnicos asignados
         if (!info.assigned_techs().isEmpty()) {
             sb.append("\n*Técnicos Asignados:*\n");
             for (TicketInfoDto.TechDto tech : info.assigned_techs()) {
@@ -504,7 +393,7 @@ public class UserChatServiceImpl implements UserchatService {
             sb.append("\n").append("_Tu Ticket aun no está asignado a un técnico_");
         }
 
-        // 4.2) Información de la solución (si existe y no está rechazada)
+        // 2.2) Información de la solución (si existe y no está rechazada)
         boolean hasValidSolution = false;
         if (!info.solutions().isEmpty()) {
             TicketInfoDto.TicketSolutionDto solution = info.solutions().stream()
@@ -540,7 +429,7 @@ public class UserChatServiceImpl implements UserchatService {
             }
         }
 
-        // 4.3) Último seguimiento (si existe)
+        // 2.3) Último seguimiento (si existe)
         if (!hasValidSolution && info.notes() != null && !info.notes().isEmpty()) {
             TicketInfoDto.NoteDto lastNote = info.notes().get(info.notes().size() - 1);
             sb.append("\n").append("> *Último Seguimiento:*\n");
@@ -568,7 +457,7 @@ public class UserChatServiceImpl implements UserchatService {
             }
         }
 
-        // 5) Dividir el mensaje si excede el límite de 4096 caracteres
+        // 3) Dividir el mensaje si excede el límite de 4096 caracteres
         String message = sb.toString();
         if (message.length() > 4096) {
             List<String> parts = splitMessage(message, 4096);
@@ -578,7 +467,6 @@ public class UserChatServiceImpl implements UserchatService {
         } else {
             apiWhatsappService.sendMessage(new MessageBody(whatsAppPhone, message));
         }
-
         return info;
     }
    
@@ -613,7 +501,6 @@ public class UserChatServiceImpl implements UserchatService {
         } else {
             apiWhatsappService.sendMessage(new MessageBody(whatsAppPhone, message));
         }
-
         return ticketsDto;
     }
 
@@ -651,43 +538,8 @@ public class UserChatServiceImpl implements UserchatService {
     // ============ Usuario crea un nuevo seguimiento en un Ticket ============
     @Override
     public Object createNoteForTicket( Long ticketId, String contentNote, String whatsAppPhone) {
-
         // 1) Verificar que el usuario existe
-        UserChatEntity user = repo.findByWhatsappPhone(whatsAppPhone)
-            .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado para el número: " + whatsAppPhone));
-
-        // 2) Verificar que el ticket le pertenece
-        boolean alreadyLinked = userTicketRepository.existsByWhatsappPhoneAndId(whatsAppPhone, ticketId);
-        
-        UserChatFullDto emailsUser = findByWhatsappPhone(whatsAppPhone);
-        String emailIns = emailsUser.getErpUser().getEmailInstitucional();
-        String emailPer = emailsUser.getErpUser().getEmailPersonal();
-
-        TicketInfoDto info = glpiService.getInfoTicketById(ticketId);
-
-        // Comprobar si ya esta cerrado
-        if ("Cerrado".equals(info.ticket().status())) {
-            throw new ResponseStatusException(
-                HttpStatus.CONFLICT,
-                "El ticket " + ticketId + " ya fue cerrado"
-            );
-        }
-
-        // 3) Si no está vinculado por WhatsApp, comprobamos por correo
-        if (!alreadyLinked) {
-            String requester = info.requester_email();
-            if (emailIns != null && !emailIns.isBlank() && requester.equals(emailIns)) {
-                linkTicket(user, info);
-                alreadyLinked = true;
-            }
-            else if (emailPer != null && !emailPer.isBlank() && requester.equals(emailPer)) {
-                linkTicket(user, info);
-                alreadyLinked = true;
-            }
-        }
-        if (!alreadyLinked) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,"El ticket " + ticketId + " no te pertenece");
-        }
+        validateAndLinkTicket(whatsAppPhone, ticketId);
 
         // Actualiza el Status del ticket(En progreso)
         RequestUpdateStatus updateStatus = new RequestUpdateStatus(new InputUpdate(2L));
@@ -701,47 +553,14 @@ public class UserChatServiceImpl implements UserchatService {
     // ============ Usuario acepta o rechaza la solución de un Ticket ============
     @Override
     public Object refusedOrAcceptedSolutionTicket(SolutionDecisionRequest request, String whatsAppPhone) {
-
         Boolean _acepted = request.getAccepted();
         Long ticketId = request.getTicketId();
         String contentNote = request.getContent();
         Long status = glpiServerClient.getTicketById(ticketId).status();
 
         // 1) Verificar que el usuario existe
-        UserChatEntity user = repo.findByWhatsappPhone(whatsAppPhone)
-            .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado para el número: " + whatsAppPhone));
-
-        // 2) Verificar que el ticket le pertenece
-        Long id = ticketId;
-        boolean alreadyLinked = userTicketRepository.existsByWhatsappPhoneAndId(whatsAppPhone, id);
-        
-        UserChatFullDto emailsUser = findByWhatsappPhone(whatsAppPhone);
-        String emailIns = emailsUser.getErpUser().getEmailInstitucional();
-        String emailPer = emailsUser.getErpUser().getEmailPersonal();
-
-        TicketInfoDto info = glpiService.getInfoTicketById(id);
-
-        // 3) Si no está vinculado por WhatsApp, comprobamos por correo
-        if (!alreadyLinked) {
-            String requester = info.requester_email();
-            if (emailIns != null && !emailIns.isBlank() && requester.equals(emailIns)) {
-                linkTicket(user, info);
-                alreadyLinked = true;
-            }
-            else if (emailPer != null && !emailPer.isBlank() && requester.equals(emailPer)) {
-                linkTicket(user, info);
-                alreadyLinked = true;
-            }
-        }
-        if (!alreadyLinked) {
-            throw new ServerClientException("El ticket " + ticketId + " no te pertenece.");
-        }
-
-        // 4) Comprobar si ya esta cerrado
-        if (status == 6L) {
-                throw new ServerClientException("El ticket " + ticketId + " está cerrado.");
-        }
-                
+        validateAndLinkTicket(whatsAppPhone, ticketId);
+    
         if (status == 5L) {
             if (_acepted) {
                 RequestUpdateStatus updateStatus = new RequestUpdateStatus(new InputUpdate(6L, _acepted));
@@ -770,14 +589,12 @@ public class UserChatServiceImpl implements UserchatService {
     @Override
     @Transactional
     public void closeAttachmentSession(String whatsappPhone) {
-        var user = repo.findByWhatsappPhone(whatsappPhone)
-            .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado: " + whatsappPhone));
+        var user = repo.findByWhatsappPhone(whatsappPhone).orElseThrow(() -> new UserNotFoundException("Usuario no encontrado: " + whatsappPhone));
         user.setConversationState(ConversationState.READY);
         user.setAttachTargetTicketId(null);
         user.setAttachStartedAt(null);
         user.setAttachTtlMinutes(null);
         repo.save(user);
     }
-
 
 }

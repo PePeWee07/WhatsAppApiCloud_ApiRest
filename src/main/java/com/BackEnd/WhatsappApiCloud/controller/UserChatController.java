@@ -94,34 +94,6 @@ public class UserChatController {
         return ResponseEntity.ok(usersPage);
     }
 
-    // ================== Paginar usuarios por fecha de última interacción ========================
-    @GetMapping("/page/users/{page}/byLastInteraction")
-    public ResponseEntity<Page<UserChatFullDto>> listByLastInteraction(
-            @PathVariable("page") int page,
-            @RequestParam(value = "pageSize", defaultValue = "10") int pageSize,
-            @RequestParam(value = "sortBy",   defaultValue = "lastInteraction") String sortBy,
-            @RequestParam(value = "direction", defaultValue = "asc")     String direction,
-            @RequestParam("startDate") String startDateStr,
-            @RequestParam("endDate")   String endDateStr) {
-        
-        int size = Math.min(pageSize, MAX_PAGE_SIZE);
-
-        if (!UserChatFieldsSorby.ALLOWED_SORT_FIELDS.contains(sortBy)) {
-            return ResponseEntity.badRequest().body(Page.empty());
-        }
-        
-        LocalDateTime inicio, fin;
-        inicio = LocalDateTime.parse(startDateStr, DateTimeFormatter.ISO_DATE_TIME);
-        fin    = LocalDateTime.parse(endDateStr,   DateTimeFormatter.ISO_DATE_TIME);
-
-        if (inicio.isAfter(fin)) {
-            return ResponseEntity.badRequest().build();
-        }
-
-        Page<UserChatFullDto> usuarios = userchatService.tablefindByLastInteraction(page, size, sortBy, direction, inicio, fin);
-        return ResponseEntity.ok(usuarios);
-    }
-
     // ================== Paginar usuarios por fecha de inicio de sesión de chat ========================
     @GetMapping("/page/users/{page}/byChatSessionStart")
     public ResponseEntity<Page<UserChatFullDto>> listChatSessionStart(
