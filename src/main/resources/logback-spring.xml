@@ -1,56 +1,63 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 
-    <!-- Directorio de logs -->
-    <property name="LOGS" value="./var/log"/>
+  <!-- Toma la ruta de logs de Spring (logging.file.path) o usa /backend/var/log -->
+  <springProperty scope="context"
+                  name="LOGS"
+                  source="logging.file.path"
+                  defaultValue="/backend/var/log"/>
 
-    <!-- Appender para consola -->
-    <appender name="Console" class="ch.qos.logback.core.ConsoleAppender">
-        <layout class="ch.qos.logback.classic.PatternLayout">
-            <pattern>
-                %d{yyyy-MM-dd HH:mm:ss.SSS} %highlight(%-5level) [%thread] %cyan(%logger{1}) - %msg%n%throwable
-            </pattern>
-        </layout>
-    </appender>
+  <!-- Consola única (reutilizada en ambos perfiles) -->
+  <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+    <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+      <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{1} - %msg%n%throwable</pattern>
+    </encoder>
+  </appender>
 
-    <!-- Appender de archivo con rotación diaria y límite de tamaño -->
-    <appender name="RollingFile" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOGS}/spring-boot-logger.log</file>
-        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{1} - %msg%n</pattern>
-        </encoder>
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${LOGS}/archived/spring-boot-logger-%d{yyyy-MM-dd}-%i.log.zip</fileNamePattern>
-            <maxFileSize>10MB</maxFileSize>
-            <maxHistory>30</maxHistory>
-            <totalSizeCap>1GB</totalSizeCap>
-        </rollingPolicy>
-    </appender>
-
-    <!-- Appender de archivo separado para errores -->
-    <appender name="ErrorFile" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>${LOGS}/spring-boot-errors.log</file>
-        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
-            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{1} - %msg%n</pattern>
-        </encoder>
-        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
-            <fileNamePattern>${LOGS}/archived/spring-boot-errors-%d{yyyy-MM-dd}-%i.log.zip</fileNamePattern>
-            <maxFileSize>10MB</maxFileSize>
-            <maxHistory>30</maxHistory>
-            <totalSizeCap>1GB</totalSizeCap>
-        </rollingPolicy>
-    </appender>
-
-    <!-- Configuración del logger raíz -->
+  <!-- EN DOCKER: SOLO CONSOLA (stdout) -->
+  <springProfile name="docker">
     <root level="INFO">
-        <appender-ref ref="RollingFile"/>
-        <appender-ref ref="Console"/>
+      <appender-ref ref="CONSOLE"/>
+    </root>
+  </springProfile>
+
+  <!-- FUERA DE DOCKER: archivos + consola -->
+  <springProfile name="!docker">
+
+    <appender name="RollingFile" class="ch.qos.logback.core.rolling.RollingFileAppender">
+      <file>${LOGS}/spring-boot-logger.log</file>
+      <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+        <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{1} - %msg%n</pattern>
+      </encoder>
+      <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+        <fileNamePattern>${LOGS}/archived/spring-boot-logger-%d{yyyy-MM-dd}-%i.log.gz</fileNamePattern>
+        <maxFileSize>10MB</maxFileSize>
+        <maxHistory>30</maxHistory>
+        <totalSizeCap>1GB</totalSizeCap>
+      </rollingPolicy>
+    </appender>
+
+    <appender name="ErrorFile" class="ch.qos.logback.core.rolling.RollingFileAppender">
+      <file>${LOGS}/spring-boot-errors.log</file>
+      <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+        <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] %logger{1} - %msg%n</pattern>
+      </encoder>
+      <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+        <fileNamePattern>${LOGS}/archived/spring-boot-errors-%d{yyyy-MM-dd}-%i.log.gz</fileNamePattern>
+        <maxFileSize>10MB</maxFileSize>
+        <maxHistory>30</maxHistory>
+        <totalSizeCap>1GB</totalSizeCap>
+      </rollingPolicy>
+    </appender>
+
+    <root level="INFO">
+      <appender-ref ref="RollingFile"/>
+      <appender-ref ref="CONSOLE"/>
     </root>
 
-    <!-- Logger específico para errores en el paquete com.BackEnd -->
     <logger name="com.BackEnd" level="ERROR" additivity="false">
-        <appender-ref ref="ErrorFile"/>
-        <appender-ref ref="Console"/>
+      <appender-ref ref="ErrorFile"/>
+      <appender-ref ref="CONSOLE"/>
     </logger>
-
+  </springProfile>
 </configuration>

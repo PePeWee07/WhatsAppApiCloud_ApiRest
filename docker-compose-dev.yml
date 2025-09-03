@@ -16,13 +16,13 @@ services:
     restart: always
     volumes:
       - .:/app
-      - whatsappapicloud_logs:/backend/var/log
       - ./welcome_message.txt:/app/doc/welcome_message.txt
     networks:
       - virtual_assistant_network
     environment:
       SPRING_REDIS_HOST: redis
       SPRING_REDIS_PORT: 6379
+      SPRING_PROFILES_ACTIVE: docker
 
   db:
     container_name: whatsapp-api-cloud-db
