@@ -38,6 +38,7 @@ import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.TemplateMessageDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestMessages;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestMessagesFactory;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestWhatsappAsRead;
+import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.TypingIndicator;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.media.ResponseMediaMetadata;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsappMessage;
@@ -426,7 +427,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         var messageOptionalText = changeValue.messages().get(0).text();
 
         // Marcar el mensaje como leído
-        markAsRead(new RequestWhatsappAsRead("whatsapp", "read", wamid));
+        markAsRead(new RequestWhatsappAsRead("whatsapp", "read", wamid, new TypingIndicator("text")));
 
         // Para obtener respuesta de la plantilla de msg
         if (messageType.equals("interactive")) {
