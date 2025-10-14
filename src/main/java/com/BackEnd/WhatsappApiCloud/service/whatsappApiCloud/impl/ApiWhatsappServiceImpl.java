@@ -235,7 +235,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             logger.error("Error al leer el archivo de bienvenida: ", e);
             welcomeMessage = "Mensaje de bienvenidad no econtrado. Por favor, reporta a soportetic@ucaue.edu.ec.";
         }
-        sendStickerMessageByUrl(waId, "https://almacenamiento.ucacue.edu.ec/videos/VA-with-logo-uc-Photoroom-ezgif.com-png-to-webp-converter.webp");
+        sendStickerMessageByUrl(waId, "https://ia-sp-backoffice.ucatolica.cue.ec/uploads/catia.webp");
         sendMessage(new MessageBody(waId, welcomeMessage));
         user.setConversationState(ConversationState.ASKED_FOR_CEDULA);
         userChatRepository.save(user);
