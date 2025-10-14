@@ -13,7 +13,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_started
-    restart: always
     volumes:
       - .:/app
       - ./welcome_message.txt:/app/doc/welcome_message.txt

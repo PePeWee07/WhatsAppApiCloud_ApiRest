@@ -1,22 +1,44 @@
 # Etapa de build (Maven + JDK 21 LTS)
-FROM maven:3.9.11-eclipse-temurin-21-noble AS build
+# FROM maven:3.9.11-eclipse-temurin-21-noble AS build
+
+# WORKDIR /app
+
+# COPY pom.xml .
+# RUN mvn -B -q dependency:go-offline
+# COPY src ./src
+# RUN mvn -B -q clean package -DskipTests
+
+# # Etapa de runtime (JRE 21 LTS)
+# FROM eclipse-temurin:21-jre-noble
+# WORKDIR /backend
+
+# # Crear usuario no-root (en Ubuntu noble/jammy usa 'useradd')
+# RUN useradd --system --create-home --shell /usr/sbin/nologin spring \
+#  && mkdir -p /backend/var/log
+
+# COPY --chown=spring:spring --from=build /app/target/*SNAPSHOT.jar /backend/app.jar
+# USER spring
+# EXPOSE 8080
+# ENTRYPOINT ["java","-jar","/backend/app.jar"]
+
+
+# Etapa de desarrollo
+FROM maven:3.9.11-eclipse-temurin-21-noble
 
 WORKDIR /app
 
+# Copia el pom para cachear dependencias
 COPY pom.xml .
-RUN mvn -B -q dependency:go-offline
+RUN mvn dependency:go-offline -B
+
+# Copia el código fuente
 COPY src ./src
-RUN mvn -B -q clean package -DskipTests
 
-# Etapa de runtime (JRE 21 LTS)
-FROM eclipse-temurin:21-jre-noble
-WORKDIR /backend
+# Instala DevTools
+RUN mvn dependency:resolve -Dincludes=org.springframework.boot:spring-boot-devtools
 
-# Crear usuario no-root (en Ubuntu noble/jammy usa 'useradd')
-RUN useradd --system --create-home --shell /usr/sbin/nologin spring \
- && mkdir -p /backend/var/log
+# Expone el puerto
+EXPOSE 8082
 
-COPY --chown=spring:spring --from=build /app/target/*SNAPSHOT.jar /backend/app.jar
-USER spring
-EXPOSE 8080
-ENTRYPOINT ["java","-jar","/backend/app.jar"]
+# Ejecuta en modo desarrollo (no empaca el jar)
+CMD ["mvn", "spring-boot:run", "-Dspring-boot.run.profiles=docker"]
