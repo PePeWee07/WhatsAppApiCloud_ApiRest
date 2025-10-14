@@ -29,9 +29,11 @@ import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.*;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.TicketInfoDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.TicketInfoDto.*;
 import com.BackEnd.WhatsappApiCloud.model.entity.glpi.UserTicketEntity;
+import com.BackEnd.WhatsappApiCloud.model.entity.reports.TicketReportEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.user.AttachmentEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
 import com.BackEnd.WhatsappApiCloud.repository.AttachmentRepository;
+import com.BackEnd.WhatsappApiCloud.repository.TicketReportRepository;
 import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
 import com.BackEnd.WhatsappApiCloud.repository.UserTicketRepository;
 import com.BackEnd.WhatsappApiCloud.service.glpi.GlpiServerClient;
@@ -51,18 +53,21 @@ public class GlpiServiceImpl implements GlpiService {
         private final AttachmentRepository attachmentRepository;
 
         private final WhatsappMediaService whatsappMediaService;
+        private final TicketReportRepository ticketReportRepository;
 
         public GlpiServiceImpl(
                 GlpiServerClient glpiServerClient,
                 UserChatRepository userChatRepository, 
                 UserTicketRepository userTicketRepository, 
                 AttachmentRepository attachmentRepository, 
-                WhatsappMediaService whatsappMediaService) {
+                WhatsappMediaService whatsappMediaService,
+                TicketReportRepository ticketReportRepository) {
                                 this.whatsappMediaService = whatsappMediaService;
                                 this.glpiServerClient = glpiServerClient;
                                 this.userChatRepository = userChatRepository;
                                 this.userTicketRepository = userTicketRepository;
                                 this.attachmentRepository = attachmentRepository;
+                                this.ticketReportRepository = ticketReportRepository;
         }
 
         private String getExtensionFromDocumentId(String documentsId) {
@@ -482,6 +487,13 @@ public class GlpiServiceImpl implements GlpiService {
                 entity.setStatus(statusStr);
                 entity.setUserChat(user);
                 userTicketRepository.save(entity);
+
+                //Reporteria de ticket creados
+                TicketReportEntity ticketReport = new TicketReportEntity();
+                ticketReport.setTicketId(glpiTicket.id());
+                ticketReport.setUserRequester(whatsAppPhone);
+                ticketReport.setNameTicket(glpiTicket.name());
+                ticketReportRepository.save(ticketReport);
 
                 // Adjuntar archivos recientes de WhatsApp al ticket
                 attachRecentWhatsappMediaToTicket(whatsAppPhone, glpiTicket.id(), 15);
