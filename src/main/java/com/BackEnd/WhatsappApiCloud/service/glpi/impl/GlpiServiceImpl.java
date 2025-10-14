@@ -496,7 +496,7 @@ public class GlpiServiceImpl implements GlpiService {
                 ticketReportRepository.save(ticketReport);
 
                 // Adjuntar archivos recientes de WhatsApp al ticket
-                attachRecentWhatsappMediaToTicket(whatsAppPhone, glpiTicket.id(), 15);
+                attachRecentWhatsappMediaToTicket(whatsAppPhone, glpiTicket.id(), 10);
 
                 return Map.of(
                         "id", glpiTicket.id(),

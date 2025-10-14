@@ -513,7 +513,17 @@ public class UserChatServiceImpl implements UserchatService {
         user.setConversationState(ConversationState.WAITING_ATTACHMENTS);
         user.setAttachTargetTicketId(null);
         user.setAttachStartedAt(Instant.now());
-        user.setAttachTtlMinutes(15);
+        user.setAttachTtlMinutes(10);
+
+        String msg = "📎 Sesión de adjuntos activa. \n"
+                   + "✔️ Formatos: JPG, PNG, PDF, WORD, EXCEL \n"
+                   + "Máx: 100 MB (docs) / 5 MB (imgs).\n"
+                   + "⏰ Tienes 10 minutos para enviar los archivos.\n";
+        try {
+            apiWhatsappService.sendMessage(new MessageBody(whatsappPhone, msg));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Error al enviar mensaje de adjuntos por WhatsApp", e);
+        }
 
         repo.save(user);
         return user.getConversationState().name();
@@ -529,7 +539,17 @@ public class UserChatServiceImpl implements UserchatService {
         user.setConversationState(ConversationState.WAITING_ATTACHMENTS_FOR_TICKET_EXISTING);
         user.setAttachTargetTicketId(ticketId);
         user.setAttachStartedAt(Instant.now());
-        user.setAttachTtlMinutes(15);
+        user.setAttachTtlMinutes(10);
+
+        String msg = "📎 Sesión de adjuntos activa del ticket " + ticketId + ".\n"
+                   + "✔️ Formatos: JPG, PNG, PDF, WORD, EXCEL \n"
+                   + "Máx: 100 MB (docs) / 5 MB (imgs).\n"
+                   + "⏰ Tienes 10 minutos para enviar los archivos.\n";
+        try {
+            apiWhatsappService.sendMessage(new MessageBody(whatsappPhone, msg));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Error al enviar mensaje de adjuntos por WhatsApp", e);
+        }
 
         repo.save(user);
         return user.getConversationState().name();
