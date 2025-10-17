@@ -2,6 +2,7 @@ package com.BackEnd.WhatsappApiCloud.controller;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
@@ -156,7 +157,7 @@ public class WhatsappController {
     }
 
 
-    // ================ Enviar plantilla de feedback_de_catia =======================
+    // ================ Enviar xea =======================
     @PostMapping("/template-feedback")
     public ResponseEntity<ResponseWhatsapp> sendFeedbackTemplate(
             @RequestParam("to") String toPhoneNumber) {
@@ -180,17 +181,47 @@ public class WhatsappController {
 
 
     // ================ Obtner todas las respuestas de los templates =======================
-     @GetMapping("/template/all")
+    @GetMapping("/template/all")
     public ResponseEntity<Page<TemplateMessageDto>> getAll(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int pageSize,
             @RequestParam(defaultValue = "sentAt") String sort,
-            @RequestParam(defaultValue = "desc") String dir
+            @RequestParam(defaultValue = "desc") String dir,
+            @RequestParam(defaultValue = "false") Boolean onlyAnswered
     ) {
         int size = Math.min(pageSize, MAX_PAGE_SIZE);
         Sort.Direction d = Sort.Direction.fromString(dir);
         Pageable pg = PageRequest.of(page, size, Sort.by(d, sort));
-        return ResponseEntity.ok(apiWhatsappService.getResponsesTemplate(pg));
+        return ResponseEntity.ok(apiWhatsappService.getResponsesTemplate(pg, onlyAnswered));
+    }
+
+    // ============== Obtener resultado de plantilla por fecha de envío ==================
+    @GetMapping("/template/date-range")
+    public ResponseEntity<List<TemplateMessageDto>> getTemplateByDateRange(
+            @RequestParam("start") String start,
+            @RequestParam("end") String end) {
+        try {
+            List<TemplateMessageDto> list = apiWhatsappService.listResponseTemplateByDate(
+                    LocalDateTime.parse(start),
+                    LocalDateTime.parse(end)
+            );
+            if (list.isEmpty()) {
+                return ResponseEntity.noContent().build();
+            }
+            return ResponseEntity.ok(list);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
+        }
+    }
+
+    // ============== Obtener resultado de plantilla por nombre ==================
+    @GetMapping("/template/name/{templateName}")
+    public ResponseEntity<List<TemplateMessageDto>> getTemplateByName(@PathVariable String templateName) {
+        List<TemplateMessageDto> list = apiWhatsappService.listResponseTemplateByName(templateName);
+        if (list.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(list);
     }
 
 }

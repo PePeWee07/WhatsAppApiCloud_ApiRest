@@ -1,5 +1,6 @@
 package com.BackEnd.WhatsappApiCloud.repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -13,4 +14,7 @@ public interface TemplateMessageRepository extends JpaRepository<TemplateMessage
     Optional<TemplateMessageEntity> findByWamid(String wamid);
     List<TemplateMessageEntity> findByToPhone(String toPhone);
     Page<TemplateMessageEntity> findAll(Pageable pageable);
+    Page<TemplateMessageEntity> findByAnswerIsNotNullAndAnswerNot(Pageable pageable, String value);
+    List<TemplateMessageEntity> findBySentAtBetween(LocalDateTime start, LocalDateTime end);
+    List<TemplateMessageEntity> findByTemplateName(String templateName);
 }

@@ -1,6 +1,7 @@
 package com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
@@ -26,7 +27,9 @@ public interface ApiWhatsappService {
      ResponseWhatsapp sendDocumentMessageById(String toPhoneNumber, String documentId, String caption, String filename);
      ResponseMediaMetadata getMediaMetadata(String mediaId);
      ResponseWhatsapp sendTemplatefeedback(String toPhoneNumber);
-     Page<TemplateMessageDto>  getResponsesTemplate(Pageable pageable);
+     Page<TemplateMessageDto> getResponsesTemplate(Pageable pageable, Boolean onlyAnswered);
      List<TemplateMessageDto> listResponseTemplateByPhone(String WhatsAppPhone);
+     List<TemplateMessageDto> listResponseTemplateByDate(LocalDateTime inicio, LocalDateTime fin);
+     List<TemplateMessageDto> listResponseTemplateByName(String templateName);
 
 }

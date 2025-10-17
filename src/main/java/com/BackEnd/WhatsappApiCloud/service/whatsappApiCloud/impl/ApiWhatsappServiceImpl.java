@@ -8,6 +8,7 @@ import java.nio.file.Files;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.List;
@@ -810,14 +811,39 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     }
 
 
-    // ============== Obtener resultados de plantillas ==================
+    // ============== Obtener plantillas ==================
     @Override
-    public Page<TemplateMessageDto> getResponsesTemplate(Pageable pageable) {
-        return templateMsgRepo.findAll(pageable).map(this::templateMessageEntitytoDto);
+    public Page<TemplateMessageDto> getResponsesTemplate(Pageable pageable, Boolean onlyAnswered) {
+        if (onlyAnswered == null || !onlyAnswered) {
+            return templateMsgRepo.findAll(pageable)
+                    .map(this::templateMessageEntitytoDto);
+        } else {
+            return templateMsgRepo.findByAnswerIsNotNullAndAnswerNot(pageable, "")
+                    .map(this::templateMessageEntitytoDto);
+        }
     }
 
 
-    // ============== Obtener resultado de plantilla por WhatsAppPhone ==================
+    // ============== Obtener plantilla por fecha de envío ==================
+    @Override
+    public List<TemplateMessageDto> listResponseTemplateByDate(LocalDateTime inicio, LocalDateTime fin) {
+        LocalDateTime startOfDay = inicio.toLocalDate().atStartOfDay();
+        LocalDateTime endOfDay = fin.toLocalDate().atTime(LocalTime.MAX);
+        return templateMsgRepo.findBySentAtBetween(startOfDay, endOfDay).stream()
+            .map(this::templateMessageEntitytoDto)
+            .collect(Collectors.toList());
+    }
+
+    // ============== Obtener plantilla por nombre ==================
+    @Override
+    public List<TemplateMessageDto> listResponseTemplateByName(String templateName) {
+        return templateMsgRepo.findByTemplateName(templateName).stream()
+            .map(this::templateMessageEntitytoDto)
+            .collect(Collectors.toList());
+    }
+
+
+    // ============== Obtener plantilla por usuario ==================
     @Override
     public List<TemplateMessageDto> listResponseTemplateByPhone(String WhatsAppPhone) {
         return templateMsgRepo.findByToPhone(WhatsAppPhone).stream()
