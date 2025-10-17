@@ -32,7 +32,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
 
 import com.BackEnd.WhatsappApiCloud.exception.ApiInfoException;
-import com.BackEnd.WhatsappApiCloud.exception.ErpNotFoundException;
+// import com.BackEnd.WhatsappApiCloud.exception.ErpNotFoundException;
 import com.BackEnd.WhatsappApiCloud.exception.MediaNotFoundException;
 import com.BackEnd.WhatsappApiCloud.exception.ServerClientException;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.TemplateMessageDto;
@@ -127,6 +127,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     private AttachmentRepository attachmentRepository;
     private GlpiService glpiService;
 
+
     // ================ Constructor para inicializar el cliente REST =====================
     public ApiWhatsappServiceImpl(
         @Value("${Phone-Number-ID}") String identifier,
@@ -151,6 +152,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         this.glpiService = glpiService;
         this.whatsappMediaService = whatsappMediaService;
     }
+
 
     // ================ Constructor de mensajes de respuesta ==========================
     private ResponseWhatsapp NewResponseBuilder(RequestMessages requestBody, String uri) {
@@ -247,34 +249,27 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     // ============== Estado "WAITING_FOR_CEDULA" ====================
     @Transactional
     private ResponseWhatsapp handleWaitingForCedula(UserChatEntity user, String messageText, String waId, LocalDateTime timeNow) {
+        if (user.getLimitQuestions() <= 0){
+                return null;
+        }
         ErpUserDto dto;
         try {
             dto = erpJsonServerClient.getUser(messageText);
-        } catch (ErpNotFoundException e) {
+        } catch (ServerClientException e) {
             user.setLastInteraction(timeNow);
             user.setLimitQuestions(user.getLimitQuestions() - 1);
             userChatRepository.save(user);
+            if(user.getLimitQuestions() == 0 ){
+                user.setBlock(true);
+                user.setBlockingReason("Demasiados intentos fallidos");
+                userChatRepository.save(user);
+                return sendMessage(new MessageBody(
+                    waId, "Demasiados intentos fallidos. Hemos bloqueado tu acceso por seguridad. Por favor, comunícate con soportetic@ucacue.edu.ec"
+                ));
+            }
             return sendMessage(new MessageBody(
                 waId,
                 "No encontramos tu número de identificación en nuestro sistema. " +
-                "Te quedan " + user.getLimitQuestions() + " intentos."
-            ));
-        } catch (ServerClientException e) {
-            logger.warn("ERP no disponible al buscar identificación {}: {}", messageText, e.getMessage());
-            return sendMessage(new MessageBody(
-                waId,
-                "Disculpa, nuestro servicio de verificación está temporalmente fuera de línea. " +
-                "Por favor inténtalo de nuevo en unos minutos."
-            ));
-        }
-
-        if (dto == null || dto.getIdentificacion() == null) {
-            user.setLastInteraction(timeNow);
-            user.setLimitQuestions(user.getLimitQuestions() - 1);
-            userChatRepository.save(user);
-            return sendMessage(new MessageBody(
-                waId,
-                "No encontramos tu número de identificación. " +
                 "Te quedan " + user.getLimitQuestions() + " intentos."
             ));
         }
@@ -402,6 +397,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         return sendMessage(new MessageBody(waId, data.answer()));
     }
 
+
     // ================ LLegada de Exepeciones Informativas o Moderación de IA ===================
     private ResponseWhatsapp handleApiInfoException(ApiInfoException e, String waId) {
         userChatRepository.findByWhatsappPhone(waId).ifPresent(user -> {
@@ -426,9 +422,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         String messageType      = changeValue.messages().get(0).type();
         String waId             = changeValue.contacts().get(0).wa_id();
         var messageOptionalText = changeValue.messages().get(0).text();
-
-        // Marcar el mensaje como leído
-        markAsRead(new RequestWhatsappAsRead("whatsapp", "read", wamid, new TypingIndicator("text")));
 
         // Para obtener respuesta de la plantilla de msg
         if (messageType.equals("interactive")) {
@@ -458,14 +451,17 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             return null;
         }
 
-        //! Buscar el usuario o crearlo si no existe
+        // Buscar el usuario o crearlo si no existe
         UserChatEntity user = userChatRepository.findByWhatsappPhone(waId)
             .orElseGet(() -> createNewUser(waId, timeNow));
 
-        //! Verificar si el usuario ya está bloqueado
+        // Verificar si el usuario ya está bloqueado
         if (user.isBlock()) {
             return null;
         }
+
+        // Marcar el mensaje como leído y estado "escribiendo..."
+        markAsRead(new RequestWhatsappAsRead("whatsapp", "read", wamid, new TypingIndicator("text")));
 
         try {
             //! Verificar el estado de la conversación
@@ -660,6 +656,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
+
     // ============== Eliminar archvio multi-media por ID ===================
     @Override
     public Boolean deleteMediaById(String mediaId) {
@@ -729,10 +726,12 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
+
     @Cacheable(cacheNames="mediaIdCache", key="'" + TEMPLATE_NAME + "'")
     public String loadTemplateMediaId() {
         return whatsappMediaService.uploadMedia(getTemplateImageFile());
     }
+
 
     // ============== Obtener Media ============
     @Override
@@ -834,6 +833,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             .collect(Collectors.toList());
     }
 
+
     // ============== Obtener plantilla por nombre ==================
     @Override
     public List<TemplateMessageDto> listResponseTemplateByName(String templateName) {
@@ -850,6 +850,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             .map(this::templateMessageEntitytoDto)
             .collect(Collectors.toList());
     }
+
 
     private TemplateMessageDto templateMessageEntitytoDto(TemplateMessageEntity log) {
         return new TemplateMessageDto(

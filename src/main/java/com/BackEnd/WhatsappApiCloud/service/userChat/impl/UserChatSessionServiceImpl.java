@@ -45,7 +45,7 @@ public class UserChatSessionServiceImpl implements UserChatSessionService {
             session.setWhatsappPhone(whatsappPhone);
             session.setStartTime(now);
             session.setEndTime(now.plusHours(sessionDurationHours));
-            session.setMessageCount(0);
+            session.setMessageCount(1);
             return chatSessionRepository.save(session);
         }
     }
