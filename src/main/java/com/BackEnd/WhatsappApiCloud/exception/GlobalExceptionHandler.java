@@ -124,10 +124,9 @@ public class GlobalExceptionHandler {
 
 
     // Manejador genérico para cualquier otra excepción no contemplada
-    // @ExceptionHandler(Exception.class)
-    // public ResponseEntity<Map<String,String>> handleAnyException(Exception ex) {
-    // Map<String,String> body = Map.of("error", "Ocurrió un error inesperado.
-    // Intenta nuevamente. " + ex);
-    // return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
-    // }
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<Map<String,String>> handleAnyException(Exception ex) {
+    Map<String,String> body = Map.of("error", "Ocurrió un error inesperado. Intenta nuevamente. " + ex);
+    return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+    }
 }

@@ -15,6 +15,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -159,8 +160,10 @@ public class WhatsappMediaServiceImpl implements WhatsappMediaService {
         String ext  = ALLOWED_MIME_TO_EXT.get(mime);
         String finalName = ensureExt(base, ext);
 
-        File tmp = File.createTempFile("wa_", "_" + finalName);
+        Path tmpDir = Files.createTempDirectory("wa_media_");
+        File tmp = new File(tmpDir.toFile(), finalName);
         Files.write(tmp.toPath(), bytes);
+
         return tmp;
     }
 

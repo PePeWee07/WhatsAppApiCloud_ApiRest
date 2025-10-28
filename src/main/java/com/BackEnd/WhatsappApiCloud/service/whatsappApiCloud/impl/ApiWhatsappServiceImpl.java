@@ -501,7 +501,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
                         return sendMessage(new MessageBody(
                             waId,
-                            "⚠️ La ventana para adjuntar expiró. Pidele de nuevo a CATIA que active la sesión de adjuntos. ⚠️ "
+                            "⚠️ La sesión para adjuntar expiró. ⚠️ "
                         ));
                     }
 
@@ -574,7 +574,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                         user.setAttachStartedAt(null);
                         user.setAttachTtlMinutes(null);
                         userChatRepository.save(user);
-                        return sendMessage(new MessageBody(waId, "⚠️ La ventana para adjuntar expiró. Pidele de nuevo a CATIA que active la sesión de adjuntos. ⚠️ "));
+                        return sendMessage(new MessageBody(waId, "⚠️ La sesión para adjuntar expiró. ⚠️"));
                     }
 
                     // 1) Texto = finalizar y adjuntar batch
@@ -582,8 +582,9 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                         String messageText = messageOptionalText.get().body();
                         try {
                             glpiService.attachRecentWhatsappMediaToTicket(waId, ticketId, user.getAttachTtlMinutes());
-                        } catch (Exception ex) {
-                            logger.error("Adjuntado falló para ticket {}: {}", ticketId, ex.getMessage(), ex);
+                        } catch (ServerClientException sce) {
+                            logger.warn("Adjuntado fallo: {}", sce.getMessage());
+                            sendMessage(new MessageBody(waId, "⚠️🚨 " + sce.getMessage() + " 🚨⚠️"));
                         } finally {
                             user.setConversationState(ConversationState.READY);
                             user.setAttachTargetTicketId(null);
@@ -625,7 +626,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                         att.setType("document");
                         att.setMimeType(doc.mime_type());
                         att.setAttachmentID(doc.id());
-                        att.setCaption(null);
+                        att.setCaption(doc.caption());
                         att.setConversationState(ConversationState.WAITING_ATTACHMENTS_FOR_TICKET_EXISTING);
                         att.setAttachmentStatus(AttachmentStatus.UNUSED);
                         attachmentRepository.save(att);

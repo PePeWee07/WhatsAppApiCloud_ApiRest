@@ -542,8 +542,8 @@ public class UserChatServiceImpl implements UserchatService {
         user.setAttachTtlMinutes(10);
 
         String msg = "📎 Sesión de adjuntos activa del ticket " + ticketId + ".\n"
-                   + "✔️ Formatos: JPG, PNG, PDF, WORD, EXCEL \n"
-                   + "Máx: 100 MB (docs) / 5 MB (imgs).\n"
+                   + "✔️ Formatos: JPG, PNG, PDF, WORD, EXCEL, TXT \n"
+                   + " Máx: 100 MB (docs) / 5 MB (imgs).\n"
                    + "⏰ Tienes 10 minutos para enviar los archivos.\n";
         try {
             apiWhatsappService.sendMessage(new MessageBody(whatsappPhone, msg));
