@@ -437,6 +437,16 @@ public class GlpiServiceImpl implements GlpiService {
                                 var up = glpiServerClient.uploadDocument(tmp, tmp.getName(), 0);
                                 long docId = up.id();
 
+                                // 2.1) Si es una imagen con caption, crear  seguimiento con el texto de caption
+                                if (att.getCaption() != null && !att.getCaption().isBlank()) {
+                                        // Actualiza el Status del ticket(En progreso)
+                                        RequestUpdateStatus updateStatus = new RequestUpdateStatus(new InputUpdate(2L));
+                                        glpiServerClient.updateTicketStatusById(ticketId, updateStatus);
+                                        CreateNoteForTicket note = new CreateNoteForTicket(
+                                                        new InputFollowup("Ticket", ticketId, att.getCaption()));
+                                        glpiServerClient.createNoteForTicket(note);
+                                }
+
                                 // 3) Enlazar Document al Ticket
                                 glpiServerClient.linkDocumentToTicket(docId, ticketId);
 
@@ -447,6 +457,8 @@ public class GlpiServiceImpl implements GlpiService {
                                 attachmentRepository.save(att);
 
                         } catch (Exception ex) {
+                                att.setAttachmentStatus(AttachmentStatus.INVALID);
+                                attachmentRepository.save(att);
                                 String msg = "Error al adjuntar el archivo " + att.getAttachmentID()
                                                 + " al ticket " + ticketId + ": " + ex.getMessage();
                                 logger.error(msg, ex);
