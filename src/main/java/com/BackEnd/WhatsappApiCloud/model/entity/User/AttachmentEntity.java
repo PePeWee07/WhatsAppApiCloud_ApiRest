@@ -49,7 +49,7 @@ public class AttachmentEntity {
     @Column(name = "attachment_id", nullable = false)
     private String attachmentID;
 
-    @Column(name = "caption", length = 512, nullable = true)
+    @Column(name = "caption", length = 1350, nullable = true)
     private String caption; //! opcional
     
     
