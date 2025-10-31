@@ -23,7 +23,6 @@ import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.CreateNoteForTicket;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.InputFollowup;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.InputUpdate;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.GlpiDto.RequestUpdateStatus;
-import com.BackEnd.WhatsappApiCloud.model.dto.glpi.SolutionDecisionRequest;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.TicketInfoDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.TicketInfoDto.MediaFileDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.user.UserChatSessionDto;
@@ -515,9 +514,9 @@ public class UserChatServiceImpl implements UserchatService {
         user.setAttachStartedAt(Instant.now());
         user.setAttachTtlMinutes(10);
 
-        String msg = "📎 Sesión de adjuntos activa. \n"
-                   + "✔️ Formatos: JPG, PNG, PDF, WORD, EXCEL \n"
-                   + "Máx: 100 MB (docs) / 5 MB (imgs).\n"
+        String msg = "🎫 Sesión de adjuntos activa. \n"
+                   + "✔️ Formatos: JPG, PNG, PDF, WORD, EXCEL, TXT \n"
+                   + " Máx: 100 MB (docs) / 5 MB (imgs).\n"
                    + "⏰ Tienes 10 minutos para enviar los archivos.\n";
         try {
             apiWhatsappService.sendMessage(new MessageBody(whatsappPhone, msg));
@@ -572,34 +571,15 @@ public class UserChatServiceImpl implements UserchatService {
 
     // ============ Usuario acepta o rechaza la solución de un Ticket ============
     @Override
-    public Object refusedOrAcceptedSolutionTicket(SolutionDecisionRequest request, String whatsAppPhone) {
-        Boolean _acepted = request.getAccepted();
-        Long ticketId = request.getTicketId();
-        String contentNote = request.getContent();
+    public Object acceptedSolutionTicket(Long ticketId, String whatsAppPhone) {
         Long status = glpiServerClient.getTicketById(ticketId).status();
 
-        // 1) Verificar que el usuario existe
         validateAndLinkTicket(whatsAppPhone, ticketId);
     
         if (status == 5L) {
-            if (_acepted) {
-                RequestUpdateStatus updateStatus = new RequestUpdateStatus(new InputUpdate(6L, _acepted));
-        
-                glpiServerClient.updateTicketStatusById(ticketId, updateStatus);
-                return Map.of("message", "La solución del ticket ha sido aceptada exitosamente.");
-            } else {
-                // Actualiza el Status del ticket(En progreso)
-                RequestUpdateStatus updateStatus = new RequestUpdateStatus(new InputUpdate(2L));
-                glpiServerClient.updateTicketStatusById(ticketId, updateStatus);
-
-                // GLPI se encarga de rechazar la solución automáticamente al cambiar ticket-status(5>2)  
-
-                // Enviar nuevo seguimeinto del ticket
-                CreateNoteForTicket note = new CreateNoteForTicket( new InputFollowup("Ticket", ticketId, contentNote));
-                glpiServerClient.createNoteForTicket(note);
-
-                return Map.of("message", "La solución del ticket ha sido rechazada exitosamente y se ha notificado el motivo del rechazo.");
-            }          
+            RequestUpdateStatus updateStatus = new RequestUpdateStatus(new InputUpdate(6L, true));
+            glpiServerClient.updateTicketStatusById(ticketId, updateStatus);
+            return Map.of("message", "La solución del ticket ha sido aceptada exitosamente.");                    
         } else {
                 return Map.of("message", "El ticket aún no tiene solución.");
         }

@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.BackEnd.WhatsappApiCloud.exception.BadRequestException;
-import com.BackEnd.WhatsappApiCloud.model.dto.glpi.SolutionDecisionRequest;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.TicketInfoDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.user.UserChatFullDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.user.UserTicketDto;
@@ -156,8 +155,8 @@ public class UserChatController {
 
     // ================== Aceptar o rechazar solucion de ticket ==================
     @PostMapping("/user/ticket/solution/decision")
-    public ResponseEntity<Object> refusedOrAcceptedTicketSolution(@RequestBody SolutionDecisionRequest request,  @RequestParam("whatsappPhone") String whatsAppPhone) {
-        Object resp = userchatService.refusedOrAcceptedSolutionTicket(request, whatsAppPhone);
+    public ResponseEntity<Object> refusedOrAcceptedTicketSolution(@RequestParam Long ticketId,  @RequestParam("whatsappPhone") String whatsAppPhone) {
+        Object resp = userchatService.acceptedSolutionTicket(ticketId, whatsAppPhone);
         return ResponseEntity.status(HttpStatus.OK).body(resp);
     }
 

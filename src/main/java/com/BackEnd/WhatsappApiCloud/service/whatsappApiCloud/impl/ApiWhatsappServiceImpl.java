@@ -505,7 +505,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                         ));
                     }
 
-                    //! Devolver estado READY y pasarle el mensjae a CATIA al momento de recibir un mensaje de texto
                     if (messageType.equals("text")) {
                         String messageText = messageOptionalText.get().body();
                         user.setConversationState(ConversationState.READY);
@@ -594,7 +593,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                         }
                         return handleReadyState(user, messageText, waId, timeNow);
                     }
-
 
                     // 2) Imagen
                     if ("image".equals(messageType)) {

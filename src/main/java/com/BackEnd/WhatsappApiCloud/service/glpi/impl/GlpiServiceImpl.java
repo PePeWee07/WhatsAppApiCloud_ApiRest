@@ -398,9 +398,6 @@ public class GlpiServiceImpl implements GlpiService {
                 if ("Cerrado".equals(st))
                         throw new ServerClientException(
                                         "El ticket " + ticketId + " está cerrado, no se pueden adjuntar más archivos.");
-                if ("Resuelto".equals(st))
-                        throw new ServerClientException("El ticket " + ticketId
-                                        + " está resuelto, no se pueden adjuntar más archivos.");
                 if (!userTicketRepository.existsByWhatsappPhoneAndId(waId, ticketId))
                         throw new ServerClientException("El ticket " + ticketId + " no te pertenece.");
 

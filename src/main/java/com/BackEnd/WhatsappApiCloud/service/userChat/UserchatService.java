@@ -7,7 +7,6 @@ import java.util.Map;
 
 import org.springframework.data.domain.Page;
 
-import com.BackEnd.WhatsappApiCloud.model.dto.glpi.SolutionDecisionRequest;
 import com.BackEnd.WhatsappApiCloud.model.dto.glpi.TicketInfoDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.user.UserChatFullDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.user.UserTicketDto;
@@ -23,6 +22,6 @@ public interface UserchatService {
     Object setWaitingAttachmentsState(String whatsappPhone);
     Object setWaitingAttachmentsStateForExistingTicket(String whatsappPhone, Long ticketId);
     Object createNoteForTicket( Long ticketId, String contentNote, String whatsAppPhone);
-    Object refusedOrAcceptedSolutionTicket(SolutionDecisionRequest request, String whatsAppPhone);
+    Object acceptedSolutionTicket(Long ticketId, String whatsAppPhone);
     void closeAttachmentSession(String whatsappPhone);
 }
