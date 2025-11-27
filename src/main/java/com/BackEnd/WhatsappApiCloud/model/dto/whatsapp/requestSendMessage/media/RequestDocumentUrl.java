@@ -8,12 +8,14 @@ import lombok.Setter;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Getter
 @Setter
-public class RequestMediaId implements RequestMedia {
-    private String id;
+public class RequestDocumentUrl implements RequestMedia {
+    private String link;
     private String caption;
+    private String filename;
 
-    public RequestMediaId(String id, String caption) {
-        this.id = id;
+    public RequestDocumentUrl(String link, String caption, String filename) {
+        this.link = link;
         this.caption = caption;
+        this.filename = filename;
     }
 }

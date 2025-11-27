@@ -20,13 +20,13 @@ import org.springframework.beans.factory.annotation.Value;
 
 
 @Component
-public class openAiServerClient {
+public class OpenAiServerClient {
     
     private final Logger logger = LoggerFactory.getLogger(getClass());
     private final RestClient restClient;
     private final String uriOpenAiServer;
 
-    public openAiServerClient(
+    public OpenAiServerClient(
        @Value("${baseurl.ai.service}") String baseUrlOpenAiServer,
        @Value("${uri.ai.service}") String uriOpenAiServer,
        @Value("${ai.service.api.key}") String apiKeyOpenAI

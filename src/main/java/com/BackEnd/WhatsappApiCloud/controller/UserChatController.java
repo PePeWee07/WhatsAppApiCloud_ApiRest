@@ -168,7 +168,7 @@ public class UserChatController {
             return ResponseEntity.ok().body(ticketList);
     }
 
-    // ================== Cambiar estado del usuario a WAITING_SUBJECTS ==================
+    // ================== Cambiar estado del usuario a WAITING_ATTACHMENTS ==================
     @PatchMapping("/user/state/waiting-attachment")
     public ResponseEntity<String> setUserStateToWaitingAttachment(@RequestParam("whatsappPhone") String whatsappPhone) {
         Object newState = userchatService.setWaitingAttachmentsState(whatsappPhone);

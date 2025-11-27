@@ -8,7 +8,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.TemplateMessageDto;
-import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.media.ResponseMediaMetadata;
+import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseMediaMetadata;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppDataDto;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
@@ -22,9 +22,14 @@ public interface ApiWhatsappService {
      // ======================================================
      ResponseWhatsapp sendMessage(MessageBody payload) throws JsonProcessingException;
      ResponseWhatsapp handleUserMessage(WhatsAppDataDto.WhatsAppMessage message) throws JsonMappingException, JsonProcessingException;
+     void handleMessageStatus(WhatsAppDataDto.WhatsAppMessage status);
      Boolean deleteMediaById(String mediaId) throws IOException;
-     ResponseWhatsapp sendImageMessageById(String toPhoneNumber, String mediaId, String caption) throws JsonProcessingException;
-     ResponseWhatsapp sendDocumentMessageById(String toPhoneNumber, String documentId, String caption, String filename);
+     ResponseWhatsapp sendImageMessageById(MessageBody payload, String mediaId);
+     ResponseWhatsapp sendImageMessageByUrl(MessageBody payload, String imageUrl);
+     ResponseWhatsapp sendVideoMessageById(MessageBody payload, String videoId);
+     ResponseWhatsapp sendVideoMessageByUrl(MessageBody payload, String videoUrl);
+     ResponseWhatsapp sendDocumentMessageById(MessageBody payload, String documentId, String filename);
+     ResponseWhatsapp sendDocumentMessageByUrl(MessageBody payload, String documentUrl, String filename);
      ResponseMediaMetadata getMediaMetadata(String mediaId);
      ResponseWhatsapp sendTemplatefeedback(String toPhoneNumber);
      Page<TemplateMessageDto> getResponsesTemplate(Pageable pageable, Boolean onlyAnswered);

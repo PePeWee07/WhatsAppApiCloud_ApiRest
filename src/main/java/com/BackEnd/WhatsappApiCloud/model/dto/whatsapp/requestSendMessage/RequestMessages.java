@@ -16,10 +16,13 @@ public class RequestMessages {
     private String to;
     private String type;  // "text", "image", "video", "sticker", "document", "template"
 
-    private RequestMessageText text;    // Usado cuando type = "text"
-    private RequestMedia image;         // Usado cuando type = "document"
-    private RequestVideoLink video;     // Usado cuando type = "video"
-    private RequestMediaLink sticker;   // Usado cuando type = "sticker"
-    private RequestDocument document;   // Usado cuando type = "document"
-    private RequestTemplate template;   // Usado cuando type = "template"
+    private RequestContext context;
+
+    // Media
+    private RequestMessageText text;
+    private RequestMedia image;
+    private RequestMedia video;
+    private RequestMedia document;
+    private RequestSticker     sticker;       // sticker
+    private RequestTemplate    template;     // template message
 }

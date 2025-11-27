@@ -1,8 +1,5 @@
 package com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.impl;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.time.Duration;
@@ -19,10 +16,6 @@ import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
@@ -40,7 +33,7 @@ import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.Reques
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestMessagesFactory;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestWhatsappAsRead;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.TypingIndicator;
-import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.media.ResponseMediaMetadata;
+import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseMediaMetadata;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsappMessage;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppDataDto;
@@ -51,29 +44,27 @@ import com.BackEnd.WhatsappApiCloud.model.dto.openIA.QuestionOpenIADto;
 import com.BackEnd.WhatsappApiCloud.model.entity.user.AttachmentEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
+import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.TemplateMessageEntity;
 import com.BackEnd.WhatsappApiCloud.repository.AttachmentRepository;
+import com.BackEnd.WhatsappApiCloud.repository.MessageRepository;
 import com.BackEnd.WhatsappApiCloud.repository.TemplateMessageRepository;
 import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
 import com.BackEnd.WhatsappApiCloud.service.erp.ErpCacheService;
 import com.BackEnd.WhatsappApiCloud.service.erp.ErpServerClient;
 import com.BackEnd.WhatsappApiCloud.service.glpi.GlpiService;
-import com.BackEnd.WhatsappApiCloud.service.openAi.openAiServerClient;
+import com.BackEnd.WhatsappApiCloud.service.openAi.OpenAiServerClient;
 import com.BackEnd.WhatsappApiCloud.service.userChat.ChatHistoryService;
 import com.BackEnd.WhatsappApiCloud.service.userChat.UserChatSessionService;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
-import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.WhatsappMediaService;
+import com.BackEnd.WhatsappApiCloud.util.MessageMapperHelper;
 import com.BackEnd.WhatsappApiCloud.util.enums.AttachmentStatus;
 import com.BackEnd.WhatsappApiCloud.util.enums.ConversationState;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
-
 import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -82,14 +73,13 @@ import org.slf4j.LoggerFactory;
 public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
     private static final Logger logger = LoggerFactory.getLogger(ApiWhatsappServiceImpl.class);
-
+    private static final String TEMPLATE_NAME = "feedback_de_catia";
     private final RestClient restClient;
     private final RestClient restMediaClient;
     private final ObjectMapper objectMapper;
-    private final WhatsappMediaService whatsappMediaService;
-
-    private static final String TEMPLATE_NAME               = "feedback_de_catia";
-    private static final String TEMPLATE_IMAGE_CLASSPATH   = "templates/catia_feedback.png";
+    private final GlpiService glpiService;
+    private final MessageRepository messageRepository;
+    private final TemplateMediaCacheService templateMediaCacheService;
 
     @Value("${restricted.roles}")
     private String restrictedRol;
@@ -106,27 +96,25 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     @Value("${WELCOME_MESSAGE_FILE}")
     private String welcomeMessageFile;
 
-    @PersistenceContext
-    private EntityManager em;
+    @Value("${PHONE_NUMBER}")
+    private String businessPhoneNumber;
 
     @Autowired
-    UserChatRepository userChatRepository;
+    private UserChatRepository userChatRepository;
     @Autowired
-    ErpServerClient erpJsonServerClient;
+    private ErpServerClient erpJsonServerClient;
     @Autowired
-    openAiServerClient openAiServerClient;
+    private OpenAiServerClient openAiServerClient;
     @Autowired
-    UserChatSessionService chatSessionService;
+    private UserChatSessionService chatSessionService;
     @Autowired
-    ErpCacheService erpCacheService;
+    private ErpCacheService erpCacheService;
     @Autowired
-    ChatHistoryService chatHistoryService;
+    private ChatHistoryService chatHistoryService;
     @Autowired
     private TemplateMessageRepository templateMsgRepo;
     @Autowired
     private AttachmentRepository attachmentRepository;
-    private GlpiService glpiService;
-
 
     // ================ Constructor para inicializar el cliente REST =====================
     public ApiWhatsappServiceImpl(
@@ -136,7 +124,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         @Value("${whatsapp.version}") String version,
         ObjectMapper objectMapper,
         GlpiService glpiService,
-        WhatsappMediaService whatsappMediaService) {
+        MessageRepository messageRepository,
+        TemplateMediaCacheService templateMediaCacheService) {
 
         restClient = RestClient.builder()
                     .baseUrl(urlBase + version + "/" + identifier)
@@ -150,9 +139,9 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
         this.objectMapper = objectMapper;
         this.glpiService = glpiService;
-        this.whatsappMediaService = whatsappMediaService;
+        this.messageRepository = messageRepository;
+        this.templateMediaCacheService = templateMediaCacheService;
     }
-
 
     // ================ Constructor de mensajes de respuesta ==========================
     private ResponseWhatsapp NewResponseBuilder(RequestMessages requestBody, String uri) {
@@ -181,16 +170,26 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
-
     // =================== Envio de mensaje ==========================
     @Override
     public ResponseWhatsapp sendMessage(MessageBody payload) {
         try {
-            RequestMessages requestBody = RequestMessagesFactory.buildTextMessage(payload.number(), payload.message());
+            RequestMessages requestBody = RequestMessagesFactory.buildTextMessage(
+                payload.number(),
+                payload.message(),
+                payload.contextId()
+            );
             ResponseWhatsapp response = NewResponseBuilder(requestBody, "/messages");
+            
+            try {
+                Thread.sleep(150);
+            } catch (InterruptedException ignored) {
+            }
 
-            if (response != null && response.messages() != null && !response.messages().isEmpty()) {
+            if (response != null && !response.messages().isEmpty()) {
                 chatSessionService.createSessionIfNotExists(payload.number());
+                MessageEntity entity = MessageMapperHelper.createSentMessageEntity(payload, response);
+                messageRepository.save(entity);
             }
 
             return response;
@@ -200,8 +199,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             throw new RuntimeException("Error al enviar mensaje", e);
         }
     }
-
-    
+ 
     // ================ Mensaje leído ===========================
     public void markAsRead(RequestWhatsappAsRead request) {
         restClient.post().
@@ -211,7 +209,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             .retrieve()
             .body(String.class);
     }
-
 
     // =================== Crear Usuario ============================
     private UserChatEntity createNewUser(String waId, LocalDateTime timeNow) {
@@ -227,7 +224,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         return savedUser;
     }
 
-
     // =============== Enviar mensaje de bienvenida ====================
     private ResponseWhatsapp sendWelcomeMessage(UserChatEntity user, String waId) {
         String welcomeMessage = "";
@@ -238,13 +234,37 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             logger.error("Error al leer el archivo de bienvenida: ", e);
             welcomeMessage = "Mensaje de bienvenidad no econtrado. Por favor, reporta a soportetic@ucaue.edu.ec.";
         }
-        sendStickerMessageByUrl(waId, "https://ia-sp-backoffice.ucatolica.cue.ec/uploads/catia.webp");
-        sendMessage(new MessageBody(waId, welcomeMessage));
+        sendStickerMessageByUrl(new MessageBody(
+            waId,
+            null,
+            "System",
+            "Back-end",
+            businessPhoneNumber,
+            "sticker",
+            null), 
+            "https://ia-sp-backoffice.ucatolica.cue.ec/uploads/catia.webp"
+        );
+        sendMessage(new MessageBody(
+            waId,
+            welcomeMessage,
+            "System",
+            "Back-end",
+            businessPhoneNumber,
+            "text",
+            null)
+        );
         user.setConversationState(ConversationState.ASKED_FOR_CEDULA);
         userChatRepository.save(user);
-        return sendMessage(new MessageBody(waId, "Para comenzar, por favor, *ingresa tu número de cédula o identificación* 🔒."));
+        return sendMessage(new MessageBody(
+            waId,
+            "Para comenzar, por favor, *ingresa tu número de cédula o identificación* 🔒.",
+            "System",
+            "Back-end", 
+            businessPhoneNumber, 
+            "text", 
+            null)
+        );
     }
-
 
     // ============== Estado "WAITING_FOR_CEDULA" ====================
     @Transactional
@@ -264,13 +284,15 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 user.setBlockingReason("Demasiados intentos fallidos");
                 userChatRepository.save(user);
                 return sendMessage(new MessageBody(
-                    waId, "Demasiados intentos fallidos. Hemos bloqueado tu acceso por seguridad. Por favor, comunícate con soportetic@ucacue.edu.ec"
+                    waId, "Demasiados intentos fallidos. Hemos bloqueado tu acceso por seguridad. Por favor, comunícate con soportetic@ucacue.edu.ec",
+                        "System", "Back-end", businessPhoneNumber, "text", null
                 ));
             }
             return sendMessage(new MessageBody(
                 waId,
                 "No encontramos tu número de identificación en nuestro sistema. " +
-                "Te quedan " + user.getLimitQuestions() + " intentos."
+                "Te quedan " + user.getLimitQuestions() + " intentos.",
+                    "System", "Back-end", businessPhoneNumber, "text", null
             ));
         }
 
@@ -285,10 +307,10 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
         return sendMessage(new MessageBody(
             waId,
-            "¡Hola 😊, " + dto.getNombres() + " " + dto.getApellidos() + "! ¿En qué puedo ayudarte hoy?"
+            "¡Hola 😊, " + dto.getNombres() + " " + dto.getApellidos() + "! ¿En qué puedo ayudarte hoy?", "System",
+                "Back-end", businessPhoneNumber, "text", null
         ));
     }
-
 
     // ================= Verificar si el rol del usuario está denegado =================
     private boolean allRolesAreRestricted(List<ErpRolUserDto> rolesUsuarioDto) {
@@ -308,7 +330,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                             .allMatch(restrictedSet::contains);
     }
 
-
     // ================ Estado "READY" =========================
     @Transactional
     private ResponseWhatsapp handleReadyState(UserChatEntity user, String messageText, String waId, LocalDateTime timeNow) throws JsonProcessingException {
@@ -316,7 +337,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         ErpUserDto userDto = erpCacheService.getCachedUser(user.getIdentificacion());
 
         if (userDto == null || userDto.getIdentificacion() == null) {
-            return sendMessage(new MessageBody(waId, "Hubo un problema al obtner tus datos desde el ERP."));
+            return sendMessage(new MessageBody(waId, "Hubo un problema al obtner tus datos desde el ERP.", "System",
+                    "Back-end", businessPhoneNumber, "text", null));
         }
 
         //! 1. Verificar si el rol del usuario está denegado
@@ -328,7 +350,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             userChatRepository.save(user);
             return sendMessage(new MessageBody(
                 waId,
-                "Lo sentimos, pero este asistente virtual aún no está disponible para los siguientes rol(es): *" + restrictedRol + "*."
+                "Lo sentimos, pero este asistente virtual aún no está disponible para los siguientes rol(es): *" + restrictedRol + "*.",
+                    "System", "Back-end", businessPhoneNumber, "text", null
             ));
         }
             
@@ -337,7 +360,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             user.setBlock(true);
             user.setBlockingReason("Moderacion");
             userChatRepository.save(user);
-            return sendMessage(new MessageBody(waId, "Tu cuenta ha sido bloqueada 🚫. Por favor, comunícate con *soportetic@ucacue.edu.ec* ✉️."));
+            return sendMessage(new MessageBody(waId, "Tu cuenta ha sido bloqueada 🚫. Por favor, comunícate con *soportetic@ucacue.edu.ec* ✉️.",
+                    "System", "Back-end", businessPhoneNumber, "text", null));
         }
 
         //! 3. Restablece el límite de preguntas diarias si han pasado 24 horas
@@ -358,7 +382,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 long hours = remainingTime.toHours();
                 long minutes = remainingTime.toMinutes() % 60;
                 long seconds = remainingTime.toSeconds() % 60;
-                return sendMessage(new MessageBody(waId, String.format("Tu límite de interacciones ha sido alcanzado, tiempo faltante: %02d:%02d:%02d. ⏳", hours, minutes, seconds)));
+                return sendMessage(new MessageBody(waId, String.format("Tu límite de interacciones ha sido alcanzado, tiempo faltante: %02d:%02d:%02d. ⏳", hours, minutes, seconds),
+                        "System", "Back-end", businessPhoneNumber, "text", null));
             }
         }
 
@@ -366,7 +391,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         if (user.getLimitQuestions() <= 0) {
             user.setNextResetDate(timeNow.plusHours(hoursToWaitAfterLimit));
             userChatRepository.save(user);
-            return sendMessage(new MessageBody(waId, "Tu límite de interacciones ha sido alcanzado, vuelve mañana ⏳."));
+            return sendMessage(new MessageBody(waId, "Tu límite de interacciones ha sido alcanzado, vuelve mañana ⏳.",
+                    "System", "Back-end", businessPhoneNumber, "text", null));
         }
 
         //! 6. Obtener respuesta de IA
@@ -394,9 +420,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         user.setValidQuestionCount(user.getValidQuestionCount() + 1);
         userChatRepository.save(user);
 
-        return sendMessage(new MessageBody(waId, data.answer()));
+        return sendMessage(new MessageBody(waId, data.answer(), "CatIA", "IA", businessPhoneNumber, "text", null));
     }
-
 
     // ================ LLegada de Exepeciones Informativas o Moderación de IA ===================
     private ResponseWhatsapp handleApiInfoException(ApiInfoException e, String waId) {
@@ -407,254 +432,383 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             }
         });
         logger.warn("Mensaje informativo recibido: " + e.getInfoMessage());
-        return sendMessage(new MessageBody(waId, e.getInfoMessage()));
+        return sendMessage(new MessageBody(waId, e.getInfoMessage(), "CatIA", "IA", businessPhoneNumber, "text", null));
     }
-
 
     // =================== Recibir y enviar respuesta automática ======================
     @Override
     public ResponseWhatsapp handleUserMessage(WhatsAppDataDto.WhatsAppMessage message) {
         LocalDateTime timeNow = LocalDateTime.now();
-
-        // Extraer datos básicos del mensaje
         var changeValue = message.entry().get(0).changes().get(0).value();
-        String wamid            = changeValue.messages().get(0).id();
-        String messageType      = changeValue.messages().get(0).type();
-        String waId             = changeValue.contacts().get(0).wa_id();
-        var messageOptionalText = changeValue.messages().get(0).text();
 
-        // Para obtener respuesta de la plantilla de msg
-        if (messageType.equals("interactive")) {
-            var msg = changeValue.messages().get(0);
-            var ctx = msg.context();
-            Object rawInteractive = msg.interactive();
-            String ts = msg.timestamp();
+        if (changeValue.messages() != null && !changeValue.messages().isEmpty()) {
+            String messageType = changeValue.messages().get(0).type();
+            String wamid = changeValue.messages().get(0).id();
+            String waId = changeValue.contacts().get(0).wa_id();
+            var messageOptionalText = changeValue.messages().get(0).text();
 
-            long epochSec = Long.parseLong(ts);
-            LocalDateTime answeredAt = LocalDateTime.ofInstant(
-                Instant.ofEpochSecond(epochSec),
-                ZoneId.systemDefault()
-            );
+            UserChatEntity user = userChatRepository.findByWhatsappPhone(waId)
+                    .orElseGet(() -> createNewUser(waId, timeNow));
 
-            if (ctx != null && rawInteractive instanceof Map<?,?> interactiveMap) {
-                Object nfmObj = interactiveMap.get("nfm_reply");
-                if (nfmObj instanceof Map<?,?> nfmMap) {
-                    String parentWamid  = ctx.id();
-                    String answerJson   = (String) nfmMap.get("response_json");
-                    templateMsgRepo.findByWamid(parentWamid).ifPresent(log -> {
-                        log.setAnswer(answerJson);
-                        log.setAnsweredAt(answeredAt);
-                        templateMsgRepo.save(log);
-                    });
-                }
+            if (user.isBlock()) {
+                return null;
             }
-            return null;
-        }
 
-        // Buscar el usuario o crearlo si no existe
-        UserChatEntity user = userChatRepository.findByWhatsappPhone(waId)
-            .orElseGet(() -> createNewUser(waId, timeNow));
+            markAsRead(new RequestWhatsappAsRead("whatsapp", "read", wamid, new TypingIndicator("text")));
 
-        // Verificar si el usuario ya está bloqueado
-        if (user.isBlock()) {
-            return null;
-        }
+            // Recivir mensaje interactivo
+            if (messageType.equals("interactive")) {
+                var msg = changeValue.messages().get(0);
+                var ctx = msg.context();
+                Object rawInteractive = msg.interactive();
+                String ts = msg.timestamp();
 
-        // Marcar el mensaje como leído y estado "escribiendo..."
-        markAsRead(new RequestWhatsappAsRead("whatsapp", "read", wamid, new TypingIndicator("text")));
+                long epochSec = Long.parseLong(ts);
+                LocalDateTime answeredAt = LocalDateTime.ofInstant(
+                        Instant.ofEpochSecond(epochSec),
+                        ZoneId.systemDefault());
 
-        try {
-            //! Verificar el estado de la conversación
-            switch (user.getConversationState()) {
-
-                case NEW: {
-                    return sendWelcomeMessage(user, waId);
-                }
-
-                case ASKED_FOR_CEDULA: {
-                    if (messageOptionalText.isEmpty() || !messageType.equals("text")) {
-                        return null;
+                if (ctx != null && rawInteractive instanceof Map<?, ?> interactiveMap) {
+                    Object nfmObj = interactiveMap.get("nfm_reply");
+                    if (nfmObj instanceof Map<?, ?> nfmMap) {
+                        String parentWamid = ctx.id();
+                        String answerJson = (String) nfmMap.get("response_json");
+                        templateMsgRepo.findByWamid(parentWamid).ifPresent(log -> {
+                            log.setAnswer(answerJson);
+                            log.setAnsweredAt(answeredAt);
+                            templateMsgRepo.save(log);
+                        });
                     }
-                    String messageText = messageOptionalText.get().body();
-                    return handleWaitingForCedula(user, messageText, waId, timeNow);
                 }
+                return null;
+            }
 
-                case READY: {
-                    if (messageOptionalText.isEmpty() || !messageType.equals("text")) {
-                        return null;
+            // Guardar mensaje entrante
+            for (var msg : changeValue.messages()) {
+                MessageEntity entity = MessageMapperHelper.fromWebhookMessage(
+                    changeValue,
+                    msg,
+                    "inbound",
+                    "user"
+                );
+                messageRepository.save(entity);
+            }
+
+            // Manejar estados de conversación
+            try {
+                switch (user.getConversationState()) {
+                    case NEW: {
+                        return sendWelcomeMessage(user, waId);
                     }
-                    String messageText = messageOptionalText.get().body();
-                    return handleReadyState(user, messageText, waId, timeNow);
-                }
-
-                case WAITING_ATTACHMENTS: {
-                    boolean expired = user.getAttachStartedAt() == null || user.getAttachTtlMinutes() == null || Instant.now().isAfter(
-                        user.getAttachStartedAt().plus(Duration.ofMinutes(user.getAttachTtlMinutes()))
-                    );
-
-                    if (expired) {
-                        // Si expiró, cerramos la sesión de adjuntos y volvemos a READY
-                        user.setConversationState(ConversationState.READY);
-                        user.setAttachStartedAt(null);
-                        user.setAttachTtlMinutes(null);
-                        userChatRepository.save(user);
-
-                        return sendMessage(new MessageBody(
-                            waId,
-                            "⚠️ La sesión para adjuntar expiró. ⚠️ "
-                        ));
-                    }
-
-                    if (messageType.equals("text")) {
+    
+                    case ASKED_FOR_CEDULA: {
+                        if (messageOptionalText.isEmpty() || !messageType.equals("text")) {
+                            return null;
+                        }
                         String messageText = messageOptionalText.get().body();
-                        user.setConversationState(ConversationState.READY);
-                        userChatRepository.save(user);
+                        return handleWaitingForCedula(user, messageText, waId, timeNow);
+                    }
+    
+                    case READY: {
+                        if (messageOptionalText.isEmpty() || !messageType.equals("text")) {
+                            return null;
+                        }
+                        String messageText = messageOptionalText.get().body();
                         return handleReadyState(user, messageText, waId, timeNow);
                     }
-                    
-
-                    // Guardar IMAGEN
-                    if (messageType.equals("image")) {
-                        var msg = changeValue.messages().get(0);
-                        var img = msg.image().get();
-
-                        AttachmentEntity att = new AttachmentEntity();
-                        att.setWhatsappPhone(waId);
-                        att.setTimestamp(Instant.ofEpochSecond(Long.parseLong(msg.timestamp())));
-                        att.setType("image");
-                        att.setMimeType(img.mime_type());
-                        att.setAttachmentID(img.id());
-                        att.setCaption(img.caption());
-                        att.setConversationState(ConversationState.WAITING_ATTACHMENTS);
-                        att.setAttachmentStatus(AttachmentStatus.UNUSED);
-
-                        attachmentRepository.save(att);
-
-                        return sendMessage(new MessageBody(
-                            waId, "🖼️ Imagen recibida. Sube más o dime si deseas continuar."
-                        ));
+    
+                    case WAITING_ATTACHMENTS: {
+                        boolean expired = user.getAttachStartedAt() == null || user.getAttachTtlMinutes() == null || Instant.now().isAfter(
+                            user.getAttachStartedAt().plus(Duration.ofMinutes(user.getAttachTtlMinutes()))
+                        );
+    
+                        if (expired) {
+                            // Si expiró, cerramos la sesión de adjuntos y volvemos a READY
+                            user.setConversationState(ConversationState.READY);
+                            user.setAttachStartedAt(null);
+                            user.setAttachTtlMinutes(null);
+                            userChatRepository.save(user);
+    
+                            return sendMessage(new MessageBody(
+                                waId,
+                                "⚠️ La sesión para adjuntar expiró. ⚠️ ", "System", "Back-end", businessPhoneNumber,
+                                    "text", null
+                            ));
+                        }
+    
+                        if (messageType.equals("text")) {
+                            String messageText = messageOptionalText.get().body();
+                            user.setConversationState(ConversationState.READY);
+                            userChatRepository.save(user);
+                            return handleReadyState(user, messageText, waId, timeNow);
+                        }
+                        
+    
+                        // Guardar IMAGEN
+                        if (messageType.equals("image")) {
+                            var msg = changeValue.messages().get(0);
+                            var img = msg.image().get();
+    
+                            AttachmentEntity att = new AttachmentEntity();
+                            att.setWhatsappPhone(waId);
+                            att.setTimestamp(Instant.ofEpochSecond(Long.parseLong(msg.timestamp())));
+                            att.setType("image");
+                            att.setMimeType(img.mime_type());
+                            att.setAttachmentID(img.id());
+                            att.setCaption(img.caption());
+                            att.setConversationState(ConversationState.WAITING_ATTACHMENTS);
+                            att.setAttachmentStatus(AttachmentStatus.UNUSED);
+    
+                            attachmentRepository.save(att);
+    
+                            return sendMessage(new MessageBody(
+                                waId, "🖼️ Imagen recibida. Sube más o dime si deseas continuar.", "System",
+                                    "Back-end", businessPhoneNumber, "text", null
+                            ));
+                        }
+    
+                        // Guardar DOCUMENTO
+                        if (messageType.equals("document")) {
+                            var msg = changeValue.messages().get(0);
+                            var doc = msg.document().get();
+    
+                            AttachmentEntity att = new AttachmentEntity();
+                            att.setWhatsappPhone(waId);
+                            att.setTimestamp(Instant.ofEpochSecond(Long.parseLong(msg.timestamp())));
+                            att.setType("document");
+                            att.setMimeType(doc.mime_type());
+                            att.setAttachmentID(doc.id());
+                            att.setCaption(null);
+                            att.setConversationState(ConversationState.WAITING_ATTACHMENTS);
+                            att.setAttachmentStatus(AttachmentStatus.UNUSED);
+    
+                            attachmentRepository.save(att);
+    
+                            return sendMessage(new MessageBody(
+                                waId, "📎 Documento recibido. Sube más o dime si deseas continuar.", "System",
+                                    "Back-end", businessPhoneNumber, "text", null
+                            ));
+                        }
+    
+                        // Cualquier otro tipo: ignorar (stickers, audio, etc.)
+                        return null;
                     }
-
-                    // Guardar DOCUMENTO
-                    if (messageType.equals("document")) {
-                        var msg = changeValue.messages().get(0);
-                        var doc = msg.document().get();
-
-                        AttachmentEntity att = new AttachmentEntity();
-                        att.setWhatsappPhone(waId);
-                        att.setTimestamp(Instant.ofEpochSecond(Long.parseLong(msg.timestamp())));
-                        att.setType("document");
-                        att.setMimeType(doc.mime_type());
-                        att.setAttachmentID(doc.id());
-                        att.setCaption(null);
-                        att.setConversationState(ConversationState.WAITING_ATTACHMENTS);
-                        att.setAttachmentStatus(AttachmentStatus.UNUSED);
-
-                        attachmentRepository.save(att);
-
-                        return sendMessage(new MessageBody(
-                            waId, "📎 Documento recibido. Sube más o dime si deseas continuar."
-                        ));
-                    }
-
-                    // Cualquier otro tipo: ignorar (stickers, audio, etc.)
-                    return null;
-                }
-
-                case WAITING_ATTACHMENTS_FOR_TICKET_EXISTING: {
-
-                    Long ticketId = user.getAttachTargetTicketId();
-
-                    // 0) TTL
-                    boolean expired = user.getAttachStartedAt() == null || user.getAttachTtlMinutes() == null || Instant.now().isAfter(user.getAttachStartedAt().plus(Duration.ofMinutes(user.getAttachTtlMinutes())));
-                    if (expired) {
-                        user.setConversationState(ConversationState.READY);
-                        user.setAttachTargetTicketId(null);
-                        user.setAttachStartedAt(null);
-                        user.setAttachTtlMinutes(null);
-                        userChatRepository.save(user);
-                        return sendMessage(new MessageBody(waId, "⚠️ La sesión para adjuntar expiró. ⚠️"));
-                    }
-
-                    // 1) Texto = finalizar y adjuntar batch
-                    if ("text".equals(messageType)) {
-                        String messageText = messageOptionalText.get().body();
-                        try {
-                            glpiService.attachRecentWhatsappMediaToTicket(waId, ticketId, user.getAttachTtlMinutes());
-                        } catch (ServerClientException sce) {
-                            logger.warn("Adjuntado fallo: {}", sce.getMessage());
-                            sendMessage(new MessageBody(waId, "⚠️🚨 " + sce.getMessage() + " 🚨⚠️"));
-                        } finally {
+    
+                    case WAITING_ATTACHMENTS_FOR_TICKET_EXISTING: {
+    
+                        Long ticketId = user.getAttachTargetTicketId();
+    
+                        // 0) TTL
+                        boolean expired = user.getAttachStartedAt() == null || user.getAttachTtlMinutes() == null || Instant.now().isAfter(user.getAttachStartedAt().plus(Duration.ofMinutes(user.getAttachTtlMinutes())));
+                        if (expired) {
                             user.setConversationState(ConversationState.READY);
                             user.setAttachTargetTicketId(null);
                             user.setAttachStartedAt(null);
                             user.setAttachTtlMinutes(null);
                             userChatRepository.save(user);
+                            return sendMessage(new MessageBody(waId, "⚠️ La sesión para adjuntar expiró. ⚠️", "System",
+                                    "Back-end", businessPhoneNumber, "text", null));
                         }
-                        return handleReadyState(user, messageText, waId, timeNow);
+    
+                        // 1) Texto = finalizar y adjuntar batch
+                        if ("text".equals(messageType)) {
+                            String messageText = messageOptionalText.get().body();
+                            try {
+                                glpiService.attachRecentWhatsappMediaToTicket(waId, ticketId, user.getAttachTtlMinutes());
+                            } catch (ServerClientException sce) {
+                                logger.warn("Adjuntado fallo: {}", sce.getMessage());
+                                sendMessage(new MessageBody(waId, "⚠️🚨 " + sce.getMessage() + " 🚨⚠️", "System",
+                                        "Back-end", businessPhoneNumber, "text", null));
+                            } finally {
+                                user.setConversationState(ConversationState.READY);
+                                user.setAttachTargetTicketId(null);
+                                user.setAttachStartedAt(null);
+                                user.setAttachTtlMinutes(null);
+                                userChatRepository.save(user);
+                            }
+                            return handleReadyState(user, messageText, waId, timeNow);
+                        }
+    
+                        // 2) Imagen
+                        if ("image".equals(messageType)) {
+                            var msg = changeValue.messages().get(0);
+                            var img = msg.image().get();
+    
+                            AttachmentEntity att = new AttachmentEntity();
+                            att.setWhatsappPhone(waId);
+                            att.setTimestamp(Instant.ofEpochSecond(Long.parseLong(msg.timestamp())));
+                            att.setType("image");
+                            att.setMimeType(img.mime_type());
+                            att.setAttachmentID(img.id());
+                            att.setCaption(img.caption());
+                            att.setConversationState(ConversationState.WAITING_ATTACHMENTS_FOR_TICKET_EXISTING);
+                            att.setAttachmentStatus(AttachmentStatus.UNUSED);
+                            attachmentRepository.save(att);
+    
+                            return sendMessage(new MessageBody(waId, "🖼️ Imagen recibida. Sube más o dime si deseas continuar.", "System", "Back-end",
+                                    businessPhoneNumber, "text", null));
+                        }
+    
+                        // 3) Documento
+                        if ("document".equals(messageType)) {
+                            var msg = changeValue.messages().get(0);
+                            var doc = msg.document().get();
+    
+                            AttachmentEntity att = new AttachmentEntity();
+                            att.setWhatsappPhone(waId);
+                            att.setTimestamp(Instant.ofEpochSecond(Long.parseLong(msg.timestamp())));
+                            att.setType("document");
+                            att.setMimeType(doc.mime_type());
+                            att.setAttachmentID(doc.id());
+                            att.setCaption(doc.caption());
+                            att.setConversationState(ConversationState.WAITING_ATTACHMENTS_FOR_TICKET_EXISTING);
+                            att.setAttachmentStatus(AttachmentStatus.UNUSED);
+                            attachmentRepository.save(att);
+    
+                            return sendMessage(new MessageBody(waId, "📎 Documento recibido. Sube más o dime si deseas continuar.", "System", "Back-end",
+                                    businessPhoneNumber, "text", null));
+                        }
+    
+                        // Otros tipos: ignorar
+                        return null;
                     }
-
-                    // 2) Imagen
-                    if ("image".equals(messageType)) {
-                        var msg = changeValue.messages().get(0);
-                        var img = msg.image().get();
-
-                        AttachmentEntity att = new AttachmentEntity();
-                        att.setWhatsappPhone(waId);
-                        att.setTimestamp(Instant.ofEpochSecond(Long.parseLong(msg.timestamp())));
-                        att.setType("image");
-                        att.setMimeType(img.mime_type());
-                        att.setAttachmentID(img.id());
-                        att.setCaption(img.caption());
-                        att.setConversationState(ConversationState.WAITING_ATTACHMENTS_FOR_TICKET_EXISTING);
-                        att.setAttachmentStatus(AttachmentStatus.UNUSED);
-                        attachmentRepository.save(att);
-
-                        return sendMessage(new MessageBody(waId, "🖼️ Imagen recibida. Sube más o dime si deseas continuar."));
+    
+                    default: {
+                        user.setConversationState(ConversationState.NEW);
+                        userChatRepository.save(user);
+                        return sendMessage(new MessageBody(
+                            waId,
+                            "¡Ups! 🫢 Algo inesperado ocurrió. Reiniciemos. \n" + "Por favor, Escribe un mensaje para comenzar.",
+                            "System",
+                            "Back-end",
+                            businessPhoneNumber,
+                            "text",
+                            null
+                        ));
                     }
-
-                    // 3) Documento
-                    if ("document".equals(messageType)) {
-                        var msg = changeValue.messages().get(0);
-                        var doc = msg.document().get();
-
-                        AttachmentEntity att = new AttachmentEntity();
-                        att.setWhatsappPhone(waId);
-                        att.setTimestamp(Instant.ofEpochSecond(Long.parseLong(msg.timestamp())));
-                        att.setType("document");
-                        att.setMimeType(doc.mime_type());
-                        att.setAttachmentID(doc.id());
-                        att.setCaption(doc.caption());
-                        att.setConversationState(ConversationState.WAITING_ATTACHMENTS_FOR_TICKET_EXISTING);
-                        att.setAttachmentStatus(AttachmentStatus.UNUSED);
-                        attachmentRepository.save(att);
-
-                        return sendMessage(new MessageBody(waId, "📎 Documento recibido. Sube más o dime si deseas continuar."));
-                    }
-
-                    // Otros tipos: ignorar
-                    return null;
                 }
-
-                default: {
-                    user.setConversationState(ConversationState.NEW);
-                    userChatRepository.save(user);
-                    return sendMessage(new MessageBody(waId,
-                        "¡Ups! 🫢 Algo inesperado ocurrió. Reiniciemos. \n"
-                    + "Por favor, Escribe un mensaje para comenzar."));
-                }
+            } catch (ApiInfoException e) {
+                return handleApiInfoException(e, waId);
+            } catch (Exception e) {
+                logger.error("Error al procesar mensaje de usuario: ", e);
+                return sendMessage(new MessageBody(
+                    waId,
+                    "Ha ocurrido un error inesperado 😟. Por favor, inténtalo nuevamente más tarde.",
+                    "System",
+                    "Back-end", 
+                    businessPhoneNumber, 
+                    "text",
+                    null
+                ));
             }
-        } catch (ApiInfoException e) {
-            return handleApiInfoException(e, waId);
-        } catch (Exception e) {
-            logger.error("Error al procesar mensaje de usuario: ", e);
-            return sendMessage(new MessageBody(
-                waId,
-                "Ha ocurrido un error inesperado 😟. Por favor, inténtalo nuevamente más tarde."
-            ));
         }
+
+        logger.warn("⚠️ Mensaje recibido sin contenido válido.");
+        return null;
     }
 
+    // =================== Recivir estados de mensajes ======================
+    @Override
+    public void handleMessageStatus(WhatsAppDataDto.WhatsAppMessage status) {
+        var changeValue = status.entry().get(0).changes().get(0).value();
+
+        if (changeValue.statuses() == null || changeValue.statuses().isEmpty()) {
+            logger.warn("⚠️ Webhook de estado sin contenido válido.");
+            return;
+        }
+
+        for (var s : changeValue.statuses()) {
+
+            String waId = s.recipient_id();
+            String messageId = s.id();
+            String state = s.status();
+
+            UserChatEntity user = userChatRepository.findByWhatsappPhone(waId)
+                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado para waId: " + waId));
+
+            if (user.isBlock()) {
+                return;
+            }
+
+            Optional<MessageEntity> op = messageRepository.findByMessageId(messageId);
+
+            MessageEntity msg;
+
+            if (op.isEmpty()) {
+                logger.warn(
+                        "⚠️ Mensaje con ID {} no encontrado en BD. Creando registro...",
+                        messageId);
+
+                msg = new MessageEntity();
+
+                msg.setConversationUserPhone(waId);
+                msg.setFromPhone(businessPhoneNumber);
+                msg.setToPhone(waId);
+                msg.setMessageId(messageId);
+                msg.setFailedAt(Instant.ofEpochSecond(Long.parseLong(s.timestamp())));
+                msg.setTimestamp(Instant.now());
+                msg.setDirection("outbound");
+                msg.setSource("whatsapp_api_cloud");
+
+                if (s.errors() != null && !s.errors().isEmpty()) {
+                    var err = s.errors().get(0);
+                    msg.setErrorCode(err.code());
+                    msg.setErrorTitle(err.title());
+                    msg.setErrorMessage(err.message());
+                    if (err.error_data() != null) {
+                        msg.setErrorDetails(err.error_data().details());
+                    }
+                }
+
+                messageRepository.save(msg);
+            } else {
+                msg = op.get();
+            }
+
+            Instant ts = Instant.ofEpochSecond(Long.parseLong(s.timestamp()));
+
+            switch (state) {
+                case "sent" -> {
+                    if (msg.getSentAt() == null)
+                        msg.setSentAt(ts);
+                }
+                case "delivered" -> {
+                    if (msg.getDeliveredAt() == null)
+                        msg.setDeliveredAt(ts);
+                }
+                case "read" -> {
+                    if (msg.getReadAt() == null)
+                        msg.setReadAt(ts);
+                }
+                case "failed" -> {
+                    msg.setFailedAt(ts);
+                    if (s.errors() != null && !s.errors().isEmpty()) {
+                        var err = s.errors().get(0);
+                        msg.setErrorCode(err.code());
+                        msg.setErrorTitle(err.title());
+                        msg.setErrorMessage(err.message());
+                        if (err.error_data() != null)
+                            msg.setErrorDetails(err.error_data().details());
+                    }
+
+                }
+                default -> logger.debug("Estado no manejado: {}", state);
+            }
+
+            s.pricing().ifPresent(p -> {
+                msg.setBillable(p.billable());
+                msg.setPricingModel(p.pricing_model());
+                msg.setPricingCategory(p.category());
+                msg.setPricingType(p.type());
+            });
+
+            try {
+                messageRepository.save(msg);
+            } catch (Exception e) {
+                logger.error("Error al guardar estado {} para mensaje {}: {}", state, messageId, e.getMessage());
+            }
+        }
+    }
 
     // ============== Eliminar archvio multi-media por ID ===================
     @Override
@@ -675,62 +829,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             return false;
         }
     }
-
-
-    // ============== Enviar una imagen por ID junto a un mensaje ==================
-    @Override
-    public ResponseWhatsapp sendImageMessageById(String toPhoneNumber, String mediaId, String caption) {
-        try {
-            RequestMessages msj = RequestMessagesFactory.buildImageByIdWithText(toPhoneNumber, mediaId, caption);
-
-            ResponseWhatsapp res = NewResponseBuilder(msj, "/messages");
-            return res;
-
-        } catch (Exception e) {
-            logger.error("Error al enviar la imagen con texto: ", e);
-            return null;
-        }
-    }
-
-
-    // ============== Enviar un docuemnto por ID junto a un mensaje ==================
-    @Override
-    public ResponseWhatsapp sendDocumentMessageById(String toPhoneNumber, String documentId, String caption, String filename) {
-        try {
-            RequestMessages msj = RequestMessagesFactory.buildDocumentByIdWithText(toPhoneNumber, documentId, caption, filename);
-
-            ResponseWhatsapp res = NewResponseBuilder(msj, "/messages");
-            return res;
-
-        } catch (Exception e) {
-            logger.error("Error al enviar documento con texto: ", e);
-            return null;
-        }
-    }
-
-
-    // ============== Enviar plantilla de mensaje ==================
-    private File getTemplateImageFile() {
-        // Extrae el recurso embebido y lo vuelca a un File temporal
-        try {
-            Resource res = new ClassPathResource(TEMPLATE_IMAGE_CLASSPATH);
-            InputStream is = res.getInputStream();
-            String ext = ".png";
-            File tmp = File.createTempFile("tpl_", ext);
-            Files.copy(is, tmp.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            return tmp;
-        } catch (IOException e) {
-            throw new IllegalStateException(
-                "No se pudo cargar la plantilla de feedback desde classpath: " + TEMPLATE_IMAGE_CLASSPATH, e);
-        }
-    }
-
-
-    @Cacheable(cacheNames="mediaIdCache", key="'" + TEMPLATE_NAME + "'")
-    public String loadTemplateMediaId() {
-        return whatsappMediaService.uploadMedia(getTemplateImageFile());
-    }
-
 
     // ============== Obtener Media ============
     @Override
@@ -758,21 +856,16 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
-
-    @CacheEvict(cacheNames="mediaIdCache", key="'" + TEMPLATE_NAME + "'")
-    public String evictAndReloadTemplateMediaId() {
-        return loadTemplateMediaId();
-    }
-
-
+    // ============== Enviar plantilla de feedback ==================
     @Override
     public ResponseWhatsapp sendTemplatefeedback(String toPhoneNumber) {
-        String mediaId = loadTemplateMediaId();
+        String mediaId = templateMediaCacheService.loadTemplateMediaId(TEMPLATE_NAME);
 
         try {
             getMediaMetadata(mediaId);
         } catch (MediaNotFoundException ex) {
-            mediaId = evictAndReloadTemplateMediaId();
+            templateMediaCacheService.evictTemplateMediaId(TEMPLATE_NAME);
+            mediaId = templateMediaCacheService.loadTemplateMediaId(TEMPLATE_NAME);
         }
 
         RequestMessages tpl = RequestMessagesFactory.buildTemplateMessage(
@@ -780,13 +873,12 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             TEMPLATE_NAME,
             "es",
             mediaId,
-            "Catia",
+            "CatIA",
             "Encuesta enviada por la Universidad Católica de Cuenca.",
             "TAKE_SURVEY"
         );
         ResponseWhatsapp resp = NewResponseBuilder(tpl, "/messages");
 
-        // 3) extraemos el wamid de la respuesta
         String wamid = null;
         String messageStatus = "";
         if (resp != null && resp.messages() != null && !resp.messages().isEmpty()) {
@@ -796,7 +888,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
         }
 
-        // 4) guardamos el log
         TemplateMessageEntity templateMessage = new TemplateMessageEntity();
         templateMessage.setToPhone(toPhoneNumber);
         templateMessage.setTemplateName(TEMPLATE_NAME);
@@ -807,7 +898,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
         return resp;
     }
-
 
     // ============== Obtener plantillas ==================
     @Override
@@ -821,7 +911,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
-
     // ============== Obtener plantilla por fecha de envío ==================
     @Override
     public List<TemplateMessageDto> listResponseTemplateByDate(LocalDateTime inicio, LocalDateTime fin) {
@@ -832,7 +921,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             .collect(Collectors.toList());
     }
 
-
     // ============== Obtener plantilla por nombre ==================
     @Override
     public List<TemplateMessageDto> listResponseTemplateByName(String templateName) {
@@ -840,7 +928,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             .map(this::templateMessageEntitytoDto)
             .collect(Collectors.toList());
     }
-
 
     // ============== Obtener plantilla por usuario ==================
     @Override
@@ -850,7 +937,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             .collect(Collectors.toList());
     }
 
-
+    // ============== Convertir entidad plantilla a DTO ==================
     private TemplateMessageDto templateMessageEntitytoDto(TemplateMessageEntity log) {
         return new TemplateMessageDto(
             log.getId(),
@@ -863,44 +950,152 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             log.getMessageStatus()
         );
     }
+
+    // ============== Enviar una imagen por ID ==================
+    @Override
+    public ResponseWhatsapp sendImageMessageById(MessageBody payload, String mediaId) {
+        try {
+            RequestMessages msj = RequestMessagesFactory.buildImageById(payload.number(), mediaId, payload.message(), payload.contextId());
+            ResponseWhatsapp res = NewResponseBuilder(msj, "/messages");
+
+            try { Thread.sleep(150); } catch (InterruptedException ignored) {}
+
+            if (res != null && !res.messages().isEmpty()) {
+                MessageEntity entity = MessageMapperHelper.createSentMessageEntity(payload, res);
+                messageRepository.save(entity);
+            }
+
+            return res;
+
+        } catch (Exception e) {
+            logger.error("Error al enviar la imagen por ID: ", e);
+            return null;
+        }
+    }
     
-
-    // ============= Enviar una imagen por URL como mensaje ================
-    public ResponseWhatsapp sendImageMessageByUrl(String toPhoneNumber, String imageUrl) {
+    // ============= Enviar una imagen por URL ================
+    @Override
+    public ResponseWhatsapp sendImageMessageByUrl(MessageBody payload, String imageUrl) {
         try {
-            RequestMessages msj = RequestMessagesFactory.buildImageByUrl(toPhoneNumber, imageUrl);
-
+            RequestMessages msj = RequestMessagesFactory.buildImageByUrl(payload.number(), imageUrl, payload.message(), payload.contextId());
             ResponseWhatsapp res = NewResponseBuilder(msj, "/messages");
+
+            try { Thread.sleep(150); } catch (InterruptedException ignored) {}
+
+            if (res != null && !res.messages().isEmpty()) {
+                MessageEntity entity = MessageMapperHelper.createSentMessageEntity(payload, res);
+                messageRepository.save(entity);
+            }
+
             return res;
 
         } catch (Exception e) {
-            logger.error("Error al enviar la imagen: ", e);
+            logger.error("Error al enviar la imagen por URL: ", e);
             return null;
         }
     }
 
-
-    // ============== Enviar una video por URL como mensaje ============
-    public ResponseWhatsapp sendVideoMessageByUrl(String toPhoneNumber, String videoUrl, String caption) {
+    // ============== Enviar un docuemnto por ID ==================
+    @Override
+    public ResponseWhatsapp sendDocumentMessageById(MessageBody payload, String documentId, String filename) {
         try {
-            RequestMessages msj = RequestMessagesFactory.buildVideoByUrl(toPhoneNumber, videoUrl, caption);
-
+            RequestMessages msj = RequestMessagesFactory.buildDocumentById(payload.number(), documentId, payload.message(), filename, payload.contextId());
             ResponseWhatsapp res = NewResponseBuilder(msj, "/messages");
+
+            if (res != null && !res.messages().isEmpty()) {
+                MessageEntity entity = MessageMapperHelper.createSentMessageEntity(payload, res);
+                messageRepository.save(entity);
+            }
+
             return res;
 
         } catch (Exception e) {
-            logger.error("Error al enviar el video: ", e);
+            logger.error("Error al enviar documento por ID: ", e);
             return null;
         }
     }
 
-
-    // ============== Enviar una Sticker statico/animado por URL como mensaje ==============
-    public ResponseWhatsapp sendStickerMessageByUrl(String toPhoneNumber, String stickerUrl) {
+    // ============== Enviar un docuemnto por URL ==================
+    @Override
+    public ResponseWhatsapp sendDocumentMessageByUrl(MessageBody payload, String documentUrl, String filename){
         try {
-            RequestMessages msj = RequestMessagesFactory.buildStickerByUrl(toPhoneNumber, stickerUrl);
-
+            RequestMessages msj = RequestMessagesFactory.buildDocumentByUrl(payload.number(), 
+                    documentUrl,
+                    payload.message(), filename, payload.contextId());
             ResponseWhatsapp res = NewResponseBuilder(msj, "/messages");
+
+            try { Thread.sleep(150); } catch (InterruptedException ignored) {}
+
+            if (res != null && !res.messages().isEmpty()) {
+                MessageEntity entity = MessageMapperHelper.createSentMessageEntity(payload, res);
+                messageRepository.save(entity);
+            }
+
+            return res;
+
+        } catch (Exception e) {
+            logger.error("Error al enviar documento por URL: ", e);
+            return null;
+        }
+    }
+
+    // ============== Enviar una video por URL ============
+    @Override
+    public ResponseWhatsapp sendVideoMessageByUrl(MessageBody payload, String videoUrl) {
+        try {
+            RequestMessages msj = RequestMessagesFactory.buildVideoByUrl(payload.number(), videoUrl, payload.message(), payload.contextId());
+            ResponseWhatsapp res = NewResponseBuilder(msj, "/messages");
+
+            try { Thread.sleep(150); } catch (InterruptedException ignored) {}
+
+            if (res != null && !res.messages().isEmpty()) {
+                MessageEntity entity = MessageMapperHelper.createSentMessageEntity(payload, res);
+                messageRepository.save(entity);
+            }
+
+            return res;
+
+        } catch (Exception e) {
+            logger.error("Error al enviar el video por URL: ", e);
+            return null;
+        }
+    }
+
+    // ================= Enviar un video por ID ==============
+    @Override
+    public ResponseWhatsapp sendVideoMessageById(MessageBody payload, String videoId) {
+        try {
+            RequestMessages msj = RequestMessagesFactory.buildVideoById(payload.number(), videoId, payload.message(), payload.contextId());
+            ResponseWhatsapp res = NewResponseBuilder(msj, "/messages");
+
+            try { Thread.sleep(150); } catch (InterruptedException ignored) {}
+
+            if (res != null && !res.messages().isEmpty()) {
+                MessageEntity entity = MessageMapperHelper.createSentMessageEntity(payload, res);
+                messageRepository.save(entity);
+            }
+
+            return res;
+
+        } catch (Exception e) {
+            logger.error("Error al enviar el video por ID: ", e);
+            return null;
+        }
+    }
+
+    // ============== Enviar una Sticker statico/animado por URL ==============
+    public ResponseWhatsapp sendStickerMessageByUrl(MessageBody payload, String stickerUrl) {
+        try {
+            RequestMessages msj = RequestMessagesFactory.buildStickerByUrl(payload.number(), stickerUrl, payload.contextId());
+            ResponseWhatsapp res = NewResponseBuilder(msj, "/messages");
+
+            try { Thread.sleep(150); } catch (InterruptedException ignored) {}
+
+            if (res != null && !res.messages().isEmpty()) {
+                MessageEntity entity = MessageMapperHelper.createSentMessageEntity(payload, res);
+                messageRepository.save(entity);
+            }
+
             return res;
 
         } catch (Exception e) {

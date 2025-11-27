@@ -10,39 +10,51 @@ import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.templa
 
 public class RequestMessagesFactory {
 
-    public static RequestMessages buildImageByIdWithText(String to, String mediaId, String caption) {
-        RequestMessages req = base(to, "image");
-        req.setImage(new RequestMediaId(mediaId, caption));
-        return req;
-    }
-
-    public static RequestMessages buildDocumentByIdWithText(String to, String documentId, String caption, String filename) {
-        RequestMessages req = base(to, "document");
-        req.setDocument(new RequestDocument(documentId, caption, filename));
-        return req;
-    }
-
-    public static RequestMessages buildTextMessage(String to, String message) {
-        RequestMessages req = base(to, "text");
+    public static RequestMessages buildTextMessage(String to, String message, String contextId) {
+        RequestMessages req = base(to, "text", contextId);
         req.setText(new RequestMessageText(false, message));
         return req;
     }
 
-    public static RequestMessages buildImageByUrl(String to, String url) {
-        RequestMessages req = base(to, "image");
-        req.setImage(new RequestMediaLink(url));
+    public static RequestMessages buildImageByUrl(String to, String url, String caption, String contextId) {
+        RequestMessages req = base(to, "image", contextId);
+        req.setImage(new RequestMediaUrl(url, caption));
         return req;
     }
 
-    public static RequestMessages buildVideoByUrl(String to, String url, String caption) {
-        RequestMessages req = base(to, "video");
-        req.setVideo(new RequestVideoLink(url, caption));
+    public static RequestMessages buildImageById(String to, String mediaId, String caption, String contextId) {
+        RequestMessages req = base(to, "image", contextId);
+        req.setImage(new RequestMediaId(mediaId, caption));
         return req;
     }
 
-    public static RequestMessages buildStickerByUrl(String to, String url) {
-        RequestMessages req = base(to, "sticker");
-        req.setSticker(new RequestMediaLink(url));
+    public static RequestMessages buildVideoByUrl(String to, String url, String caption, String contextId) {
+        RequestMessages req = base(to, "video", contextId);
+        req.setVideo(new RequestMediaUrl(url, caption));
+        return req;
+    }
+
+    public static RequestMessages buildVideoById(String to, String mediaId, String caption, String contextId) {
+        RequestMessages req = base(to, "video", contextId);
+        req.setVideo(new RequestMediaId(mediaId, caption));
+        return req;
+    }
+
+    public static RequestMessages buildDocumentById(String to, String documentId, String caption, String filename, String contextId) {
+        RequestMessages req = base(to, "document", contextId);
+        req.setDocument(new RequestDocumentId(documentId, caption, filename));
+        return req;
+    }
+
+    public static RequestMessages buildDocumentByUrl(String to, String documentUrl, String caption, String filename, String contextId) {
+        RequestMessages req = base(to, "document", contextId);
+        req.setDocument(new RequestDocumentUrl(documentUrl, caption, filename));
+        return req;
+    }
+
+    public static RequestMessages buildStickerByUrl(String to, String url, String contextId) {
+        RequestMessages req = base(to, "sticker", contextId);
+        req.setSticker(new RequestSticker(url));
         return req;
     }
 
@@ -58,7 +70,7 @@ public class RequestMessagesFactory {
             String footerText,
             String buttonPayload
     ) {
-        RequestMessages msg = base(to, "template");
+        RequestMessages msg = base(to, "template", null);
 
         // Header
         TemplateComponent header = TemplateComponent.builder()
@@ -117,12 +129,15 @@ public class RequestMessagesFactory {
         return msg;
     }
 
-    private static RequestMessages base(String to, String type) {
+    private static RequestMessages base(String to, String type, String contextId) {
         RequestMessages msg = new RequestMessages();
         msg.setMessaging_product("whatsapp");
         msg.setRecipient_type("individual");
         msg.setTo(to);
         msg.setType(type);
+        if (contextId != null && !contextId.isBlank()) {
+            msg.setContext(new RequestContext(contextId));
+        }
         return msg;
     }
 }

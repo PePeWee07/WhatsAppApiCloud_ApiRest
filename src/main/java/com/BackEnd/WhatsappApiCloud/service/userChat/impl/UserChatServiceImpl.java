@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -50,6 +51,9 @@ public class UserChatServiceImpl implements UserchatService {
     private final GlpiService glpiService;
     private final ApiWhatsappService apiWhatsappService;
     private final GlpiServerClient glpiServerClient;
+
+    @Value("${PHONE_NUMBER}")
+    private String businessPhoneNumber;
 
     public UserChatServiceImpl(UserChatRepository repo, ErpServerClient erpClient, UserTicketRepository  userTicketRepository, GlpiService glpiService, ApiWhatsappService apiWhatsappService, GlpiServerClient glpiServerClient) {
         this.erpClient = erpClient;
@@ -364,8 +368,8 @@ public class UserChatServiceImpl implements UserchatService {
         return info;
     }
 
+    // ============ Usuario solicita info del Ticket ============
     @Override
-    @Transactional
     public TicketInfoDto userRequestTicketInfo(String whatsAppPhone, Long ticketId) throws IOException {
         // 1) Verificar que el usuario existe
         TicketInfoDto info = validateAndLinkTicket(whatsAppPhone, ticketId);
@@ -396,9 +400,9 @@ public class UserChatServiceImpl implements UserchatService {
         boolean hasValidSolution = false;
         if (!info.solutions().isEmpty()) {
             TicketInfoDto.TicketSolutionDto solution = info.solutions().stream()
-                .filter(s -> !"Rechazado".equalsIgnoreCase(s.status()))
-                .findFirst()
-                .orElse(null);
+                    .filter(s -> !"Rechazado".equalsIgnoreCase(s.status()))
+                    .findFirst()
+                    .orElse(null);
 
             if (solution != null) {
                 hasValidSolution = true;
@@ -409,18 +413,36 @@ public class UserChatServiceImpl implements UserchatService {
                 // Enviar imágenes asociadas a la solución
                 for (MediaFileDto media : solution.mediaFiles()) {
                     if ("Error".equals(media.mediaId())) {
-                        sb.append("\n⚠️ _El archivo '").append(media.name()).append("' no se pudo enviar porque su formato no es compatible._\n");
+                        sb.append("\n⚠️ _El archivo '").append(media.name())
+                                .append("' no se pudo enviar porque su formato no es compatible._\n");
                         continue;
                     }
 
                     if (media.mimeType().startsWith("image/")) {
-                        apiWhatsappService.sendImageMessageById(whatsAppPhone, media.mediaId(), "📎Adjunto de la solución del ticket");
-                    } else if (
-                        media.mimeType().startsWith("application/") ||
-                        "text/plain".equals(media.mimeType()) ||
-                        "text/csv".equals(media.mimeType())
-                    ) {
-                        apiWhatsappService.sendDocumentMessageById(whatsAppPhone, media.mediaId(), "📎Adjunto de la solución del ticket", media.name());
+                        apiWhatsappService.sendImageMessageById(
+                            new MessageBody(
+                                    whatsAppPhone,
+                                    "🖼️ Imagen del seguimiento del ticket",
+                                    "System",
+                                    "Back-end",
+                                    businessPhoneNumber,
+                                    "image",
+                                    null),
+                            media.mediaId());
+                    } else if (media.mimeType().startsWith("application/") ||
+                            "text/plain".equals(media.mimeType()) ||
+                            "text/csv".equals(media.mimeType())) {
+                       apiWhatsappService.sendDocumentMessageById(
+                            new MessageBody(
+                                    whatsAppPhone,
+                                    "📎 Adjunto del seguimiento",
+                                    "System",
+                                    "Back-end",
+                                    businessPhoneNumber,
+                                    "document",
+                                    null),
+                            media.mediaId(),
+                            media.name());
                     }
 
                     apiWhatsappService.deleteMediaById(media.mediaId());
@@ -438,19 +460,37 @@ public class UserChatServiceImpl implements UserchatService {
             // Enviar imágenes asociadas al seguimiento
             for (MediaFileDto media : lastNote.mediaFiles()) {
                 if ("Error".equals(media.mediaId())) {
-                    sb.append("\n⚠️ _El archivo '").append(media.name()).append("' no se pudo enviar porque su formato no es compatible._\n");
+                    sb.append("\n⚠️ _El archivo '").append(media.name())
+                            .append("' no se pudo enviar porque su formato no es compatible._\n");
                     continue;
                 }
 
                 if (media.mimeType().startsWith("image/")) {
-                    apiWhatsappService.sendImageMessageById(whatsAppPhone, media.mediaId(), "📎Adjunto al seguimiento del ticket");
-                } else if (
-                        media.mimeType().startsWith("application/") ||
+                    apiWhatsappService.sendImageMessageById(
+                            new MessageBody(
+                                    whatsAppPhone,
+                                    "🖼️ Imagen del seguimiento del ticket",
+                                    "System",
+                                    "Back-end",
+                                    businessPhoneNumber,
+                                    "image",
+                                    null),
+                            media.mediaId());
+                } else if (media.mimeType().startsWith("application/") ||
                         "text/plain".equals(media.mimeType()) ||
-                        "text/csv".equals(media.mimeType())
-                    ) {
-                    apiWhatsappService.sendDocumentMessageById(whatsAppPhone, media.mediaId(), "📎Adjunto al seguimiento del ticket", media.name());
-                } 
+                        "text/csv".equals(media.mimeType())) {
+                    apiWhatsappService.sendDocumentMessageById(
+                            new MessageBody(
+                                    whatsAppPhone,
+                                    "📎 Adjunto del seguimiento",
+                                    "System",
+                                    "Back-end",
+                                    businessPhoneNumber,
+                                    "document",
+                                    null),
+                            media.mediaId(),
+                            media.name());
+                }
 
                 apiWhatsappService.deleteMediaById(media.mediaId());
             }
@@ -461,14 +501,31 @@ public class UserChatServiceImpl implements UserchatService {
         if (message.length() > 4096) {
             List<String> parts = splitMessage(message, 4096);
             for (String part : parts) {
-                apiWhatsappService.sendMessage(new MessageBody(whatsAppPhone, part));
+                apiWhatsappService.sendMessage(
+                            new MessageBody(
+                                    whatsAppPhone,
+                                    part,
+                                    "System",
+                                    "Back-end",
+                                    businessPhoneNumber,
+                                    "text",
+                                    null
+                            ));
             }
         } else {
-            apiWhatsappService.sendMessage(new MessageBody(whatsAppPhone, message));
+            apiWhatsappService.sendMessage(
+                new MessageBody(
+                        whatsAppPhone,
+                        message,
+                        "System",
+                        "Back-end",
+                        businessPhoneNumber,
+                        "text",
+                        null));
         }
         return info;
     }
-   
+
     // ============ Usuario solicita sus Tickets abiertos ============
     @Override
     @Transactional
@@ -495,10 +552,10 @@ public class UserChatServiceImpl implements UserchatService {
         if (message.length() > 4096) {
             List<String> parts = splitMessage(message, 4096);
             for (String part : parts) {
-                apiWhatsappService.sendMessage(new MessageBody(whatsAppPhone, part));
+                apiWhatsappService.sendMessage(new MessageBody(whatsAppPhone, part, "System", "Back-end", businessPhoneNumber, "text", null));
             }
         } else {
-            apiWhatsappService.sendMessage(new MessageBody(whatsAppPhone, message));
+            apiWhatsappService.sendMessage(new MessageBody(whatsAppPhone, message, "System", "Back-end", businessPhoneNumber, "text", null));
         }
         return ticketsDto;
     }
@@ -519,7 +576,7 @@ public class UserChatServiceImpl implements UserchatService {
                    + " Máx: 100 MB (docs) / 5 MB (imgs).\n"
                    + "⏰ Tienes 10 minutos para enviar los archivos.\n";
         try {
-            apiWhatsappService.sendMessage(new MessageBody(whatsappPhone, msg));
+            apiWhatsappService.sendMessage(new MessageBody(whatsappPhone, msg, "System", "Back-end", businessPhoneNumber, "text", null));
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Error al enviar mensaje de adjuntos por WhatsApp", e);
         }
@@ -545,7 +602,7 @@ public class UserChatServiceImpl implements UserchatService {
                    + " Máx: 100 MB (docs) / 5 MB (imgs).\n"
                    + "⏰ Tienes 10 minutos para enviar los archivos.\n";
         try {
-            apiWhatsappService.sendMessage(new MessageBody(whatsappPhone, msg));
+            apiWhatsappService.sendMessage(new MessageBody(whatsappPhone, msg, "System", "Back-end", businessPhoneNumber, "text", null));
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Error al enviar mensaje de adjuntos por WhatsApp", e);
         }

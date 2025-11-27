@@ -148,59 +148,81 @@ public class GlpiServiceImpl implements GlpiService {
                 return mediaFiles;
         }
 
-        // ========= Filtra los documentos de un ticket =========
-        private static final DateTimeFormatter GLPI_DATETIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
-        public List<MediaFileDto> filterDocuments(
+        // ========= Procesa un documento GLPI y lo sube a WhatsApp =========
+        private MediaFileDto processDocument(DocumentGlpi doc) {
+
+                try {
+                        byte[] data = glpiServerClient.downloadDocumentById(doc.id());
+
+                        if (!isMimeTypeAllowed(doc.mime())) {
+                                return new MediaFileDto("Error", doc.filename(), doc.mime());
+                        }
+
+                        String ext = doc.filename().contains(".")
+                                        ? doc.filename().substring(doc.filename().lastIndexOf('.'))
+                                        : ".tmp";
+
+                        File tmp = File.createTempFile("glpi_doc_", ext);
+                        Files.write(tmp.toPath(), data);
+
+                        String mediaId = whatsappMediaService.uploadMedia(tmp);
+                        tmp.delete();
+
+                        return new MediaFileDto(mediaId, doc.filename(), doc.mime());
+
+                } catch (Exception e) {
+                        logger.error("Error procesando documento GLPI: " + doc + " | " + e.getMessage(), e);
+                        return new MediaFileDto("Error", doc.filename(), doc.mime());
+                }
+        }
+
+        // ========= Filtra los documentos de un ticket (Soluciones)=========
+        private static final DateTimeFormatter GLPI_DATETIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        public List<MediaFileDto> filterSolutionDocuments(
                         List<DocumentGlpi> docs,
                         String targetUserId,
                         String referenceDateStr) {
+
                 LocalDateTime ref = LocalDateTime.parse(referenceDateStr, GLPI_DATETIME_FMT);
-                LocalDateTime before = ref.minusMinutes(5);
-                LocalDateTime after = ref.plusMinutes(5);
+                LocalDateTime before = ref.minusMinutes(10);
+                LocalDateTime after = ref.plusMinutes(10);
 
                 return docs.stream()
                                 .filter(doc -> {
-                                        String docUser = doc.users_id() == null
-                                                        ? ""
-                                                        : doc.users_id().toString();
-                                        if (!targetUserId.equals(docUser)) {
+
+                                        // Filtrar usuario exacto
+                                        String docUser = doc.users_id() == null ? "" : doc.users_id().toString();
+                                        if (!targetUserId.equals(docUser))
                                                 return false;
-                                        }
-                                        LocalDateTime docDate = LocalDateTime.parse(
-                                                        doc.date_creation(), GLPI_DATETIME_FMT);
+
+                                        // Filtrar rango de tiempo
+                                        LocalDateTime docDate = LocalDateTime.parse(doc.date_creation(),
+                                                        GLPI_DATETIME_FMT);
                                         return !docDate.isBefore(before) && !docDate.isAfter(after);
                                 })
-                                .map(doc -> {
-                                        try {
-                                                byte[] data = glpiServerClient.downloadDocumentById(doc.id());
-
-                                                if (!isMimeTypeAllowed(doc.mime())) {
-                                                        return new TicketInfoDto.MediaFileDto("Error", doc.filename(),
-                                                                        doc.mime());
-                                                }
-
-                                                String ext = doc.filename().contains(".")
-                                                                ? doc.filename().substring(
-                                                                                doc.filename().lastIndexOf('.'))
-                                                                : ".tmp";
-                                                File tmp = File.createTempFile("glpi_doc_", ext);
-                                                Files.write(tmp.toPath(), data);
-
-                                                String mediaId = whatsappMediaService.uploadMedia(tmp);
-                                                tmp.delete();
-
-                                                return new TicketInfoDto.MediaFileDto(mediaId, doc.filename(),
-                                                                doc.mime());
-                                        } catch (Exception e) {
-                                                logger.error("Error procesando documento del GLPI: " + doc
-                                                                + e.getMessage(), e);
-                                                return new TicketInfoDto.MediaFileDto("Error", "unknown", "unknown");
-                                        }
-                                })
+                                .map(this::processDocument)
                                 .collect(Collectors.toList());
         }
 
+        // ========= Filtra los documentos de un ticket (Seguimientos)=========
+        public List<MediaFileDto> filterNoteDocuments(
+                        List<DocumentGlpi> docs,
+                        List<String> technicianIds) {
+
+                return docs.stream()
+                                .filter(doc -> {
+                                        String docUser = doc.users_id() == null ? "" : doc.users_id().toString();
+                                        boolean userMatch = technicianIds.stream()
+                                                        .anyMatch(techId -> techId.toString().equals(docUser));
+                                        return userMatch;
+                                })
+                                .map(this::processDocument)
+                                .collect(Collectors.toList());
+        }
+
+
+        // ================== Obtener ticket =================
         @Override
         public TicketInfoDto getInfoTicketById(Long ticketId) {
                 List<UserTicket> userTickets = glpiServerClient.getTicketUser(ticketId);
@@ -345,17 +367,13 @@ public class GlpiServiceImpl implements GlpiService {
                                                                 .orElse(Collections.emptyList());
 
                                                 // Busco Documentos anexados
-                                                String solDate = solution.date_creation();
-                                                String solUserId = (String) solution.users_id();
-
-                                                List<MediaFileDto> fromDocs = filterDocuments(
-                                                                Arrays.asList(glpiTicket._documents()), solUserId,
-                                                                solDate);
-                                                System.out.println("Docuemnto desde el ticket: " + fromDocs); // ! debug
+                                                List<MediaFileDto> fromDocs = filterSolutionDocuments(
+                                                                Arrays.asList(glpiTicket._documents()),
+                                                                solution.users_id().toString(),
+                                                                solution.date_creation());
 
                                                 List<MediaFileDto> mediaFiles = new ArrayList<>(fromLinks);
                                                 mediaFiles.addAll(fromDocs);
-                                                System.out.println("media Files: " + mediaFiles); // ! debug
 
                                                 return new TicketSolutionDto(
                                                                 formatted,
@@ -371,9 +389,21 @@ public class GlpiServiceImpl implements GlpiService {
                 List<NoteDto> notes = rawNotes.stream()
                                 .map(n -> {
                                         String content = HtmlCleaner.cleanHtmlForWhatsApp(n.content());
-                                        List<MediaFileDto> mediaFiles = Optional
+                                        List<MediaFileDto> fromLinks = Optional
                                                         .ofNullable(extractMediaIdsFromLinks(n.links()))
                                                         .orElse(Collections.emptyList());
+
+                                        // Busco Documentos anexados
+                                        List<String> technicianIds = techDtos.stream()
+                                                        .map(TechDto::name)
+                                                        .collect(Collectors.toList());
+
+                                        List<MediaFileDto> fromDocs = filterNoteDocuments(
+                                                        Arrays.asList(glpiTicket._documents()),
+                                                        technicianIds);
+
+                                        List<MediaFileDto> mediaFiles = new ArrayList<>(fromLinks);
+                                        mediaFiles.addAll(fromDocs);
 
                                         return new NoteDto(
                                                         n.date_creation(),
@@ -434,7 +464,7 @@ public class GlpiServiceImpl implements GlpiService {
                                 var up = glpiServerClient.uploadDocument(tmp, tmp.getName(), 0);
                                 long docId = up.id();
 
-                                // 2.1) Si es una imagen con caption, crear  seguimiento con el texto de caption
+                                // 2.1) Si es una imagen con caption, crear seguimiento con el texto de caption
                                 if (att.getCaption() != null && !att.getCaption().isBlank()) {
                                         // Actualiza el Status del ticket(En progreso)
                                         RequestUpdateStatus updateStatus = new RequestUpdateStatus(new InputUpdate(2L));

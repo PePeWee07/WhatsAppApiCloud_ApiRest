@@ -51,10 +51,19 @@ public class WhatsAppDataDto {
         Optional<Document> document,
         Optional<Image> image,
         Optional<Sticker> sticker,
+        Optional<Audio> audio,
+        Optional<Video> video,
         Optional<Reaction> reaction,
         Optional<Location> location,
+        Optional<Error> unsupported,
         Object interactive,
         Context context
+    ) {}
+
+    public record Error(
+        String code,
+        String details,
+        String title
     ) {}
 
     public record Context (
@@ -73,6 +82,13 @@ public class WhatsAppDataDto {
     ) {}
 
     public record Image(
+        String caption,
+        String mime_type,
+        String sha256,
+        String id
+    ) {}
+
+    public record Video(
         String caption,
         String mime_type,
         String sha256,
@@ -110,8 +126,19 @@ public class WhatsAppDataDto {
         String status,
         String timestamp,
         String recipient_id,
-        Conversation conversation,
-        Pricing pricing
+        Optional<Pricing> pricing,
+        List<ErrorStatus> errors
+    ) {}
+
+    public record ErrorStatus(
+        String code,
+        String title,
+        String message,
+        ErrorData error_data
+    ) {}
+
+    public record ErrorData(
+        String details
     ) {}
 
     public record Conversation(
@@ -126,6 +153,14 @@ public class WhatsAppDataDto {
     public record Pricing(
         boolean billable,
         String pricing_model,
-        String category
+        String category,
+        String type
+    ) {}
+
+    public record Audio(
+        String mime_type,
+        String sha256,
+        String id,
+        boolean voice
     ) {}
 }
