@@ -78,7 +78,7 @@ public class RequestMessagesFactory {
             .parameters(List.of(
                 ComponentParameter.builder()
                     .type("image")
-                    .image(Map.of("id", headerMediaId))
+                    .image(Map.of("link", headerMediaId))
                     .build()
             ))
             .build();

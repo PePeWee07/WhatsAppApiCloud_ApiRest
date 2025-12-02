@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -45,7 +46,7 @@ import com.BackEnd.WhatsappApiCloud.model.entity.user.AttachmentEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageEntity;
-import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.TemplateMessageEntity;
+import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageTemplateEntity;
 import com.BackEnd.WhatsappApiCloud.repository.AttachmentRepository;
 import com.BackEnd.WhatsappApiCloud.repository.MessageRepository;
 import com.BackEnd.WhatsappApiCloud.repository.TemplateMessageRepository;
@@ -73,13 +74,11 @@ import org.slf4j.LoggerFactory;
 public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
     private static final Logger logger = LoggerFactory.getLogger(ApiWhatsappServiceImpl.class);
-    private static final String TEMPLATE_NAME = "feedback_de_catia";
     private final RestClient restClient;
     private final RestClient restMediaClient;
     private final ObjectMapper objectMapper;
     private final GlpiService glpiService;
     private final MessageRepository messageRepository;
-    private final TemplateMediaCacheService templateMediaCacheService;
 
     @Value("${restricted.roles}")
     private String restrictedRol;
@@ -124,8 +123,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         @Value("${whatsapp.version}") String version,
         ObjectMapper objectMapper,
         GlpiService glpiService,
-        MessageRepository messageRepository,
-        TemplateMediaCacheService templateMediaCacheService) {
+        MessageRepository messageRepository) {
 
         restClient = RestClient.builder()
                     .baseUrl(urlBase + version + "/" + identifier)
@@ -140,7 +138,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         this.objectMapper = objectMapper;
         this.glpiService = glpiService;
         this.messageRepository = messageRepository;
-        this.templateMediaCacheService = templateMediaCacheService;
     }
 
     // ================ Constructor de mensajes de respuesta ==========================
@@ -456,8 +453,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
             markAsRead(new RequestWhatsappAsRead("whatsapp", "read", wamid, new TypingIndicator("text")));
 
-            // Recivir mensaje interactivo
-            if (messageType.equals("interactive")) {
+            if ("interactive".equals(messageType)) {
                 var msg = changeValue.messages().get(0);
                 var ctx = msg.context();
                 Object rawInteractive = msg.interactive();
@@ -471,12 +467,14 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 if (ctx != null && rawInteractive instanceof Map<?, ?> interactiveMap) {
                     Object nfmObj = interactiveMap.get("nfm_reply");
                     if (nfmObj instanceof Map<?, ?> nfmMap) {
+
                         String parentWamid = ctx.id();
                         String answerJson = (String) nfmMap.get("response_json");
-                        templateMsgRepo.findByWamid(parentWamid).ifPresent(log -> {
-                            log.setAnswer(answerJson);
-                            log.setAnsweredAt(answeredAt);
-                            templateMsgRepo.save(log);
+
+                        templateMsgRepo.findByMessage_MessageId(parentWamid).ifPresent(template -> {
+                            template.setAnswer(answerJson);
+                            template.setAnsweredAt(answeredAt);
+                            templateMsgRepo.save(template);
                         });
                     }
                 }
@@ -489,7 +487,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     changeValue,
                     msg,
                     "inbound",
-                    "user"
+                    "User"
                 );
                 messageRepository.save(entity);
             }
@@ -856,44 +854,80 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
+    // ============== Convertir entidad plantilla a DTO ==================
+    private TemplateMessageDto templateMessageEntitytoDto(MessageTemplateEntity template) {
+        MessageEntity msg = template.getMessage();
+
+        String toPhone = null;
+        String wamid   = null;
+        LocalDateTime sentAt = null;
+
+        if (msg != null) {
+            toPhone = msg.getToPhone();
+            wamid   = msg.getMessageId();
+
+            if (msg.getSentAt() != null) {
+                sentAt = msg.getSentAt().atZone(ZoneOffset.UTC).toLocalDateTime();
+            } else if (msg.getTimestamp() != null) {
+                sentAt = msg.getTimestamp().atZone(ZoneOffset.UTC).toLocalDateTime();
+            }
+        }
+
+        return new TemplateMessageDto(
+            template.getId(),
+            toPhone,
+            template.getTemplateName(),
+            sentAt,
+            template.getAnsweredAt(),
+            wamid,
+            template.getAnswer(),
+            template.getMessageStatus()
+        );
+    }
+
     // ============== Enviar plantilla de feedback ==================
     @Override
     public ResponseWhatsapp sendTemplatefeedback(String toPhoneNumber) {
-        String mediaId = templateMediaCacheService.loadTemplateMediaId(TEMPLATE_NAME);
-
-        try {
-            getMediaMetadata(mediaId);
-        } catch (MediaNotFoundException ex) {
-            templateMediaCacheService.evictTemplateMediaId(TEMPLATE_NAME);
-            mediaId = templateMediaCacheService.loadTemplateMediaId(TEMPLATE_NAME);
-        }
-
+        final String TEMPLATE_NAME = "feedback_de_catia";
         RequestMessages tpl = RequestMessagesFactory.buildTemplateMessage(
             toPhoneNumber,
             TEMPLATE_NAME,
             "es",
-            mediaId,
+            "https://ia-sp-backoffice.ucatolica.cue.ec/uploads/catia_feedback.png",
             "CatIA",
-            "Encuesta enviada por la Universidad Católica de Cuenca.",
+            "Universidad Católica de Cuenca",
             "TAKE_SURVEY"
         );
         ResponseWhatsapp resp = NewResponseBuilder(tpl, "/messages");
 
-        String wamid = null;
-        String messageStatus = "";
-        if (resp != null && resp.messages() != null && !resp.messages().isEmpty()) {
-            ResponseWhatsappMessage msg = resp.messages().get(0);
-            wamid         = msg.id();
-            messageStatus = Optional.ofNullable(msg.messageStatus()).orElse("UNKNOWN");
-
+        if (resp == null || resp.messages() == null || resp.messages().isEmpty()) {
+            logger.warn("⚠️ API WhatsApp devolvió respuesta sin messages[] al enviar template {}", TEMPLATE_NAME);
+            return resp;
         }
 
-        TemplateMessageEntity templateMessage = new TemplateMessageEntity();
-        templateMessage.setToPhone(toPhoneNumber);
+        ResponseWhatsappMessage msgResp = resp.messages().get(0);
+        String messageStatus = Optional.ofNullable(msgResp.messageStatus()).orElse("UNKNOWN");
+
+        // Guardar mensaje en messages
+        MessageBody body = new MessageBody(
+                toPhoneNumber,
+                null,
+                "System",
+                "Back-end",
+                businessPhoneNumber,
+                "template",
+                null);
+
+        MessageEntity messageEntity = MessageMapperHelper.createSentMessageEntity(body, resp);
+        messageRepository.save(messageEntity);
+
+        // Guardar registro de plantilla vinculado al mensaje
+        MessageTemplateEntity templateMessage = new MessageTemplateEntity();
         templateMessage.setTemplateName(TEMPLATE_NAME);
-        templateMessage.setSentAt(LocalDateTime.now());
-        templateMessage.setWamid(wamid != null ? wamid : "UNKNOWN");
         templateMessage.setMessageStatus(messageStatus);
+        templateMessage.setAnsweredAt(null);
+        templateMessage.setAnswer(null);
+        templateMessage.setMessage(messageEntity);
         templateMsgRepo.save(templateMessage);
 
         return resp;
@@ -916,9 +950,13 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     public List<TemplateMessageDto> listResponseTemplateByDate(LocalDateTime inicio, LocalDateTime fin) {
         LocalDateTime startOfDay = inicio.toLocalDate().atStartOfDay();
         LocalDateTime endOfDay = fin.toLocalDate().atTime(LocalTime.MAX);
-        return templateMsgRepo.findBySentAtBetween(startOfDay, endOfDay).stream()
-            .map(this::templateMessageEntitytoDto)
-            .collect(Collectors.toList());
+
+        Instant start = startOfDay.atZone(ZoneOffset.UTC).toInstant();
+        Instant end = endOfDay.atZone(ZoneOffset.UTC).toInstant();
+
+        return templateMsgRepo.findByMessage_TimestampBetween(start, end).stream()
+                .map(this::templateMessageEntitytoDto)
+                .collect(Collectors.toList());
     }
 
     // ============== Obtener plantilla por nombre ==================
@@ -931,24 +969,10 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
     // ============== Obtener plantilla por usuario ==================
     @Override
-    public List<TemplateMessageDto> listResponseTemplateByPhone(String WhatsAppPhone) {
-        return templateMsgRepo.findByToPhone(WhatsAppPhone).stream()
-            .map(this::templateMessageEntitytoDto)
-            .collect(Collectors.toList());
-    }
-
-    // ============== Convertir entidad plantilla a DTO ==================
-    private TemplateMessageDto templateMessageEntitytoDto(TemplateMessageEntity log) {
-        return new TemplateMessageDto(
-            log.getId(),
-            log.getToPhone(),
-            log.getTemplateName(),
-            log.getSentAt(),
-            log.getAnsweredAt(),
-            log.getWamid(),
-            log.getAnswer(),
-            log.getMessageStatus()
-        );
+    public List<TemplateMessageDto> listResponseTemplateByPhone(String whatsAppPhone) {
+        return templateMsgRepo.findByMessage_ToPhone(whatsAppPhone).stream()
+                .map(this::templateMessageEntitytoDto)
+                .collect(Collectors.toList());
     }
 
     // ============== Enviar una imagen por ID ==================

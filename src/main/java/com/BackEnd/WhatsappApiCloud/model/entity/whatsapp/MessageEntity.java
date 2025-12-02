@@ -70,4 +70,8 @@ public class MessageEntity {
 
     @Column(name = "to_phone", nullable = false)
     private String toPhone;
+
+    // Foregin Key to Template Message
+    @OneToOne(mappedBy = "message", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private MessageTemplateEntity messageTemplate;
 }

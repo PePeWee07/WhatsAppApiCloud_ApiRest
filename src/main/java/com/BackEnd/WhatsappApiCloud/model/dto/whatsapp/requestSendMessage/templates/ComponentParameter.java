@@ -13,5 +13,5 @@ public class ComponentParameter {
     private String type;           // "text", "image", "payload"
     private String text;           // para parámetros de texto
     private String payload;        // para botones
-    private Map<String,String> image; // para headers de imagen { "id": mediaId }
+    private Map<String,String> image; // para headers de imagen { "id o link": mediaId }
 }

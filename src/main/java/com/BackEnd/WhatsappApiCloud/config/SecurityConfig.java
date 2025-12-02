@@ -45,7 +45,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/health").permitAll()
                 .anyRequest().authenticated()
             )
-            .addFilterBefore(apiKeyFilter, UsernamePasswordAuthenticationFilter.class); // tu filtro de API key
+            .addFilterBefore(apiKeyFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -53,8 +53,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        // acepta cualquier puerto en localhost
-        config.setAllowedOriginPatterns(List.of("http://localhost:*"));
+        config.setAllowedOriginPatterns(List.of("http://localhost:*", "https://ia-sp-webhook.ucatolica.cue.ec"));
         config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS", "PATCH"));
         config.setAllowedHeaders(List.of("x-api-key","Content-Type","Authorization"));
         config.setAllowCredentials(true);

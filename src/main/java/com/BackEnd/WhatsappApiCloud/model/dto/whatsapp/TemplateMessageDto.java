@@ -10,14 +10,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TemplateMessageDto {
-
-    private Long id;
-    private String toPhone;
-    private String templateName;
-    private LocalDateTime sentAt;
-    private LocalDateTime answeredAt;
-    private String wamid;
-    private String answer;
-    private String messageStatus;
-    
+    private Long id;                    // id de messages_templates
+    private String toPhone;             // MessageEntity.toPhone
+    private String templateName;        // MessageTemplateEntity.templateName
+    private LocalDateTime sentAt;       // MessageEntity (sentAt/timestamp)
+    private LocalDateTime answeredAt;   // MessageTemplateEntity.answeredAt
+    private String wamid;               // MessageEntity.messageId
+    private String answer;              // MessageTemplateEntity.answer
+    private String messageStatus;       // MessageTemplateEntity.messageStatus
 }
