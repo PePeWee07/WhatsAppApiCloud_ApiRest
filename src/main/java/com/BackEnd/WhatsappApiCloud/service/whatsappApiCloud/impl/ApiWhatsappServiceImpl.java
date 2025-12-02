@@ -854,37 +854,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
-    // ============== Convertir entidad plantilla a DTO ==================
-    private TemplateMessageDto templateMessageEntitytoDto(MessageTemplateEntity template) {
-        MessageEntity msg = template.getMessage();
-
-        String toPhone = null;
-        String wamid   = null;
-        LocalDateTime sentAt = null;
-
-        if (msg != null) {
-            toPhone = msg.getToPhone();
-            wamid   = msg.getMessageId();
-
-            if (msg.getSentAt() != null) {
-                sentAt = msg.getSentAt().atZone(ZoneOffset.UTC).toLocalDateTime();
-            } else if (msg.getTimestamp() != null) {
-                sentAt = msg.getTimestamp().atZone(ZoneOffset.UTC).toLocalDateTime();
-            }
-        }
-
-        return new TemplateMessageDto(
-            template.getId(),
-            toPhone,
-            template.getTemplateName(),
-            sentAt,
-            template.getAnsweredAt(),
-            wamid,
-            template.getAnswer(),
-            template.getMessageStatus()
-        );
-    }
-
     // ============== Enviar plantilla de feedback ==================
     @Override
     public ResponseWhatsapp sendTemplatefeedback(String toPhoneNumber) {
@@ -933,20 +902,52 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         return resp;
     }
 
+    // ============== Convertir entidad plantilla a DTO ==================
+    private TemplateMessageDto templateMessageEntitytoDto(MessageTemplateEntity template) {
+        MessageEntity msg = template.getMessage();
+
+        String toPhone = null;
+        String wamid = null;
+        LocalDateTime sentAt = null;
+
+        if (msg != null) {
+            toPhone = msg.getToPhone();
+            wamid = msg.getMessageId();
+
+            if (msg.getSentAt() != null) {
+                sentAt = msg.getSentAt().atZone(ZoneOffset.UTC).toLocalDateTime();
+            } else if (msg.getTimestamp() != null) {
+                sentAt = msg.getTimestamp().atZone(ZoneOffset.UTC).toLocalDateTime();
+            }
+        }
+
+        return new TemplateMessageDto(
+                template.getId(),
+                toPhone,
+                template.getTemplateName(),
+                sentAt,
+                template.getAnsweredAt(),
+                wamid,
+                template.getAnswer(),
+                template.getMessageStatus());
+    }
+
     // ============== Obtener plantillas ==================
     @Override
+    @Transactional
     public Page<TemplateMessageDto> getResponsesTemplate(Pageable pageable, Boolean onlyAnswered) {
+        Page<MessageTemplateEntity> pageResult;
         if (onlyAnswered == null || !onlyAnswered) {
-            return templateMsgRepo.findAll(pageable)
-                    .map(this::templateMessageEntitytoDto);
+            pageResult = templateMsgRepo.findAllWithMessages(pageable);
         } else {
-            return templateMsgRepo.findByAnswerIsNotNullAndAnswerNot(pageable, "")
-                    .map(this::templateMessageEntitytoDto);
+            pageResult = templateMsgRepo.findAnsweredWithMessages(pageable);
         }
+        return pageResult.map(this::templateMessageEntitytoDto);
     }
 
     // ============== Obtener plantilla por fecha de envío ==================
     @Override
+    @Transactional
     public List<TemplateMessageDto> listResponseTemplateByDate(LocalDateTime inicio, LocalDateTime fin) {
         LocalDateTime startOfDay = inicio.toLocalDate().atStartOfDay();
         LocalDateTime endOfDay = fin.toLocalDate().atTime(LocalTime.MAX);
@@ -961,6 +962,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
     // ============== Obtener plantilla por nombre ==================
     @Override
+    @Transactional
     public List<TemplateMessageDto> listResponseTemplateByName(String templateName) {
         return templateMsgRepo.findByTemplateName(templateName).stream()
             .map(this::templateMessageEntitytoDto)
@@ -969,6 +971,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
     // ============== Obtener plantilla por usuario ==================
     @Override
+    @Transactional
     public List<TemplateMessageDto> listResponseTemplateByPhone(String whatsAppPhone) {
         return templateMsgRepo.findByMessage_ToPhone(whatsAppPhone).stream()
                 .map(this::templateMessageEntitytoDto)

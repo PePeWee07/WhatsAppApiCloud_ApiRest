@@ -7,14 +7,19 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageTemplateEntity;
 
 public interface TemplateMessageRepository extends JpaRepository<MessageTemplateEntity, Long> {
-    Page<MessageTemplateEntity> findAll(Pageable pageable);
-    Page<MessageTemplateEntity> findByAnswerIsNotNullAndAnswerNot(Pageable pageable, String value);
     List<MessageTemplateEntity> findByTemplateName(String templateName);
+    
     Optional<MessageTemplateEntity> findByMessage_MessageId(String messageId);
     List<MessageTemplateEntity> findByMessage_ToPhone(String toPhone);
     List<MessageTemplateEntity> findByMessage_TimestampBetween(Instant start, Instant end);
+
+    @Query("SELECT mt FROM MessageTemplateEntity mt JOIN mt.message m")
+    Page<MessageTemplateEntity> findAllWithMessages(Pageable pageable);
+    @Query("SELECT mt FROM MessageTemplateEntity mt JOIN mt.message m WHERE mt.answer IS NOT NULL AND mt.answer <> ''")
+    Page<MessageTemplateEntity> findAnsweredWithMessages(Pageable pageable);
 }

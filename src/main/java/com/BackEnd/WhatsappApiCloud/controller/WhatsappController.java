@@ -56,7 +56,6 @@ public class WhatsappController {
         }
     }
 
-
     // ================ Recibir mensaje de un usuario de WhatsApp ========================
     @PostMapping("/receive-message")
     public ResponseWhatsapp receiveMessage(@RequestBody WhatsAppDataDto.WhatsAppMessage message) throws JsonProcessingException {
@@ -70,7 +69,6 @@ public class WhatsappController {
         apiWhatsappService.handleMessageStatus(message);
         return ResponseEntity.ok("Status processed successfully");
     }
-
 
     // ================= Cargar archivo multimedia a server de WhatsApp =======================
     @PostMapping("/upload-media-file")
@@ -93,7 +91,6 @@ public class WhatsappController {
         }
     }
 
-
     // =============== Eliminar un archvio multimedia del server de WhatsApp ==================
     @DeleteMapping("/delete-media-file")
     public ResponseEntity<?> deleteMedia(@RequestParam("mediaId") String mediaId) {
@@ -112,7 +109,6 @@ public class WhatsappController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error al procesar la solicitud: " + e.getMessage());
         }
     }
-
     
     // ============ Enviar imagen por ID ==============
     @PostMapping("/send-image-by-id")
@@ -182,7 +178,6 @@ public class WhatsappController {
         }
     }
 
-
     // =============== Enviar documento por ID ==================
     @PostMapping("/send-document-by-id")
     public ResponseEntity<ResponseWhatsapp> sendDocumentById(
@@ -200,7 +195,6 @@ public class WhatsappController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
         }
     }
-
 
     // =============== Enviar documento por URL ==================
     @PostMapping("/send-document-by-url")
@@ -220,7 +214,6 @@ public class WhatsappController {
         }
     }
 
-
     // ================ Obtener datos del archivo multimedia por ID =======================
     @GetMapping("/media/{mediaId}")
     public ResponseEntity<ResponseMediaMetadata> getMediaMetadata(@PathVariable String mediaId) {
@@ -228,8 +221,7 @@ public class WhatsappController {
         return ResponseEntity.ok(meta);
     }
 
-
-    // ================ Enviar xea =======================
+    // ================ Enviar feedback =======================
     @PostMapping("/template-feedback")
     public ResponseEntity<ResponseWhatsapp> sendFeedbackTemplate(
             @RequestParam("to") String toPhoneNumber) {
@@ -251,13 +243,12 @@ public class WhatsappController {
         return ResponseEntity.ok(list);
     }
 
-
     // ================ Obtner todas las respuestas de los templates =======================
     @GetMapping("/template/all")
     public ResponseEntity<Page<TemplateMessageDto>> getAll(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int pageSize,
-            @RequestParam(defaultValue = "sentAt") String sort,
+            @RequestParam(defaultValue = "message.sentAt") String sort,
             @RequestParam(defaultValue = "desc") String dir,
             @RequestParam(defaultValue = "false") Boolean onlyAnswered
     ) {
