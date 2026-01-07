@@ -1,5 +1,8 @@
 package com.BackEnd.WhatsappApiCloud.model.entity.whatsapp;
 
+import com.BackEnd.WhatsappApiCloud.util.enums.MessageSourceEnum;
+import com.BackEnd.WhatsappApiCloud.util.enums.MessageTypeEnum;
+
 //* number --> Numero de telefono al que se le enviara el mensaje
 //* message --> Mensaje que se enviara
 //* sentBy --> Quien respondio el mensaje = profileName (si es back-office poner nombre del usuario)
@@ -12,12 +15,13 @@ public record MessageBody(
     String number,
     String message,
     String sentBy,
-    String source,
+    MessageSourceEnum source,
     String businessPhoneNumber,
-    String type,
+    MessageTypeEnum type,
     String contextId
 ) {
-    public MessageBody(String number, String message, String sentBy, String businessPhoneNumber, String type, String source) {
+    public MessageBody(String number, String message, String sentBy, MessageSourceEnum source, String businessPhoneNumber, 
+            MessageTypeEnum type ) {
         this(number, message, sentBy, source, businessPhoneNumber, type, null);
     }
 }

@@ -4,6 +4,9 @@ import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.Respo
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppDataDto;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageEntity;
+import com.BackEnd.WhatsappApiCloud.util.enums.MessageDirectionEnum;
+import com.BackEnd.WhatsappApiCloud.util.enums.MessageSourceEnum;
+import com.BackEnd.WhatsappApiCloud.util.enums.MessageTypeEnum;
 
 import java.time.*;
 
@@ -12,8 +15,8 @@ public class MessageMapperHelper {
     public static MessageEntity fromWebhookMessage(
             WhatsAppDataDto.Value value,
             WhatsAppDataDto.Message msg,
-            String direction,
-            String source) {
+            MessageDirectionEnum direction,
+            MessageSourceEnum source) {
         MessageEntity entity = new MessageEntity();
 
         // Datos básicos
@@ -21,10 +24,9 @@ public class MessageMapperHelper {
         entity.setConversationUserPhone(value.contacts().get(0).wa_id());
         entity.setFromPhone(msg.from());
         entity.setToPhone(value.metadata().display_phone_number());
-        entity.setProfileName(value.contacts().get(0).profile().name());
         entity.setDirection(direction);
         entity.setSource(source);
-        entity.setType(msg.type());
+        entity.setType(MessageTypeEnum.valueOf(msg.type().toUpperCase()));
 
         // Timestamp
         try {
@@ -94,7 +96,10 @@ public class MessageMapperHelper {
 
             // TODO: Manejar los contactos
 
-            default -> entity.setTextBody("[Tipo no manejado: " + msg.type() + "]");
+            default -> {
+                entity.setTextBody("[Tipo no manejado: " + msg.type() + "]");
+                entity.setType(MessageTypeEnum.UNKNOWN);
+            }
         }
 
         return entity;
@@ -109,7 +114,7 @@ public class MessageMapperHelper {
         entity.setTimestamp(Instant.now());
         entity.setTextBody(payload.message());
         entity.setSource(payload.source());
-        entity.setDirection("outbound");
+        entity.setDirection(MessageDirectionEnum.OUTBOUND);
         entity.setProfileName(payload.sentBy());
         entity.setType(payload.type());
         if (payload.contextId() != null) {

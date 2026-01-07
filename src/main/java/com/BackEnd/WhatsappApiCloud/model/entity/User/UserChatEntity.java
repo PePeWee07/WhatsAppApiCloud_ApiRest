@@ -8,7 +8,7 @@ import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
 
 import com.BackEnd.WhatsappApiCloud.model.entity.glpi.UserTicketEntity;
-import com.BackEnd.WhatsappApiCloud.util.enums.ConversationState;
+import com.BackEnd.WhatsappApiCloud.util.enums.ConversationStateEnum;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.CascadeType;
@@ -61,7 +61,7 @@ public class UserChatEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "conversation_state")
-    private ConversationState conversationState;
+    private ConversationStateEnum conversationState;
 
     @Column(name = "limit_strike")
     private int limitStrike;

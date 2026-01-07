@@ -39,7 +39,9 @@ import com.BackEnd.WhatsappApiCloud.service.glpi.GlpiServerClient;
 import com.BackEnd.WhatsappApiCloud.service.glpi.GlpiService;
 import com.BackEnd.WhatsappApiCloud.service.userChat.UserchatService;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
-import com.BackEnd.WhatsappApiCloud.util.enums.ConversationState;
+import com.BackEnd.WhatsappApiCloud.util.enums.ConversationStateEnum;
+import com.BackEnd.WhatsappApiCloud.util.enums.MessageSourceEnum;
+import com.BackEnd.WhatsappApiCloud.util.enums.MessageTypeEnum;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
 @Service
@@ -424,9 +426,9 @@ public class UserChatServiceImpl implements UserchatService {
                                     whatsAppPhone,
                                     "🖼️ Imagen del seguimiento del ticket",
                                     "System",
-                                    "Back-end",
+                                    MessageSourceEnum.BACK_END,
                                     businessPhoneNumber,
-                                    "image",
+                                    MessageTypeEnum.IMAGE,
                                     null),
                             media.mediaId());
                     } else if (media.mimeType().startsWith("application/") ||
@@ -437,9 +439,9 @@ public class UserChatServiceImpl implements UserchatService {
                                     whatsAppPhone,
                                     "📎 Adjunto del seguimiento",
                                     "System",
-                                    "Back-end",
+                                    MessageSourceEnum.BACK_END,
                                     businessPhoneNumber,
-                                    "document",
+                                    MessageTypeEnum.DOCUMENT,
                                     null),
                             media.mediaId(),
                             media.name());
@@ -471,9 +473,9 @@ public class UserChatServiceImpl implements UserchatService {
                                     whatsAppPhone,
                                     "🖼️ Imagen del seguimiento del ticket",
                                     "System",
-                                    "Back-end",
+                                    MessageSourceEnum.BACK_END,
                                     businessPhoneNumber,
-                                    "image",
+                                    MessageTypeEnum.IMAGE,
                                     null),
                             media.mediaId());
                 } else if (media.mimeType().startsWith("application/") ||
@@ -484,9 +486,9 @@ public class UserChatServiceImpl implements UserchatService {
                                     whatsAppPhone,
                                     "📎 Adjunto del seguimiento",
                                     "System",
-                                    "Back-end",
+                                    MessageSourceEnum.BACK_END,
                                     businessPhoneNumber,
-                                    "document",
+                                    MessageTypeEnum.DOCUMENT,
                                     null),
                             media.mediaId(),
                             media.name());
@@ -506,9 +508,9 @@ public class UserChatServiceImpl implements UserchatService {
                                     whatsAppPhone,
                                     part,
                                     "System",
-                                    "Back-end",
+                                    MessageSourceEnum.BACK_END,
                                     businessPhoneNumber,
-                                    "text",
+                                     MessageTypeEnum.TEXT,
                                     null
                             ));
             }
@@ -518,9 +520,9 @@ public class UserChatServiceImpl implements UserchatService {
                         whatsAppPhone,
                         message,
                         "System",
-                        "Back-end",
+                        MessageSourceEnum.BACK_END,
                         businessPhoneNumber,
-                        "text",
+                         MessageTypeEnum.TEXT,
                         null));
         }
         return info;
@@ -552,10 +554,10 @@ public class UserChatServiceImpl implements UserchatService {
         if (message.length() > 4096) {
             List<String> parts = splitMessage(message, 4096);
             for (String part : parts) {
-                apiWhatsappService.sendMessage(new MessageBody(whatsAppPhone, part, "System", "Back-end", businessPhoneNumber, "text", null));
+                apiWhatsappService.sendMessage(new MessageBody(whatsAppPhone, part, "System", MessageSourceEnum.BACK_END, businessPhoneNumber,  MessageTypeEnum.TEXT, null));
             }
         } else {
-            apiWhatsappService.sendMessage(new MessageBody(whatsAppPhone, message, "System", "Back-end", businessPhoneNumber, "text", null));
+            apiWhatsappService.sendMessage(new MessageBody(whatsAppPhone, message, "System", MessageSourceEnum.BACK_END, businessPhoneNumber,  MessageTypeEnum.TEXT, null));
         }
         return ticketsDto;
     }
@@ -566,7 +568,7 @@ public class UserChatServiceImpl implements UserchatService {
     public Object setWaitingAttachmentsState(String whatsappPhone) {
         UserChatEntity user = repo.findByWhatsappPhone(whatsappPhone)
             .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado con whatsAppPhone: " + whatsappPhone));
-        user.setConversationState(ConversationState.WAITING_ATTACHMENTS);
+        user.setConversationState(ConversationStateEnum.WAITING_ATTACHMENTS);
         user.setAttachTargetTicketId(null);
         user.setAttachStartedAt(Instant.now());
         user.setAttachTtlMinutes(10);
@@ -576,7 +578,7 @@ public class UserChatServiceImpl implements UserchatService {
                    + " Máx: 100 MB (docs) / 5 MB (imgs).\n"
                    + "⏰ Tienes 10 minutos para enviar los archivos.\n";
         try {
-            apiWhatsappService.sendMessage(new MessageBody(whatsappPhone, msg, "System", "Back-end", businessPhoneNumber, "text", null));
+            apiWhatsappService.sendMessage(new MessageBody(whatsappPhone, msg, "System", MessageSourceEnum.BACK_END, businessPhoneNumber,  MessageTypeEnum.TEXT, null));
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Error al enviar mensaje de adjuntos por WhatsApp", e);
         }
@@ -592,7 +594,7 @@ public class UserChatServiceImpl implements UserchatService {
         UserChatEntity user = repo.findByWhatsappPhone(whatsappPhone)
             .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado con whatsAppPhone: " + whatsappPhone));
 
-        user.setConversationState(ConversationState.WAITING_ATTACHMENTS_FOR_TICKET_EXISTING);
+        user.setConversationState(ConversationStateEnum.WAITING_ATTACHMENTS_FOR_TICKET_EXISTING);
         user.setAttachTargetTicketId(ticketId);
         user.setAttachStartedAt(Instant.now());
         user.setAttachTtlMinutes(10);
@@ -602,7 +604,8 @@ public class UserChatServiceImpl implements UserchatService {
                    + " Máx: 100 MB (docs) / 5 MB (imgs).\n"
                    + "⏰ Tienes 10 minutos para enviar los archivos.\n";
         try {
-            apiWhatsappService.sendMessage(new MessageBody(whatsappPhone, msg, "System", "Back-end", businessPhoneNumber, "text", null));
+            apiWhatsappService.sendMessage(new MessageBody(whatsappPhone, msg, "System", MessageSourceEnum.BACK_END, businessPhoneNumber, 
+                    MessageTypeEnum.TEXT, null));
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Error al enviar mensaje de adjuntos por WhatsApp", e);
         }
@@ -647,7 +650,7 @@ public class UserChatServiceImpl implements UserchatService {
     @Transactional
     public void closeAttachmentSession(String whatsappPhone) {
         var user = repo.findByWhatsappPhone(whatsappPhone).orElseThrow(() -> new UserNotFoundException("Usuario no encontrado: " + whatsappPhone));
-        user.setConversationState(ConversationState.READY);
+        user.setConversationState(ConversationStateEnum.READY);
         user.setAttachTargetTicketId(null);
         user.setAttachStartedAt(null);
         user.setAttachTtlMinutes(null);

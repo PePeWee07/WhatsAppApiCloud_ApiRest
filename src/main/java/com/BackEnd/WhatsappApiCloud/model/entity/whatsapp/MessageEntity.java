@@ -2,6 +2,10 @@ package com.BackEnd.WhatsappApiCloud.model.entity.whatsapp;
 
 import java.time.Instant;
 
+import com.BackEnd.WhatsappApiCloud.util.enums.MessageDirectionEnum;
+import com.BackEnd.WhatsappApiCloud.util.enums.MessageSourceEnum;
+import com.BackEnd.WhatsappApiCloud.util.enums.MessageTypeEnum;
+
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -25,10 +29,10 @@ public class MessageEntity {
     private String messageId;
     @Column(name = "conversation_user_phone", nullable = false)
     private String conversationUserPhone;
-    private String direction;
+    private MessageDirectionEnum direction;
     private String profileName;
-    private String source;
-    private String type;
+    private MessageSourceEnum source;
+    private MessageTypeEnum type;
     private Instant timestamp;
     @Column(columnDefinition = "TEXT")
     private String textBody;

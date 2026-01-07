@@ -40,7 +40,7 @@ import com.BackEnd.WhatsappApiCloud.service.glpi.GlpiServerClient;
 import com.BackEnd.WhatsappApiCloud.service.glpi.GlpiService;
 import com.BackEnd.WhatsappApiCloud.service.glpi.HtmlCleaner;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.WhatsappMediaService;
-import com.BackEnd.WhatsappApiCloud.util.enums.AttachmentStatus;
+import com.BackEnd.WhatsappApiCloud.util.enums.AttachmentStatusEnum;
 
 @Service
 public class GlpiServiceImpl implements GlpiService {
@@ -452,7 +452,7 @@ public class GlpiServiceImpl implements GlpiService {
                 // Selección en BD usando BETWEEN (evita mezclar sesiones)
                 List<AttachmentEntity> list = attachmentRepository
                                 .findByWhatsappPhoneAndAttachmentStatusAndTimestampBetween(
-                                                waId, AttachmentStatus.UNUSED, start, end);
+                                                waId, AttachmentStatusEnum.UNUSED, start, end);
 
                 for (AttachmentEntity att : list) {
                         File tmp = null;
@@ -478,13 +478,13 @@ public class GlpiServiceImpl implements GlpiService {
                                 glpiServerClient.linkDocumentToTicket(docId, ticketId);
 
                                 // 4) Marcar como usado y guardar trazas
-                                att.setAttachmentStatus(AttachmentStatus.USED);
+                                att.setAttachmentStatus(AttachmentStatusEnum.USED);
                                 att.setTicketId(ticketId);
                                 att.setGpliDocuemntId(docId);
                                 attachmentRepository.save(att);
 
                         } catch (Exception ex) {
-                                att.setAttachmentStatus(AttachmentStatus.INVALID);
+                                att.setAttachmentStatus(AttachmentStatusEnum.INVALID);
                                 attachmentRepository.save(att);
                                 String msg = "Error al adjuntar el archivo " + att.getAttachmentID()
                                                 + " al ticket " + ticketId + ": " + ex.getMessage();

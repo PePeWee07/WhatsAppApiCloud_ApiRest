@@ -6,7 +6,7 @@ package com.BackEnd.WhatsappApiCloud.util.enums;
  * - USED: El archivo ya ha sido usado.
  */
 
-public enum AttachmentStatus {
+public enum AttachmentStatusEnum {
     UNUSED,
     USED,
     INVALID

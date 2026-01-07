@@ -9,7 +9,7 @@ package com.BackEnd.WhatsappApiCloud.util.enums;
  * - WAITING_SUBJECTS: Esperando a que el usuario envíe los temas de interés.
  */
 
-public enum ConversationState {
+public enum ConversationStateEnum {
     NEW,                  
     ASKED_FOR_CEDULA,     
     READY,

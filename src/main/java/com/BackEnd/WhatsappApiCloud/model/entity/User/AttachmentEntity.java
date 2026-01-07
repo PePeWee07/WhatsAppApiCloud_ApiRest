@@ -2,8 +2,8 @@ package com.BackEnd.WhatsappApiCloud.model.entity.user;
 
 import java.time.Instant;
 
-import com.BackEnd.WhatsappApiCloud.util.enums.AttachmentStatus;
-import com.BackEnd.WhatsappApiCloud.util.enums.ConversationState;
+import com.BackEnd.WhatsappApiCloud.util.enums.AttachmentStatusEnum;
+import com.BackEnd.WhatsappApiCloud.util.enums.ConversationStateEnum;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 
 import jakarta.persistence.Column;
@@ -64,11 +64,11 @@ public class AttachmentEntity {
     // ===== Atributos añadidos =====
     @Enumerated(EnumType.STRING)
     @Column(name = "conversation_state", nullable = false)
-    private ConversationState conversationState;
+    private ConversationStateEnum conversationState;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "attachment_status", nullable = false)
-    private AttachmentStatus attachmentStatus = AttachmentStatus.UNUSED;
+    private AttachmentStatusEnum attachmentStatus = AttachmentStatusEnum.UNUSED;
 
 
     // ===== Vinculacion con el Usuario =====

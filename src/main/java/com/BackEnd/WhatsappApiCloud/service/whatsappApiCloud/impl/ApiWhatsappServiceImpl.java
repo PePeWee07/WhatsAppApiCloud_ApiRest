@@ -59,8 +59,11 @@ import com.BackEnd.WhatsappApiCloud.service.userChat.ChatHistoryService;
 import com.BackEnd.WhatsappApiCloud.service.userChat.UserChatSessionService;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
 import com.BackEnd.WhatsappApiCloud.util.MessageMapperHelper;
-import com.BackEnd.WhatsappApiCloud.util.enums.AttachmentStatus;
-import com.BackEnd.WhatsappApiCloud.util.enums.ConversationState;
+import com.BackEnd.WhatsappApiCloud.util.enums.AttachmentStatusEnum;
+import com.BackEnd.WhatsappApiCloud.util.enums.ConversationStateEnum;
+import com.BackEnd.WhatsappApiCloud.util.enums.MessageDirectionEnum;
+import com.BackEnd.WhatsappApiCloud.util.enums.MessageSourceEnum;
+import com.BackEnd.WhatsappApiCloud.util.enums.MessageTypeEnum;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -214,7 +217,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         newUser.setWhatsappPhone(waId);
         newUser.setFirstInteraction(timeNow);
         newUser.setLastInteraction(timeNow);
-        newUser.setConversationState(ConversationState.NEW);
+        newUser.setConversationState(ConversationStateEnum.NEW);
         newUser.setLimitQuestions(5);
         UserChatEntity savedUser = userChatRepository.save(newUser);
 
@@ -235,9 +238,9 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             waId,
             null,
             "System",
-            "Back-end",
+            MessageSourceEnum.BACK_END,
             businessPhoneNumber,
-            "sticker",
+            MessageTypeEnum.STICKER,
             null), 
             "https://ia-sp-backoffice.ucatolica.cue.ec/uploads/catia.webp"
         );
@@ -245,20 +248,20 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             waId,
             welcomeMessage,
             "System",
-            "Back-end",
+            MessageSourceEnum.BACK_END,
             businessPhoneNumber,
-            "text",
+            MessageTypeEnum.TEXT,
             null)
         );
-        user.setConversationState(ConversationState.ASKED_FOR_CEDULA);
+        user.setConversationState(ConversationStateEnum.ASKED_FOR_CEDULA);
         userChatRepository.save(user);
         return sendMessage(new MessageBody(
             waId,
             "Para comenzar, por favor, *ingresa tu número de cédula o identificación* 🔒.",
             "System",
-            "Back-end", 
+            MessageSourceEnum.BACK_END, 
             businessPhoneNumber, 
-            "text", 
+            MessageTypeEnum.TEXT, 
             null)
         );
     }
@@ -282,21 +285,21 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 userChatRepository.save(user);
                 return sendMessage(new MessageBody(
                     waId, "Demasiados intentos fallidos. Hemos bloqueado tu acceso por seguridad. Por favor, comunícate con soportetic@ucacue.edu.ec",
-                        "System", "Back-end", businessPhoneNumber, "text", null
+                        "System", MessageSourceEnum.BACK_END, businessPhoneNumber,  MessageTypeEnum.TEXT, null
                 ));
             }
             return sendMessage(new MessageBody(
                 waId,
                 "No encontramos tu número de identificación en nuestro sistema. " +
                 "Te quedan " + user.getLimitQuestions() + " intentos.",
-                    "System", "Back-end", businessPhoneNumber, "text", null
+                    "System", MessageSourceEnum.BACK_END, businessPhoneNumber,  MessageTypeEnum.TEXT, null
             ));
         }
 
         // Encontró el usuario en el ERP
         user.setIdentificacion(dto.getIdentificacion());
         user.setLastInteraction(timeNow);
-        user.setConversationState(ConversationState.READY);
+        user.setConversationState(ConversationStateEnum.READY);
         user.setLimitQuestions(limitQuestionsPerDay);
         user.setLimitStrike(strikeLimit);
         user.setNextResetDate(null);
@@ -305,7 +308,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         return sendMessage(new MessageBody(
             waId,
             "¡Hola 😊, " + dto.getNombres() + " " + dto.getApellidos() + "! ¿En qué puedo ayudarte hoy?", "System",
-                "Back-end", businessPhoneNumber, "text", null
+                MessageSourceEnum.BACK_END, businessPhoneNumber,  MessageTypeEnum.TEXT, null
         ));
     }
 
@@ -335,7 +338,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
         if (userDto == null || userDto.getIdentificacion() == null) {
             return sendMessage(new MessageBody(waId, "Hubo un problema al obtner tus datos desde el ERP.", "System",
-                    "Back-end", businessPhoneNumber, "text", null));
+                    MessageSourceEnum.BACK_END, businessPhoneNumber,  MessageTypeEnum.TEXT, null));
         }
 
         //! 1. Verificar si el rol del usuario está denegado
@@ -348,7 +351,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             return sendMessage(new MessageBody(
                 waId,
                 "Lo sentimos, pero este asistente virtual aún no está disponible para los siguientes rol(es): *" + restrictedRol + "*.",
-                    "System", "Back-end", businessPhoneNumber, "text", null
+                    "System", MessageSourceEnum.BACK_END, businessPhoneNumber,  MessageTypeEnum.TEXT, null
             ));
         }
             
@@ -358,7 +361,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             user.setBlockingReason("Moderacion");
             userChatRepository.save(user);
             return sendMessage(new MessageBody(waId, "Tu cuenta ha sido bloqueada 🚫. Por favor, comunícate con *soportetic@ucacue.edu.ec* ✉️.",
-                    "System", "Back-end", businessPhoneNumber, "text", null));
+                    "System", MessageSourceEnum.BACK_END, businessPhoneNumber,  MessageTypeEnum.TEXT, null));
         }
 
         //! 3. Restablece el límite de preguntas diarias si han pasado 24 horas
@@ -380,7 +383,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 long minutes = remainingTime.toMinutes() % 60;
                 long seconds = remainingTime.toSeconds() % 60;
                 return sendMessage(new MessageBody(waId, String.format("Tu límite de interacciones ha sido alcanzado, tiempo faltante: %02d:%02d:%02d. ⏳", hours, minutes, seconds),
-                        "System", "Back-end", businessPhoneNumber, "text", null));
+                        "System", MessageSourceEnum.BACK_END, businessPhoneNumber,  MessageTypeEnum.TEXT, null));
             }
         }
 
@@ -389,7 +392,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             user.setNextResetDate(timeNow.plusHours(hoursToWaitAfterLimit));
             userChatRepository.save(user);
             return sendMessage(new MessageBody(waId, "Tu límite de interacciones ha sido alcanzado, vuelve mañana ⏳.",
-                    "System", "Back-end", businessPhoneNumber, "text", null));
+                    "System", MessageSourceEnum.BACK_END, businessPhoneNumber,  MessageTypeEnum.TEXT, null));
         }
 
         //! 6. Obtener respuesta de IA
@@ -409,7 +412,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
         AnswersOpenIADto data = openAiServerClient.getOpenAiData(question);
         chatHistoryService.saveHistory(data, waId);
-        user = userChatRepository.findByWhatsappPhone(waId).orElse(user); // Refrescar datos "lost update" para estado WAITING_ATTACHMENTS
+        user = userChatRepository.findByWhatsappPhone(waId).orElse(user);
 
         user.setPreviousResponseId(data.previousResponseId());
         user.setLimitQuestions(user.getLimitQuestions() - 1);
@@ -417,7 +420,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         user.setValidQuestionCount(user.getValidQuestionCount() + 1);
         userChatRepository.save(user);
 
-        return sendMessage(new MessageBody(waId, data.answer(), "CatIA", "IA", businessPhoneNumber, "text", null));
+        return sendMessage(new MessageBody(waId, data.answer(), "CatIA", 
+                MessageSourceEnum.IA, businessPhoneNumber,  MessageTypeEnum.TEXT, null));
     }
 
     // ================ LLegada de Exepeciones Informativas o Moderación de IA ===================
@@ -429,7 +433,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             }
         });
         logger.warn("Mensaje informativo recibido: " + e.getInfoMessage());
-        return sendMessage(new MessageBody(waId, e.getInfoMessage(), "CatIA", "IA", businessPhoneNumber, "text", null));
+        return sendMessage(new MessageBody(waId, e.getInfoMessage(), "CatIA", 
+                MessageSourceEnum.IA, businessPhoneNumber,  MessageTypeEnum.TEXT, null));
     }
 
     // =================== Recibir y enviar respuesta automática ======================
@@ -486,8 +491,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 MessageEntity entity = MessageMapperHelper.fromWebhookMessage(
                     changeValue,
                     msg,
-                    "inbound",
-                    "User"
+                    MessageDirectionEnum.INBOUND,
+                    MessageSourceEnum.USER
                 );
                 messageRepository.save(entity);
             }
@@ -522,21 +527,22 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     
                         if (expired) {
                             // Si expiró, cerramos la sesión de adjuntos y volvemos a READY
-                            user.setConversationState(ConversationState.READY);
+                            user.setConversationState(ConversationStateEnum.READY);
                             user.setAttachStartedAt(null);
                             user.setAttachTtlMinutes(null);
                             userChatRepository.save(user);
     
                             return sendMessage(new MessageBody(
                                 waId,
-                                "⚠️ La sesión para adjuntar expiró. ⚠️ ", "System", "Back-end", businessPhoneNumber,
-                                    "text", null
+                                "⚠️ La sesión para adjuntar expiró. ⚠️ ", "System", 
+                                    MessageSourceEnum.BACK_END, businessPhoneNumber,
+                                    MessageTypeEnum.TEXT, null
                             ));
                         }
     
                         if (messageType.equals("text")) {
                             String messageText = messageOptionalText.get().body();
-                            user.setConversationState(ConversationState.READY);
+                            user.setConversationState(ConversationStateEnum.READY);
                             userChatRepository.save(user);
                             return handleReadyState(user, messageText, waId, timeNow);
                         }
@@ -554,14 +560,14 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                             att.setMimeType(img.mime_type());
                             att.setAttachmentID(img.id());
                             att.setCaption(img.caption());
-                            att.setConversationState(ConversationState.WAITING_ATTACHMENTS);
-                            att.setAttachmentStatus(AttachmentStatus.UNUSED);
+                            att.setConversationState(ConversationStateEnum.WAITING_ATTACHMENTS);
+                            att.setAttachmentStatus(AttachmentStatusEnum.UNUSED);
     
                             attachmentRepository.save(att);
     
                             return sendMessage(new MessageBody(
                                 waId, "🖼️ Imagen recibida. Sube más o dime si deseas continuar.", "System",
-                                    "Back-end", businessPhoneNumber, "text", null
+                                    MessageSourceEnum.BACK_END, businessPhoneNumber, MessageTypeEnum.TEXT, null
                             ));
                         }
     
@@ -577,14 +583,14 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                             att.setMimeType(doc.mime_type());
                             att.setAttachmentID(doc.id());
                             att.setCaption(null);
-                            att.setConversationState(ConversationState.WAITING_ATTACHMENTS);
-                            att.setAttachmentStatus(AttachmentStatus.UNUSED);
+                            att.setConversationState(ConversationStateEnum.WAITING_ATTACHMENTS);
+                            att.setAttachmentStatus(AttachmentStatusEnum.UNUSED);
     
                             attachmentRepository.save(att);
     
                             return sendMessage(new MessageBody(
                                 waId, "📎 Documento recibido. Sube más o dime si deseas continuar.", "System",
-                                    "Back-end", businessPhoneNumber, "text", null
+                                    MessageSourceEnum.BACK_END, businessPhoneNumber,  MessageTypeEnum.TEXT, null
                             ));
                         }
     
@@ -599,13 +605,13 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                         // 0) TTL
                         boolean expired = user.getAttachStartedAt() == null || user.getAttachTtlMinutes() == null || Instant.now().isAfter(user.getAttachStartedAt().plus(Duration.ofMinutes(user.getAttachTtlMinutes())));
                         if (expired) {
-                            user.setConversationState(ConversationState.READY);
+                            user.setConversationState(ConversationStateEnum.READY);
                             user.setAttachTargetTicketId(null);
                             user.setAttachStartedAt(null);
                             user.setAttachTtlMinutes(null);
                             userChatRepository.save(user);
                             return sendMessage(new MessageBody(waId, "⚠️ La sesión para adjuntar expiró. ⚠️", "System",
-                                    "Back-end", businessPhoneNumber, "text", null));
+                                    MessageSourceEnum.BACK_END, businessPhoneNumber,  MessageTypeEnum.TEXT, null));
                         }
     
                         // 1) Texto = finalizar y adjuntar batch
@@ -616,9 +622,9 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                             } catch (ServerClientException sce) {
                                 logger.warn("Adjuntado fallo: {}", sce.getMessage());
                                 sendMessage(new MessageBody(waId, "⚠️🚨 " + sce.getMessage() + " 🚨⚠️", "System",
-                                        "Back-end", businessPhoneNumber, "text", null));
+                                        MessageSourceEnum.BACK_END, businessPhoneNumber,  MessageTypeEnum.TEXT, null));
                             } finally {
-                                user.setConversationState(ConversationState.READY);
+                                user.setConversationState(ConversationStateEnum.READY);
                                 user.setAttachTargetTicketId(null);
                                 user.setAttachStartedAt(null);
                                 user.setAttachTtlMinutes(null);
@@ -639,12 +645,12 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                             att.setMimeType(img.mime_type());
                             att.setAttachmentID(img.id());
                             att.setCaption(img.caption());
-                            att.setConversationState(ConversationState.WAITING_ATTACHMENTS_FOR_TICKET_EXISTING);
-                            att.setAttachmentStatus(AttachmentStatus.UNUSED);
+                            att.setConversationState(ConversationStateEnum.WAITING_ATTACHMENTS_FOR_TICKET_EXISTING);
+                            att.setAttachmentStatus(AttachmentStatusEnum.UNUSED);
                             attachmentRepository.save(att);
     
-                            return sendMessage(new MessageBody(waId, "🖼️ Imagen recibida. Sube más o dime si deseas continuar.", "System", "Back-end",
-                                    businessPhoneNumber, "text", null));
+                            return sendMessage(new MessageBody(waId, "🖼️ Imagen recibida. Sube más o dime si deseas continuar.", "System", MessageSourceEnum.BACK_END,
+                                    businessPhoneNumber,  MessageTypeEnum.TEXT, null));
                         }
     
                         // 3) Documento
@@ -659,12 +665,12 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                             att.setMimeType(doc.mime_type());
                             att.setAttachmentID(doc.id());
                             att.setCaption(doc.caption());
-                            att.setConversationState(ConversationState.WAITING_ATTACHMENTS_FOR_TICKET_EXISTING);
-                            att.setAttachmentStatus(AttachmentStatus.UNUSED);
+                            att.setConversationState(ConversationStateEnum.WAITING_ATTACHMENTS_FOR_TICKET_EXISTING);
+                            att.setAttachmentStatus(AttachmentStatusEnum.UNUSED);
                             attachmentRepository.save(att);
     
-                            return sendMessage(new MessageBody(waId, "📎 Documento recibido. Sube más o dime si deseas continuar.", "System", "Back-end",
-                                    businessPhoneNumber, "text", null));
+                            return sendMessage(new MessageBody(waId, "📎 Documento recibido. Sube más o dime si deseas continuar.", "System", MessageSourceEnum.BACK_END,
+                                    businessPhoneNumber,  MessageTypeEnum.TEXT, null));
                         }
     
                         // Otros tipos: ignorar
@@ -672,15 +678,15 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     }
     
                     default: {
-                        user.setConversationState(ConversationState.NEW);
+                        user.setConversationState(ConversationStateEnum.NEW);
                         userChatRepository.save(user);
                         return sendMessage(new MessageBody(
                             waId,
                             "¡Ups! 🫢 Algo inesperado ocurrió. Reiniciemos. \n" + "Por favor, Escribe un mensaje para comenzar.",
                             "System",
-                            "Back-end",
+                            MessageSourceEnum.BACK_END,
                             businessPhoneNumber,
-                            "text",
+                            MessageTypeEnum.TEXT,
                             null
                         ));
                     }
@@ -693,9 +699,9 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     waId,
                     "Ha ocurrido un error inesperado 😟. Por favor, inténtalo nuevamente más tarde.",
                     "System",
-                    "Back-end", 
+                    MessageSourceEnum.BACK_END, 
                     businessPhoneNumber, 
-                    "text",
+                    MessageTypeEnum.TEXT,
                     null
                 ));
             }
@@ -745,8 +751,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 msg.setMessageId(messageId);
                 msg.setFailedAt(Instant.ofEpochSecond(Long.parseLong(s.timestamp())));
                 msg.setTimestamp(Instant.now());
-                msg.setDirection("outbound");
-                msg.setSource("whatsapp_api_cloud");
+                msg.setDirection(MessageDirectionEnum.INBOUND);
+                msg.setSource(MessageSourceEnum.UNKNOWN);
 
                 if (s.errors() != null && !s.errors().isEmpty()) {
                     var err = s.errors().get(0);
@@ -877,14 +883,13 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         ResponseWhatsappMessage msgResp = resp.messages().get(0);
         String messageStatus = Optional.ofNullable(msgResp.messageStatus()).orElse("UNKNOWN");
 
-        // Guardar mensaje en messages
         MessageBody body = new MessageBody(
                 toPhoneNumber,
                 null,
                 "System",
-                "Back-end",
+                MessageSourceEnum.BACK_END,
                 businessPhoneNumber,
-                "template",
+                MessageTypeEnum.TEMPLATE,
                 null);
 
         MessageEntity messageEntity = MessageMapperHelper.createSentMessageEntity(body, resp);
