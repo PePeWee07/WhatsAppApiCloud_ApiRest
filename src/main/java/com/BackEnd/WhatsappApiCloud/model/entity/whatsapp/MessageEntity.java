@@ -29,10 +29,18 @@ public class MessageEntity {
     private String messageId;
     @Column(name = "conversation_user_phone", nullable = false)
     private String conversationUserPhone;
+
+    @Enumerated(EnumType.STRING)
     private MessageDirectionEnum direction;
+    
     private String profileName;
+
+    @Enumerated(EnumType.STRING)
     private MessageSourceEnum source;
+
+    @Enumerated(EnumType.STRING)
     private MessageTypeEnum type;
+
     private Instant timestamp;
     @Column(columnDefinition = "TEXT")
     private String textBody;

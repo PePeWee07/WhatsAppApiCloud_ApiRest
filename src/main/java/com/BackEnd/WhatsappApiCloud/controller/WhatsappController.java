@@ -133,7 +133,7 @@ public class WhatsappController {
             @RequestBody MessageBody payload,
             @RequestParam String imageUrl) {
         try {
-            ResponseWhatsapp response = apiWhatsappService.sendImageMessageById(payload, imageUrl);
+            ResponseWhatsapp response = apiWhatsappService.sendImageMessageByUrl(payload, imageUrl);
             if (response != null) {
                 return ResponseEntity.ok(response);
             } else {

@@ -111,7 +111,7 @@ public class MessageMapperHelper {
         entity.setFromPhone(payload.businessPhoneNumber());
         entity.setToPhone(payload.number());
         entity.setMessageId(response.messages().get(0).id());
-        entity.setTimestamp(Instant.now());
+        entity.setTimestamp(Instant.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
         entity.setTextBody(payload.message());
         entity.setSource(payload.source());
         entity.setDirection(MessageDirectionEnum.OUTBOUND);
