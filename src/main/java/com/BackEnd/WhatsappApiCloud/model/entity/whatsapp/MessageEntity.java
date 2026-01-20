@@ -26,7 +26,9 @@ public class MessageEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String messageId;
+    private String wamid;
+    private String relatedWamid;
+    
     @Column(name = "conversation_user_phone", nullable = false)
     private String conversationUserPhone;
 
@@ -44,14 +46,12 @@ public class MessageEntity {
     private Instant timestamp;
     @Column(columnDefinition = "TEXT")
     private String textBody;
-    @Column(columnDefinition = "TEXT")
-    private String caption;
-
-    private String relatedMessageId;
-
-    private String mimeType;
+    
+    private String mediaMimeType;
     private String mediaId;
     private String mediaFilename;
+    @Column(columnDefinition = "TEXT")
+    private String mediaCaption;
 
     private Double latitude;
     private Double longitude;
@@ -64,11 +64,6 @@ public class MessageEntity {
     private Instant deliveredAt;
     private Instant readAt;
     private Instant failedAt;
-
-    private Boolean billable;
-    private String pricingModel;
-    private String pricingCategory;
-    private String pricingType;
 
     private String errorCode;
     private String errorTitle;
@@ -83,7 +78,11 @@ public class MessageEntity {
     @Column(name = "to_phone", nullable = false)
     private String toPhone;
 
-    // Foregin Key to Template Message
+    // Foregin Keys
     @OneToOne(mappedBy = "message", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private MessageTemplateEntity messageTemplate;
+
+    @OneToOne(mappedBy = "message", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private MessagePircingEntity messagePircingEntity;
+
 }

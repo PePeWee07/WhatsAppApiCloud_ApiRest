@@ -14,9 +14,10 @@ import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageTemplateEntity;
 public interface TemplateMessageRepository extends JpaRepository<MessageTemplateEntity, Long> {
     List<MessageTemplateEntity> findByTemplateName(String templateName);
     
-    Optional<MessageTemplateEntity> findByMessage_MessageId(String messageId);
-    List<MessageTemplateEntity> findByMessage_ToPhone(String toPhone);
-    List<MessageTemplateEntity> findByMessage_TimestampBetween(Instant start, Instant end);
+    Optional<MessageTemplateEntity> findByMessageWamid(String wamid);
+
+    List<MessageTemplateEntity> findByMessageToPhone(String toPhone);
+    List<MessageTemplateEntity> findByMessageTimestampBetween(Instant start, Instant end);
 
     @Query("SELECT mt FROM MessageTemplateEntity mt JOIN mt.message m")
     Page<MessageTemplateEntity> findAllWithMessages(Pageable pageable);

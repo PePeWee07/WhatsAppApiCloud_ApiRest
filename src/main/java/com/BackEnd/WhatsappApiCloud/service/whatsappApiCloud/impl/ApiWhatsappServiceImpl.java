@@ -46,8 +46,10 @@ import com.BackEnd.WhatsappApiCloud.model.entity.user.AttachmentEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageEntity;
+import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessagePircingEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageTemplateEntity;
 import com.BackEnd.WhatsappApiCloud.repository.AttachmentRepository;
+import com.BackEnd.WhatsappApiCloud.repository.MessagePricingRepository;
 import com.BackEnd.WhatsappApiCloud.repository.MessageRepository;
 import com.BackEnd.WhatsappApiCloud.repository.TemplateMessageRepository;
 import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
@@ -117,6 +119,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     private TemplateMessageRepository templateMsgRepo;
     @Autowired
     private AttachmentRepository attachmentRepository;
+    @Autowired
+    private MessagePricingRepository messagePricingRepository;
 
     // ================ Constructor para inicializar el cliente REST =====================
     public ApiWhatsappServiceImpl(
@@ -126,7 +130,9 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         @Value("${whatsapp.version}") String version,
         ObjectMapper objectMapper,
         GlpiService glpiService,
-        MessageRepository messageRepository) {
+        MessageRepository messageRepository,
+        MessagePricingRepository messagePricingRepository
+        ) {
 
         restClient = RestClient.builder()
                     .baseUrl(urlBase + version + "/" + identifier)
@@ -141,6 +147,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         this.objectMapper = objectMapper;
         this.glpiService = glpiService;
         this.messageRepository = messageRepository;
+        this.messagePricingRepository = messagePricingRepository;
     }
 
     // ================ Constructor de mensajes de respuesta ==========================
@@ -476,7 +483,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                         String parentWamid = ctx.id();
                         String answerJson = (String) nfmMap.get("response_json");
 
-                        templateMsgRepo.findByMessage_MessageId(parentWamid).ifPresent(template -> {
+                        templateMsgRepo.findByMessageWamid(parentWamid).ifPresent(template -> {
                             template.setAnswer(answerJson);
                             template.setAnsweredAt(answeredAt);
                             templateMsgRepo.save(template);
@@ -734,7 +741,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 return;
             }
 
-            Optional<MessageEntity> op = messageRepository.findByMessageId(messageId);
+            Optional<MessageEntity> op = messageRepository.findByWamid(messageId);
 
             MessageEntity msg;
 
@@ -748,7 +755,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 msg.setConversationUserPhone(waId);
                 msg.setFromPhone(businessPhoneNumber);
                 msg.setToPhone(waId);
-                msg.setMessageId(messageId);
+                msg.setWamid(messageId);
                 msg.setFailedAt(Instant.ofEpochSecond(Long.parseLong(s.timestamp())));
                 msg.setTimestamp(Instant.now());
                 msg.setDirection(MessageDirectionEnum.INBOUND);
@@ -799,12 +806,23 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 default -> logger.debug("Estado no manejado: {}", state);
             }
 
-            s.pricing().ifPresent(p -> {
-                msg.setBillable(p.billable());
-                msg.setPricingModel(p.pricing_model());
-                msg.setPricingCategory(p.category());
-                msg.setPricingType(p.type());
-            });
+            if (s.pricing().isPresent()) {
+                var p = s.pricing().get();
+
+                MessagePircingEntity pricing = messagePricingRepository.findByMessageId(msg.getId())
+                        .orElseGet(() -> {
+                            MessagePircingEntity x = new MessagePircingEntity();
+                            x.setMessage(msg);
+                            return x;
+                        });
+
+                pricing.setPricingBillable(p.billable());
+                pricing.setPricingModel(p.pricing_model());
+                pricing.setPricingCategory(p.category());
+                pricing.setPricingType(p.type());
+
+                messagePricingRepository.save(pricing);
+            }
 
             try {
                 messageRepository.save(msg);
@@ -917,7 +935,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
         if (msg != null) {
             toPhone = msg.getToPhone();
-            wamid = msg.getMessageId();
+            wamid = msg.getWamid();
 
             if (msg.getSentAt() != null) {
                 sentAt = msg.getSentAt().atZone(ZoneOffset.UTC).toLocalDateTime();
@@ -960,7 +978,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         Instant start = startOfDay.atZone(ZoneOffset.UTC).toInstant();
         Instant end = endOfDay.atZone(ZoneOffset.UTC).toInstant();
 
-        return templateMsgRepo.findByMessage_TimestampBetween(start, end).stream()
+        return templateMsgRepo.findByMessageTimestampBetween(start, end).stream()
                 .map(this::templateMessageEntitytoDto)
                 .collect(Collectors.toList());
     }
@@ -978,7 +996,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     @Override
     @Transactional
     public List<TemplateMessageDto> listResponseTemplateByPhone(String whatsAppPhone) {
-        return templateMsgRepo.findByMessage_ToPhone(whatsAppPhone).stream()
+        return templateMsgRepo.findByMessageToPhone(whatsAppPhone).stream()
                 .map(this::templateMessageEntitytoDto)
                 .collect(Collectors.toList());
     }

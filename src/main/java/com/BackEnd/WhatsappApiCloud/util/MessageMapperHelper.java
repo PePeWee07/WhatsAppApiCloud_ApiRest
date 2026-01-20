@@ -20,7 +20,7 @@ public class MessageMapperHelper {
         MessageEntity entity = new MessageEntity();
 
         // Datos básicos
-        entity.setMessageId(msg.id());
+        entity.setWamid(msg.id());
         entity.setConversationUserPhone(value.contacts().get(0).wa_id());
         entity.setFromPhone(msg.from());
         entity.setToPhone(value.metadata().display_phone_number());
@@ -37,7 +37,7 @@ public class MessageMapperHelper {
         }
 
         if (msg.context() != null && msg.context().id() != null) {
-            entity.setRelatedMessageId(msg.context().id());
+            entity.setRelatedWamid(msg.context().id());
         }
 
         // Datos según tipo
@@ -47,32 +47,32 @@ public class MessageMapperHelper {
             });
 
             case "image" -> msg.image().ifPresent(img -> {
-                entity.setCaption(img.caption());
-                entity.setMimeType(img.mime_type());
+                entity.setMediaCaption(img.caption());
+                entity.setMediaMimeType(img.mime_type());
                 entity.setMediaId(img.id());
             });
 
             case "document" -> msg.document().ifPresent(doc -> {
-                entity.setCaption(doc.caption());
-                entity.setMimeType(doc.mime_type());
+                entity.setMediaCaption(doc.caption());
+                entity.setMediaMimeType(doc.mime_type());
                 entity.setMediaId(doc.id());
                 entity.setMediaFilename(doc.filename());
             });
 
             case "audio" -> msg.audio().ifPresent(aud -> {
-                entity.setMimeType(aud.mime_type());
+                entity.setMediaMimeType(aud.mime_type());
                 entity.setMediaId(aud.id());
-                entity.setCaption(aud.voice() ? "Nota de voz" : "Archivo de audio");
+                entity.setMediaCaption(aud.voice() ? "Nota de voz" : "Archivo de audio");
             });
 
             case "sticker" -> msg.sticker().ifPresent(st -> {
-                entity.setMimeType(st.mime_type());
+                entity.setMediaMimeType(st.mime_type());
                 entity.setMediaId(st.id());
             });
 
             case "reaction" -> msg.reaction().ifPresent(r -> {
                 entity.setReactionEmoji(r.emoji());
-                entity.setRelatedMessageId(r.message_id());
+                entity.setRelatedWamid(r.message_id());
             });
 
             case "location" -> msg.location().ifPresent(loc -> {
@@ -83,8 +83,8 @@ public class MessageMapperHelper {
             });
 
             case "video" -> msg.video().ifPresent(vid -> {
-                entity.setCaption(vid.caption());
-                entity.setMimeType(vid.mime_type());
+                entity.setMediaCaption(vid.caption());
+                entity.setMediaMimeType(vid.mime_type());
                 entity.setMediaId(vid.id());
             });
 
@@ -110,7 +110,7 @@ public class MessageMapperHelper {
         entity.setConversationUserPhone(payload.number());
         entity.setFromPhone(payload.businessPhoneNumber());
         entity.setToPhone(payload.number());
-        entity.setMessageId(response.messages().get(0).id());
+        entity.setWamid(response.messages().get(0).id());
         entity.setTimestamp(Instant.now().truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
         entity.setTextBody(payload.message());
         entity.setSource(payload.source());
@@ -118,7 +118,7 @@ public class MessageMapperHelper {
         entity.setProfileName(payload.sentBy());
         entity.setType(payload.type());
         if (payload.contextId() != null) {
-            entity.setRelatedMessageId(payload.contextId());
+            entity.setRelatedWamid(payload.contextId());
         }
         return  entity;
     }

@@ -8,6 +8,6 @@ import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageEntity;
 
 public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
 
-    Optional<MessageEntity> findByMessageId(String messageId);
-  
-} 
+    Optional<MessageEntity> findByWamid(String wamid);
+
+}

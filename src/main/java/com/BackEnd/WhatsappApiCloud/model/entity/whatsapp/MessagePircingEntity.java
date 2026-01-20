@@ -1,5 +1,4 @@
 package com.BackEnd.WhatsappApiCloud.model.entity.whatsapp;
-
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -7,7 +6,6 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
-import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -15,27 +13,20 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @ToString
 @Entity
-@Table(name = "messages_templates")
-public class MessageTemplateEntity {
+@Table(name = "messages_pricing")
+public class MessagePircingEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "template_name", nullable = false)
-    private String templateName;
-
-    @Column(name = "answered_at")
-    private LocalDateTime answeredAt;
-
-    @Column(name = "answer", length = 700)
-    private String answer;
-
-    @Column(name = "message_status")
-    private String messageStatus;
+    private Boolean pricingBillable;
+    private String pricingModel;
+    private String pricingCategory;
+    private String pricingType;
 
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "message_id", nullable = false, unique = true)
     private MessageEntity message;
-
+    
 }
