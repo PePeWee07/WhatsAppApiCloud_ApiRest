@@ -1,7 +1,9 @@
 package com.BackEnd.WhatsappApiCloud.model.entity.whatsapp;
 
 import java.time.Instant;
+import java.util.Set;
 
+import com.BackEnd.WhatsappApiCloud.model.entity.openIA.AiResponseEntity;
 import com.BackEnd.WhatsappApiCloud.util.enums.MessageDirectionEnum;
 import com.BackEnd.WhatsappApiCloud.util.enums.MessageSourceEnum;
 import com.BackEnd.WhatsappApiCloud.util.enums.MessageTypeEnum;
@@ -84,5 +86,8 @@ public class MessageEntity {
 
     @OneToOne(mappedBy = "message", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private MessagePircingEntity messagePircingEntity;
+
+    @OneToMany(mappedBy = "message", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private Set<AiResponseEntity> aiResponses;
 
 }

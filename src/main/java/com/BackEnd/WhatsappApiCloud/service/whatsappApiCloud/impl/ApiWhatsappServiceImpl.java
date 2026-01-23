@@ -56,8 +56,8 @@ import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
 import com.BackEnd.WhatsappApiCloud.service.erp.ErpCacheService;
 import com.BackEnd.WhatsappApiCloud.service.erp.ErpServerClient;
 import com.BackEnd.WhatsappApiCloud.service.glpi.GlpiService;
+import com.BackEnd.WhatsappApiCloud.service.openAi.AiResponseService;
 import com.BackEnd.WhatsappApiCloud.service.openAi.OpenAiServerClient;
-import com.BackEnd.WhatsappApiCloud.service.userChat.ChatHistoryService;
 import com.BackEnd.WhatsappApiCloud.service.userChat.UserChatSessionService;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
 import com.BackEnd.WhatsappApiCloud.util.MessageMapperHelper;
@@ -114,7 +114,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     @Autowired
     private ErpCacheService erpCacheService;
     @Autowired
-    private ChatHistoryService chatHistoryService;
+    private AiResponseService chatHistoryService;
     @Autowired
     private TemplateMessageRepository templateMsgRepo;
     @Autowired
@@ -177,36 +177,42 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
-    // =================== Envio de mensaje ==========================
+    public record SendResult(ResponseWhatsapp response, MessageEntity entity) {
+    }
+
+    // =================== Envío de mensaje ==========================
     @Override
     public ResponseWhatsapp sendMessage(MessageBody payload) {
+        return sendMessageAndReturnEntity(payload).response();
+    }
+
+    public SendResult sendMessageAndReturnEntity(MessageBody payload) {
         try {
             RequestMessages requestBody = RequestMessagesFactory.buildTextMessage(
-                payload.number(),
-                payload.message(),
-                payload.contextId()
-            );
+                    payload.number(),
+                    payload.message(),
+                    payload.contextId());
+
             ResponseWhatsapp response = NewResponseBuilder(requestBody, "/messages");
-            
-            try {
-                Thread.sleep(150);
-            } catch (InterruptedException ignored) {
+
+            if (response == null || response.messages() == null || response.messages().isEmpty()) {
+                return new SendResult(response, null);
             }
 
-            if (response != null && !response.messages().isEmpty()) {
-                chatSessionService.createSessionIfNotExists(payload.number());
-                MessageEntity entity = MessageMapperHelper.createSentMessageEntity(payload, response);
-                messageRepository.save(entity);
-            }
+            chatSessionService.createSessionIfNotExists(payload.number());
 
-            return response;
+            MessageEntity entity = MessageMapperHelper.createSentMessageEntity(payload, response);
+            entity = messageRepository.save(entity);
+
+            return new SendResult(response, entity);
 
         } catch (Exception e) {
             logger.error("Error al enviar mensaje: " + e);
             throw new RuntimeException("Error al enviar mensaje", e);
         }
     }
- 
+
+
     // ================ Mensaje leído ===========================
     public void markAsRead(RequestWhatsappAsRead request) {
         restClient.post().
@@ -418,17 +424,32 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         );
 
         AnswersOpenIADto data = openAiServerClient.getOpenAiData(question);
-        chatHistoryService.saveHistory(data, waId);
-        user = userChatRepository.findByWhatsappPhone(waId).orElse(user);
 
+        MessageBody outPayload = new MessageBody(
+                waId,
+                data.answer(),
+                "CatIA",
+                MessageSourceEnum.IA,
+                businessPhoneNumber,
+                MessageTypeEnum.TEXT,
+                null);
+
+        SendResult sent = sendMessageAndReturnEntity(outPayload);
+
+        if (sent.entity() != null) {
+            chatHistoryService.saveAiResponses(data, sent.entity());
+        } else {
+            logger.warn("No se pudo guardar historial IA: no se guardó MessageEntity del mensaje final.");
+        }
+
+        user = userChatRepository.findByWhatsappPhone(waId).orElse(user);
         user.setPreviousResponseId(data.previousResponseId());
         user.setLimitQuestions(user.getLimitQuestions() - 1);
         user.setLastInteraction(timeNow);
         user.setValidQuestionCount(user.getValidQuestionCount() + 1);
         userChatRepository.save(user);
 
-        return sendMessage(new MessageBody(waId, data.answer(), "CatIA", 
-                MessageSourceEnum.IA, businessPhoneNumber,  MessageTypeEnum.TEXT, null));
+        return sent.response();
     }
 
     // ================ LLegada de Exepeciones Informativas o Moderación de IA ===================

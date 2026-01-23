@@ -8,6 +8,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
@@ -30,15 +31,15 @@ public interface UserChatRepository extends JpaRepository<UserChatEntity, Long> 
             Pageable pageable);
 
     @Query("""
-        SELECT DISTINCT u
-        FROM UserChatEntity u
-        JOIN u.chatSessions cs
-        WHERE cs.startTime < :fin
-        AND cs.endTime   > :inicio
-        """)
-        Page<UserChatEntity> findByChatSessionsOverlapping(
-        LocalDateTime inicio,
-        LocalDateTime fin,
-        Pageable pageable
-        );
+                        SELECT DISTINCT u
+                        FROM UserChatEntity u
+                        JOIN u.chatSessions cs
+                        WHERE cs.startTime >= :inicio
+                          AND cs.startTime <  :fin
+                    """)
+    Page<UserChatEntity> findByChatSessionsStartInRange(
+                    @Param("inicio") LocalDateTime inicio,
+                    @Param("fin") LocalDateTime fin,
+                    Pageable pageable);
+
 }

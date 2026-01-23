@@ -1,4 +1,4 @@
-package com.BackEnd.WhatsappApiCloud.model.entity.user;
+package com.BackEnd.WhatsappApiCloud.model.entity.openIA;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 
@@ -23,16 +23,16 @@ import lombok.ToString;
 @AllArgsConstructor
 @ToString
 @Entity
-@Table(name = "chat_tool_call")
-public class ChatToolCallEntity {
+@Table(name = "ai_tool_call")
+public class AiToolCallEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "turn_id", nullable = false)
+    @JoinColumn(name = "ai_response_id", nullable = false)
     @JsonBackReference
-    private ChatTurnEntity turn;
+    private AiResponseEntity aiResponse;
 
     @Column(name = "call_id", nullable = false)
     private String callId;

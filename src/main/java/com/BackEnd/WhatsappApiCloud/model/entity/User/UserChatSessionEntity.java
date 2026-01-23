@@ -37,16 +37,9 @@ public class UserChatSessionEntity {
     @Column(name = "start_time", nullable = false)
     private LocalDateTime startTime;
 
-    @Column(name = "end_time", nullable = false)
-    private LocalDateTime endTime;
-
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(
-        name = "whatsapp_phone",
-        referencedColumnName = "whatsapp_phone",
-        insertable = false,
-        updatable = false
-    )
+    @JoinColumn(name = "whatsapp_phone", referencedColumnName = "whatsapp_phone", insertable = false, updatable = false)
     @JsonBackReference
     private UserChatEntity userChat;
+
 }

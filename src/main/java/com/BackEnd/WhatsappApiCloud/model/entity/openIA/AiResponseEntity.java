@@ -1,9 +1,9 @@
-package com.BackEnd.WhatsappApiCloud.model.entity.user;
+package com.BackEnd.WhatsappApiCloud.model.entity.openIA;
 
 import java.time.Instant;
 import java.util.Set;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageEntity;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.Column;
@@ -29,8 +29,8 @@ import lombok.ToString;
 @AllArgsConstructor
 @ToString
 @Entity
-@Table(name = "chat_turn")
-public class ChatTurnEntity {
+@Table(name = "ai_response")
+public class AiResponseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -72,26 +72,14 @@ public class ChatTurnEntity {
     @Column(name = "reasoning", columnDefinition = "TEXT")
     private String reasoning;
 
-    @Column(name = "whatsapp_phone", nullable = false)
-    private String whatsappPhone;
-
-    @OneToMany(mappedBy="turn", fetch = FetchType.LAZY)
-    @JsonManagedReference
-    private Set<ChatMessageEntity> messages;
-
-    @OneToMany(mappedBy="turn", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy="aiResponse", fetch = FetchType.LAZY)
     @OrderColumn(name="message_index")
     @JsonManagedReference
-    private Set<ChatToolCallEntity> toolCalls;
+    private Set<AiToolCallEntity> toolCalls;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(
-        name = "whatsapp_phone",
-        referencedColumnName = "whatsapp_phone",
-        insertable = false,
-        updatable  = false
-    )
-    @JsonBackReference
-    private UserChatEntity userChat;
+    @JoinColumn(name = "message_id", nullable = false)
+    private MessageEntity message;
+
 
 }

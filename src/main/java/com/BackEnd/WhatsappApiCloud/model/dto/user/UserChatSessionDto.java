@@ -11,8 +11,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public  class UserChatSessionDto {
     private Long id;
-    private String whatsappPhone;
     private int messageCount;
     private LocalDateTime startTime;
-    private LocalDateTime endTime;
 }

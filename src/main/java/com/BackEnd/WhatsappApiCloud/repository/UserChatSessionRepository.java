@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatSessionEntity;
 
 import java.util.List;
+import java.util.Optional;
 import java.time.LocalDateTime;
 
 @Repository
@@ -17,4 +18,10 @@ public interface UserChatSessionRepository extends JpaRepository<UserChatSession
         LocalDateTime startTime, 
         LocalDateTime endTime
     );
+
+    // Obtener la última sesión en un rango de tiempo
+    Optional<UserChatSessionEntity> findFirstByWhatsappPhoneAndStartTimeBetweenOrderByStartTimeDesc(
+            String whatsappPhone,
+            LocalDateTime startTime,
+            LocalDateTime endTime);
 }

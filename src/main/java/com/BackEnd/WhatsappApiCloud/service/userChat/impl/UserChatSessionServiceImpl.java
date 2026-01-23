@@ -1,7 +1,8 @@
 package com.BackEnd.WhatsappApiCloud.service.userChat.impl;
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.Optional;
+
 import org.springframework.stereotype.Service;
 
 import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatSessionEntity;
@@ -24,30 +25,30 @@ public class UserChatSessionServiceImpl implements UserChatSessionService {
     public UserChatSessionServiceImpl(UserChatSessionRepository chatSessionRepository) {
         this.chatSessionRepository = chatSessionRepository;
     }
-    
+
     @Override
     public UserChatSessionEntity createSessionIfNotExists(String whatsappPhone) {
-        int sessionDurationHours = 24;
-        LocalDateTime now       = LocalDateTime.now();
-        LocalDateTime threshold = now.minusHours(sessionDurationHours);
 
-        // 1) Buscar sesiones activas para este userChatId
-        List<UserChatSessionEntity> active = chatSessionRepository.findByWhatsappPhoneAndStartTimeBetween(whatsappPhone, threshold, now);
+        LocalDateTime now = LocalDateTime.now();
+        // Rango del día actual: 00:00 -> 00:00 del día siguiente
+        LocalDateTime startOfDay = now.toLocalDate().atStartOfDay();
+        LocalDateTime endOfDay = startOfDay.plusDays(1);
 
-        if (!active.isEmpty()) {
-            // 2) Existe actualizar contador
-            UserChatSessionEntity session = active.get(0);
+        Optional<UserChatSessionEntity> op = chatSessionRepository
+                .findFirstByWhatsappPhoneAndStartTimeBetweenOrderByStartTimeDesc(
+                        whatsappPhone, startOfDay, endOfDay);
+
+        if (op.isPresent()) {
+            UserChatSessionEntity session = op.get();
             session.setMessageCount(session.getMessageCount() + 1);
             return chatSessionRepository.save(session);
-        } else {
-            // 3) No existe crear nueva
-            UserChatSessionEntity session = new UserChatSessionEntity();
-            session.setWhatsappPhone(whatsappPhone);
-            session.setStartTime(now);
-            session.setEndTime(now.plusHours(sessionDurationHours));
-            session.setMessageCount(1);
-            return chatSessionRepository.save(session);
         }
+
+        UserChatSessionEntity session = new UserChatSessionEntity();
+        session.setWhatsappPhone(whatsappPhone);
+        session.setStartTime(now);
+        session.setMessageCount(1);
+        return chatSessionRepository.save(session);
     }
 
 }

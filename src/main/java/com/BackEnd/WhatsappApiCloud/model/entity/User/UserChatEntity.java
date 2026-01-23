@@ -99,14 +99,6 @@ public class UserChatEntity {
     private List<UserTicketEntity> tickets;
 
     @OneToMany(
-              mappedBy = "userChat",
-              cascade = CascadeType.ALL,
-              fetch = FetchType.LAZY)
-    @Fetch(FetchMode.SUBSELECT)
-    @JsonManagedReference
-    private List<ChatTurnEntity> turns;
-
-    @OneToMany(
         mappedBy = "userChat",
         cascade = CascadeType.ALL,
         fetch = FetchType.LAZY

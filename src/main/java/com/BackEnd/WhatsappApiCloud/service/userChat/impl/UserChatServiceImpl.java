@@ -125,10 +125,8 @@ public class UserChatServiceImpl implements UserchatService {
             List<UserChatSessionDto> sesionesDto = user.getChatSessions().stream()
             .map(cs -> new UserChatSessionDto(
                 cs.getId(),
-                cs.getWhatsappPhone(),
                 cs.getMessageCount(),
-                cs.getStartTime(),
-                cs.getEndTime()))
+                cs.getStartTime()))
             .collect(Collectors.toList());
         
         List<UserTicketDto> ticketsDto = listOpenTickets(user.getWhatsappPhone());
@@ -150,10 +148,8 @@ public class UserChatServiceImpl implements UserchatService {
         List<UserChatSessionDto> sesionesDto = user.getChatSessions().stream()
         .map(cs -> new UserChatSessionDto(
                 cs.getId(),
-                cs.getWhatsappPhone(),
                 cs.getMessageCount(),
-                cs.getStartTime(),
-                cs.getEndTime()))
+                cs.getStartTime()))
             .collect(Collectors.toList());
         List<UserTicketDto> ticketsDto = listOpenTickets(user.getWhatsappPhone());
 
@@ -182,10 +178,8 @@ public class UserChatServiceImpl implements UserchatService {
                 List<UserChatSessionDto> sesionesDto = user.getChatSessions().stream()
                     .map(cs -> new UserChatSessionDto(
                         cs.getId(),
-                        cs.getWhatsappPhone(),
                         cs.getMessageCount(),
-                        cs.getStartTime(),
-                        cs.getEndTime()))
+                        cs.getStartTime()))
                         .collect(Collectors.toList());
                 
                 List<UserTicketDto> ticketsDto = listOpenTickets(user.getWhatsappPhone());
@@ -214,17 +208,15 @@ public class UserChatServiceImpl implements UserchatService {
         Sort sort = Sort.by(sortBy);
         sort = "desc".equalsIgnoreCase(direction) ? sort.descending() : sort.ascending();
         Pageable pageable = PageRequest.of(page, size, sort);
-        Page<UserChatEntity> pageLocal = repo.findByChatSessionsOverlapping(inicio, fin, pageable);
+        Page<UserChatEntity> pageLocal = repo.findByChatSessionsStartInRange(inicio, fin, pageable);
 
         List<UserChatFullDto> dtos = pageLocal.getContent().stream()
             .map(user -> {
                 List<UserChatSessionDto> sesionesDto = user.getChatSessions().stream()
                     .map(cs -> new UserChatSessionDto(
                         cs.getId(),
-                        cs.getWhatsappPhone(),
                         cs.getMessageCount(),
-                        cs.getStartTime(),
-                        cs.getEndTime()))
+                        cs.getStartTime()))
                     .collect(Collectors.toList());
                     
                 List<UserTicketDto> ticketsDto = listOpenTickets(user.getWhatsappPhone());
@@ -294,10 +286,8 @@ public class UserChatServiceImpl implements UserchatService {
         List<UserChatSessionDto> sesionesDto = userEntity.getChatSessions().stream()
             .map(cs -> new UserChatSessionDto(
                 cs.getId(),
-                cs.getWhatsappPhone(),
                 cs.getMessageCount(),
-                cs.getStartTime(),
-                cs.getEndTime()))
+                cs.getStartTime()))
             .collect(Collectors.toList());
 
         List<UserTicketDto> ticketsDto = listOpenTickets(userEntity.getWhatsappPhone());
