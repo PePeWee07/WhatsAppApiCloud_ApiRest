@@ -414,7 +414,7 @@ public class UserChatServiceImpl implements UserchatService {
                         apiWhatsappService.sendImageMessageById(
                             new MessageBody(
                                     whatsAppPhone,
-                                    "🖼️ Imagen del seguimiento del ticket",
+                                    "🖼️ El técnico adjuntó esta imagen en la solución del ticket.",
                                     "System",
                                     MessageSourceEnum.BACK_END,
                                     businessPhoneNumber,
@@ -427,7 +427,7 @@ public class UserChatServiceImpl implements UserchatService {
                        apiWhatsappService.sendDocumentMessageById(
                             new MessageBody(
                                     whatsAppPhone,
-                                    "📎 Adjunto del seguimiento",
+                                    "📎 El técnico adjuntó este documento en la solución del ticket.",
                                     "System",
                                     MessageSourceEnum.BACK_END,
                                     businessPhoneNumber,
@@ -461,7 +461,7 @@ public class UserChatServiceImpl implements UserchatService {
                     apiWhatsappService.sendImageMessageById(
                             new MessageBody(
                                     whatsAppPhone,
-                                    "🖼️ Imagen del seguimiento del ticket",
+                                    "🖼️ El técnico adjuntó esta imagen en el seguimiento del ticket.",
                                     "System",
                                     MessageSourceEnum.BACK_END,
                                     businessPhoneNumber,
@@ -474,7 +474,7 @@ public class UserChatServiceImpl implements UserchatService {
                     apiWhatsappService.sendDocumentMessageById(
                             new MessageBody(
                                     whatsAppPhone,
-                                    "📎 Adjunto del seguimiento",
+                                    "📎 El técnico adjuntó este documento en el seguimiento del ticket.",
                                     "System",
                                     MessageSourceEnum.BACK_END,
                                     businessPhoneNumber,

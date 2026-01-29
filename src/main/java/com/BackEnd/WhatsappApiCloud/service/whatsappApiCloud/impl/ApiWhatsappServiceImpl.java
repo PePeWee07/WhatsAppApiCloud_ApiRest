@@ -343,6 +343,30 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                             .allMatch(restrictedSet::contains);
     }
 
+    // =========== Save Attachment Document ==============
+    private AttachmentEntity saveMediaAttachment(
+            String waId,
+            WhatsAppDataDto.Message msg,
+            String type,
+            String attachmentId,
+            String mimeType,
+            String caption,
+            ConversationStateEnum stateAfterSave
+        ) {
+        AttachmentEntity att = new AttachmentEntity();
+        att.setWhatsappPhone(waId);
+        att.setTimestamp(Instant.ofEpochSecond(Long.parseLong(msg.timestamp())));
+        att.setType(type);
+        att.setAttachmentID(attachmentId);
+        att.setMimeType(mimeType);
+        att.setCaption(caption);
+
+        att.setConversationState(stateAfterSave);
+        att.setAttachmentStatus(AttachmentStatusEnum.UNUSED);
+
+        return attachmentRepository.save(att);
+    }
+
     // ================ Estado "READY" =========================
     @Transactional
     private ResponseWhatsapp handleReadyState(UserChatEntity user, String messageText, String waId, LocalDateTime timeNow) throws JsonProcessingException {
@@ -567,70 +591,54 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                                     MessageTypeEnum.TEXT, null
                             ));
                         }
-    
-                        if (messageType.equals("text")) {
-                            String messageText = messageOptionalText.get().body();
-                            user.setConversationState(ConversationStateEnum.READY);
-                            userChatRepository.save(user);
-                            return handleReadyState(user, messageText, waId, timeNow);
+
+                        var msg = changeValue.messages().get(0);
+                        switch (messageType) {
+                            case "text" -> {
+                                String messageText = messageOptionalText.get().body();
+                                user.setConversationState(ConversationStateEnum.READY);
+                                userChatRepository.save(user);
+                                return handleReadyState(user, messageText, waId, timeNow);
+                            }
+                            case "image" -> {
+                                var img = msg.image().get();
+
+                                saveMediaAttachment(
+                                        waId,
+                                        msg,
+                                        "image",
+                                        img.id(),
+                                        img.mime_type(),
+                                        img.caption(),
+                                        ConversationStateEnum.WAITING_ATTACHMENTS);
+
+                                return sendMessage(new MessageBody(
+                                        waId, "🖼️ Imagen recibida. Sube más o dime si deseas continuar.", "System",
+                                        MessageSourceEnum.BACK_END, businessPhoneNumber, MessageTypeEnum.TEXT, null));
+                            }
+                            case "document" -> {
+                                var doc = msg.document().get();
+
+                                saveMediaAttachment(
+                                        waId,
+                                        msg,
+                                        "document",
+                                        doc.id(),
+                                        doc.mime_type(),
+                                        doc.caption(),
+                                        ConversationStateEnum.WAITING_ATTACHMENTS);
+
+                                return sendMessage(new MessageBody(
+                                        waId, "📎 Documento recibido. Sube más o dime si deseas continuar.", "System",
+                                        MessageSourceEnum.BACK_END, businessPhoneNumber, MessageTypeEnum.TEXT, null));
+                            }
+                            default -> {
+                                return null;
+                            }
                         }
-                        
-    
-                        // Guardar IMAGEN
-                        if (messageType.equals("image")) {
-                            var msg = changeValue.messages().get(0);
-                            var img = msg.image().get();
-    
-                            AttachmentEntity att = new AttachmentEntity();
-                            att.setWhatsappPhone(waId);
-                            att.setTimestamp(Instant.ofEpochSecond(Long.parseLong(msg.timestamp())));
-                            att.setType("image");
-                            att.setMimeType(img.mime_type());
-                            att.setAttachmentID(img.id());
-                            att.setCaption(img.caption());
-                            att.setConversationState(ConversationStateEnum.WAITING_ATTACHMENTS);
-                            att.setAttachmentStatus(AttachmentStatusEnum.UNUSED);
-    
-                            attachmentRepository.save(att);
-    
-                            return sendMessage(new MessageBody(
-                                waId, "🖼️ Imagen recibida. Sube más o dime si deseas continuar.", "System",
-                                    MessageSourceEnum.BACK_END, businessPhoneNumber, MessageTypeEnum.TEXT, null
-                            ));
-                        }
-    
-                        // Guardar DOCUMENTO
-                        if (messageType.equals("document")) {
-                            var msg = changeValue.messages().get(0);
-                            var doc = msg.document().get();
-    
-                            AttachmentEntity att = new AttachmentEntity();
-                            att.setWhatsappPhone(waId);
-                            att.setTimestamp(Instant.ofEpochSecond(Long.parseLong(msg.timestamp())));
-                            att.setType("document");
-                            att.setMimeType(doc.mime_type());
-                            att.setAttachmentID(doc.id());
-                            att.setCaption(null);
-                            att.setConversationState(ConversationStateEnum.WAITING_ATTACHMENTS);
-                            att.setAttachmentStatus(AttachmentStatusEnum.UNUSED);
-    
-                            attachmentRepository.save(att);
-    
-                            return sendMessage(new MessageBody(
-                                waId, "📎 Documento recibido. Sube más o dime si deseas continuar.", "System",
-                                    MessageSourceEnum.BACK_END, businessPhoneNumber,  MessageTypeEnum.TEXT, null
-                            ));
-                        }
-    
-                        // Cualquier otro tipo: ignorar (stickers, audio, etc.)
-                        return null;
                     }
     
                     case WAITING_ATTACHMENTS_FOR_TICKET_EXISTING: {
-    
-                        Long ticketId = user.getAttachTargetTicketId();
-    
-                        // 0) TTL
                         boolean expired = user.getAttachStartedAt() == null || user.getAttachTtlMinutes() == null || Instant.now().isAfter(user.getAttachStartedAt().plus(Duration.ofMinutes(user.getAttachTtlMinutes())));
                         if (expired) {
                             user.setConversationState(ConversationStateEnum.READY);
@@ -641,70 +649,65 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                             return sendMessage(new MessageBody(waId, "⚠️ La sesión para adjuntar expiró. ⚠️", "System",
                                     MessageSourceEnum.BACK_END, businessPhoneNumber,  MessageTypeEnum.TEXT, null));
                         }
-    
-                        // 1) Texto = finalizar y adjuntar batch
-                        if ("text".equals(messageType)) {
-                            String messageText = messageOptionalText.get().body();
-                            try {
-                                glpiService.attachRecentWhatsappMediaToTicket(waId, ticketId, user.getAttachTtlMinutes());
-                            } catch (ServerClientException sce) {
-                                logger.warn("Adjuntado fallo: {}", sce.getMessage());
-                                sendMessage(new MessageBody(waId, "⚠️🚨 " + sce.getMessage() + " 🚨⚠️", "System",
-                                        MessageSourceEnum.BACK_END, businessPhoneNumber,  MessageTypeEnum.TEXT, null));
-                            } finally {
-                                user.setConversationState(ConversationStateEnum.READY);
-                                user.setAttachTargetTicketId(null);
-                                user.setAttachStartedAt(null);
-                                user.setAttachTtlMinutes(null);
-                                userChatRepository.save(user);
+
+                        var msg = changeValue.messages().get(0);
+                        switch (messageType) {
+                            case "text" -> {
+                                String messageText = messageOptionalText.get().body();
+                                try {
+                                    glpiService.attachRecentWhatsappMediaToTicket(waId, 
+                                        user.getAttachTargetTicketId(), user.getAttachTtlMinutes());
+                                } catch (ServerClientException sce) {
+                                    logger.warn("Adjuntado fallo: {}", sce.getMessage());
+                                    sendMessage(new MessageBody(waId, "⚠️🚨 " + sce.getMessage() + " 🚨⚠️", "System",
+                                            MessageSourceEnum.BACK_END, businessPhoneNumber, MessageTypeEnum.TEXT,
+                                            null));
+                                } finally {
+                                    user.setConversationState(ConversationStateEnum.READY);
+                                    user.setAttachTargetTicketId(null);
+                                    user.setAttachStartedAt(null);
+                                    user.setAttachTtlMinutes(null);
+                                    userChatRepository.save(user);
+                                }
+                                return handleReadyState(user, messageText, waId, timeNow);
                             }
-                            return handleReadyState(user, messageText, waId, timeNow);
+                            case "image" -> {
+                                var img = msg.image().get();
+
+                                saveMediaAttachment(
+                                        waId,
+                                        msg,
+                                        "image",
+                                        img.id(),
+                                        img.mime_type(),
+                                        img.caption(),
+                                        ConversationStateEnum.WAITING_ATTACHMENTS_FOR_TICKET_EXISTING);
+
+                                return sendMessage(new MessageBody(
+                                        waId, "🖼️ Imagen recibida. Sube más o dime si deseas continuar.", "System",
+                                        MessageSourceEnum.BACK_END, businessPhoneNumber, MessageTypeEnum.TEXT, null));
+                            }
+                            case "document" -> {
+                                var doc = msg.document().get();
+
+                                saveMediaAttachment(
+                                        waId,
+                                        msg,
+                                        "document",
+                                        doc.id(),
+                                        doc.mime_type(),
+                                        doc.caption(),
+                                        ConversationStateEnum.WAITING_ATTACHMENTS_FOR_TICKET_EXISTING);
+
+                                return sendMessage(new MessageBody(
+                                        waId, "📎 Documento recibido. Sube más o dime si deseas continuar.", "System",
+                                        MessageSourceEnum.BACK_END, businessPhoneNumber, MessageTypeEnum.TEXT, null));
+                            }
+                            default -> {
+                                return null;
+                            }
                         }
-    
-                        // 2) Imagen
-                        if ("image".equals(messageType)) {
-                            var msg = changeValue.messages().get(0);
-                            var img = msg.image().get();
-    
-                            AttachmentEntity att = new AttachmentEntity();
-                            att.setWhatsappPhone(waId);
-                            att.setTimestamp(Instant.ofEpochSecond(Long.parseLong(msg.timestamp())));
-                            att.setType("image");
-                            att.setMimeType(img.mime_type());
-                            att.setAttachmentID(img.id());
-                            att.setCaption(img.caption());
-                            att.setConversationState(ConversationStateEnum.WAITING_ATTACHMENTS_FOR_TICKET_EXISTING);
-                            att.setAttachmentStatus(AttachmentStatusEnum.UNUSED);
-                            attachmentRepository.save(att);
-    
-                            return sendMessage(new MessageBody(waId, "🖼️ Imagen recibida. Sube más o dime si deseas continuar.", "System", MessageSourceEnum.BACK_END,
-                                    businessPhoneNumber,  MessageTypeEnum.TEXT, null));
-                        }
-    
-                        // 3) Documento
-                        if ("document".equals(messageType)) {
-                            var msg = changeValue.messages().get(0);
-                            var doc = msg.document().get();
-    
-                            AttachmentEntity att = new AttachmentEntity();
-                            att.setWhatsappPhone(waId);
-                            att.setTimestamp(Instant.ofEpochSecond(Long.parseLong(msg.timestamp())));
-                            att.setType("document");
-                            att.setMimeType(doc.mime_type());
-                            att.setAttachmentID(doc.id());
-                            att.setCaption(doc.caption());
-                            att.setConversationState(ConversationStateEnum.WAITING_ATTACHMENTS_FOR_TICKET_EXISTING);
-                            att.setAttachmentStatus(AttachmentStatusEnum.UNUSED);
-                            attachmentRepository.save(att);
-    
-                            return sendMessage(new MessageBody(waId, "📎 Documento recibido. Sube más o dime si deseas continuar.", "System", MessageSourceEnum.BACK_END,
-                                    businessPhoneNumber,  MessageTypeEnum.TEXT, null));
-                        }
-    
-                        // Otros tipos: ignorar
-                        return null;
                     }
-    
                     default: {
                         user.setConversationState(ConversationStateEnum.NEW);
                         userChatRepository.save(user);
