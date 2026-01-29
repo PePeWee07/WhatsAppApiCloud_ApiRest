@@ -46,6 +46,7 @@ import com.BackEnd.WhatsappApiCloud.model.entity.user.AttachmentEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageEntity;
+import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageErrorEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessagePircingEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageTemplateEntity;
 import com.BackEnd.WhatsappApiCloud.repository.AttachmentRepository;
@@ -176,11 +177,10 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             throw new ServerClientException("Error inesperado al enviar mensaje", e);
         }
     }
-
-    public record SendResult(ResponseWhatsapp response, MessageEntity entity) {
-    }
-
+    
     // =================== Envío de mensaje ==========================
+    public record SendResult(ResponseWhatsapp response, MessageEntity entity) {}
+
     @Override
     public ResponseWhatsapp sendMessage(MessageBody payload) {
         return sendMessageAndReturnEntity(payload).response();
@@ -757,6 +757,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             String waId = s.recipient_id();
             String messageId = s.id();
             String state = s.status();
+            String timestamp = s.timestamp();
 
             UserChatEntity user = userChatRepository.findByWhatsappPhone(waId)
                     .orElseThrow(() -> new RuntimeException("Usuario no encontrado para waId: " + waId));
@@ -780,19 +781,19 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 msg.setFromPhone(businessPhoneNumber);
                 msg.setToPhone(waId);
                 msg.setWamid(messageId);
-                msg.setFailedAt(Instant.ofEpochSecond(Long.parseLong(s.timestamp())));
+                msg.setFailedAt(Instant.ofEpochSecond(Long.parseLong(timestamp)));
                 msg.setTimestamp(Instant.now());
                 msg.setDirection(MessageDirectionEnum.INBOUND);
                 msg.setSource(MessageSourceEnum.UNKNOWN);
 
                 if (s.errors() != null && !s.errors().isEmpty()) {
                     var err = s.errors().get(0);
-                    msg.setErrorCode(err.code());
-                    msg.setErrorTitle(err.title());
-                    msg.setErrorMessage(err.message());
-                    if (err.error_data() != null) {
-                        msg.setErrorDetails(err.error_data().details());
-                    }
+                    MessageErrorEntity entityError = new MessageErrorEntity();
+                    entityError.setErrorCode(err.code());
+                    entityError.setErrorTitle(err.title());
+                    entityError.setErrorDetails(err.message());
+                    if (err.error_data() != null)
+                        entityError.setErrorDetails(err.error_data().details());
                 }
 
                 messageRepository.save(msg);
@@ -800,7 +801,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 msg = op.get();
             }
 
-            Instant ts = Instant.ofEpochSecond(Long.parseLong(s.timestamp()));
+            Instant ts = Instant.ofEpochSecond(Long.parseLong(timestamp));
 
             switch (state) {
                 case "sent" -> {
@@ -819,11 +820,12 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     msg.setFailedAt(ts);
                     if (s.errors() != null && !s.errors().isEmpty()) {
                         var err = s.errors().get(0);
-                        msg.setErrorCode(err.code());
-                        msg.setErrorTitle(err.title());
-                        msg.setErrorMessage(err.message());
+                        MessageErrorEntity entityError = new MessageErrorEntity();
+                        entityError.setErrorCode(err.code());
+                        entityError.setErrorTitle(err.title());
+                        entityError.setErrorDetails(err.message());
                         if (err.error_data() != null)
-                            msg.setErrorDetails(err.error_data().details());
+                            entityError.setErrorDetails(err.error_data().details());
                     }
 
                 }

@@ -13,13 +13,11 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import lombok.ToString;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@ToString
 @Entity
 @Table(name = "messages")
 public class MessageEntity {
@@ -55,11 +53,6 @@ public class MessageEntity {
     @Column(columnDefinition = "TEXT")
     private String mediaCaption;
 
-    private Double latitude;
-    private Double longitude;
-    private String locationName;
-    private String locationAddress;
-
     private String reactionEmoji;
 
     private Instant sentAt;
@@ -67,12 +60,6 @@ public class MessageEntity {
     private Instant readAt;
     private Instant failedAt;
 
-    private String errorCode;
-    private String errorTitle;
-    @Column(columnDefinition = "TEXT")
-    private String errorDetails;
-    @Column(columnDefinition = "TEXT")
-    private String errorMessage;
 
     @Column(name = "from_phone", nullable = false)
     private String fromPhone;
@@ -84,10 +71,15 @@ public class MessageEntity {
     @OneToOne(mappedBy = "message", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private MessageTemplateEntity messageTemplate;
 
-    @OneToOne(mappedBy = "message", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    private MessagePircingEntity messagePircingEntity;
-
     @OneToMany(mappedBy = "message", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private Set<AiResponseEntity> aiResponses;
 
+    @OneToOne(mappedBy = "message", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private MessagePircingEntity messagePircingEntity;
+
+    @OneToOne(mappedBy = "message", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private MessageAddresEntity messageAddresEntity;
+
+    @OneToOne(mappedBy = "message", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private MessageErrorEntity messageErrorEntity;
 }

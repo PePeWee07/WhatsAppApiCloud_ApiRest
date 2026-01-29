@@ -2,8 +2,10 @@ package com.BackEnd.WhatsappApiCloud.util;
 
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppDataDto;
+import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageAddresEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageEntity;
+import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageErrorEntity;
 import com.BackEnd.WhatsappApiCloud.util.enums.MessageDirectionEnum;
 import com.BackEnd.WhatsappApiCloud.util.enums.MessageSourceEnum;
 import com.BackEnd.WhatsappApiCloud.util.enums.MessageTypeEnum;
@@ -76,10 +78,13 @@ public class MessageMapperHelper {
             });
 
             case "location" -> msg.location().ifPresent(loc -> {
-                entity.setLatitude(Double.valueOf(loc.latitude()));
-                entity.setLongitude(Double.valueOf(loc.longitude()));
-                entity.setLocationName(loc.name());
-                entity.setLocationAddress(loc.address());
+                MessageAddresEntity addressEntity = new MessageAddresEntity();
+                addressEntity.setLatitude(Double.valueOf(loc.latitude()));
+                addressEntity.setLongitude(Double.valueOf(loc.longitude()));
+                addressEntity.setLocationName(loc.name());
+                addressEntity.setLocationAddress(loc.address());
+                addressEntity.setMessage(entity);
+                entity.setMessageAddresEntity(addressEntity);
             });
 
             case "video" -> msg.video().ifPresent(vid -> {
@@ -89,9 +94,12 @@ public class MessageMapperHelper {
             });
 
             case "unsupported" -> msg.unsupported().ifPresent(err -> {
-                entity.setErrorCode(err.code());
-                entity.setErrorTitle(err.title());
-                entity.setErrorDetails(err.details());
+                MessageErrorEntity entityError = new MessageErrorEntity();
+                entityError.setErrorCode(err.code());
+                entityError.setErrorTitle(err.title());
+                entityError.setErrorDetails(err.details());
+                entityError.setMessage(entity);
+                entity.setMessageErrorEntity(entityError);
             });
 
             // TODO: Manejar los contactos

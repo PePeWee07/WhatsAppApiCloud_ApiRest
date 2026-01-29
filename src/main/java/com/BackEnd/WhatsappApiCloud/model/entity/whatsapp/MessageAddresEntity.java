@@ -6,34 +6,24 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
-
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "messages_templates")
-public class MessageTemplateEntity {
+@Table(name = "messages_addres")
+public class MessageAddresEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "template_name", nullable = false)
-    private String templateName;
-
-    @Column(name = "answered_at")
-    private LocalDateTime answeredAt;
-
-    @Column(name = "answer", length = 700)
-    private String answer;
-
-    @Column(name = "message_status")
-    private String messageStatus;
-
+    private Double latitude;
+    private Double longitude;
+    private String locationName;
+    private String locationAddress;
+    
     @OneToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "message_id", nullable = false, unique = true)
     private MessageEntity message;
-
 }
