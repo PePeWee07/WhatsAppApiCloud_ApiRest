@@ -29,12 +29,12 @@ import com.BackEnd.WhatsappApiCloud.exception.ApiInfoException;
 // import com.BackEnd.WhatsappApiCloud.exception.ErpNotFoundException;
 import com.BackEnd.WhatsappApiCloud.exception.MediaNotFoundException;
 import com.BackEnd.WhatsappApiCloud.exception.ServerClientException;
-import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.TemplateMessageDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestMessages;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestMessagesFactory;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestWhatsappAsRead;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.TypingIndicator;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseMediaMetadata;
+import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseMessageTemplate;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsappMessage;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppDataDto;
@@ -47,7 +47,7 @@ import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageErrorEntity;
-import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessagePircingEntity;
+import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessagePricingEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageTemplateEntity;
 import com.BackEnd.WhatsappApiCloud.repository.AttachmentRepository;
 import com.BackEnd.WhatsappApiCloud.repository.MessagePricingRepository;
@@ -835,9 +835,9 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             if (s.pricing().isPresent()) {
                 var p = s.pricing().get();
 
-                MessagePircingEntity pricing = messagePricingRepository.findByMessageId(msg.getId())
+                MessagePricingEntity pricing = messagePricingRepository.findByMessageId(msg.getId())
                         .orElseGet(() -> {
-                            MessagePircingEntity x = new MessagePircingEntity();
+                            MessagePricingEntity x = new MessagePricingEntity();
                             x.setMessage(msg);
                             return x;
                         });
@@ -952,7 +952,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     }
 
     // ============== Convertir entidad plantilla a DTO ==================
-    private TemplateMessageDto templateMessageEntitytoDto(MessageTemplateEntity template) {
+    private ResponseMessageTemplate templateMessageEntitytoDto(MessageTemplateEntity template) {
         MessageEntity msg = template.getMessage();
 
         String toPhone = null;
@@ -970,7 +970,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             }
         }
 
-        return new TemplateMessageDto(
+        return new ResponseMessageTemplate(
                 template.getId(),
                 toPhone,
                 template.getTemplateName(),
@@ -984,7 +984,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     // ============== Obtener plantillas ==================
     @Override
     @Transactional
-    public Page<TemplateMessageDto> getResponsesTemplate(Pageable pageable, Boolean onlyAnswered) {
+    public Page<ResponseMessageTemplate> getResponsesTemplate(Pageable pageable, Boolean onlyAnswered) {
         Page<MessageTemplateEntity> pageResult;
         if (onlyAnswered == null || !onlyAnswered) {
             pageResult = templateMsgRepo.findAllWithMessages(pageable);
@@ -997,7 +997,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     // ============== Obtener plantilla por fecha de envío ==================
     @Override
     @Transactional
-    public List<TemplateMessageDto> listResponseTemplateByDate(LocalDateTime inicio, LocalDateTime fin) {
+    public List<ResponseMessageTemplate> listResponseTemplateByDate(LocalDateTime inicio, LocalDateTime fin) {
         LocalDateTime startOfDay = inicio.toLocalDate().atStartOfDay();
         LocalDateTime endOfDay = fin.toLocalDate().atTime(LocalTime.MAX);
 
@@ -1012,7 +1012,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     // ============== Obtener plantilla por nombre ==================
     @Override
     @Transactional
-    public List<TemplateMessageDto> listResponseTemplateByName(String templateName) {
+    public List<ResponseMessageTemplate> listResponseTemplateByName(String templateName) {
         return templateMsgRepo.findByTemplateName(templateName).stream()
             .map(this::templateMessageEntitytoDto)
             .collect(Collectors.toList());
@@ -1021,7 +1021,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     // ============== Obtener plantilla por usuario ==================
     @Override
     @Transactional
-    public List<TemplateMessageDto> listResponseTemplateByPhone(String whatsAppPhone) {
+    public List<ResponseMessageTemplate> listResponseTemplateByPhone(String whatsAppPhone) {
         return templateMsgRepo.findByMessageToPhone(whatsAppPhone).stream()
                 .map(this::templateMessageEntitytoDto)
                 .collect(Collectors.toList());

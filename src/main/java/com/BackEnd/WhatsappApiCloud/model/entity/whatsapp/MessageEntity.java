@@ -60,7 +60,6 @@ public class MessageEntity {
     private Instant readAt;
     private Instant failedAt;
 
-
     @Column(name = "from_phone", nullable = false)
     private String fromPhone;
 
@@ -75,7 +74,7 @@ public class MessageEntity {
     private Set<AiResponseEntity> aiResponses;
 
     @OneToOne(mappedBy = "message", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    private MessagePircingEntity messagePircingEntity;
+    private MessagePricingEntity messagePricingEntity;
 
     @OneToOne(mappedBy = "message", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private MessageAddresEntity messageAddresEntity;

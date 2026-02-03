@@ -1,4 +1,4 @@
-package com.BackEnd.WhatsappApiCloud.model.dto.whatsapp;
+package com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage;
 
 import java.time.LocalDateTime;
 
@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class TemplateMessageDto {
+public class ResponseMessageTemplate {
     private Long id;                    // id de messages_templates
     private String toPhone;             // MessageEntity.toPhone
     private String templateName;        // MessageTemplateEntity.templateName

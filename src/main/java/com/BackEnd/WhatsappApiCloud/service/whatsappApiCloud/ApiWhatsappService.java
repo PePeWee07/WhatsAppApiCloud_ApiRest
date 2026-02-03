@@ -7,8 +7,8 @@ import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.TemplateMessageDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseMediaMetadata;
+import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseMessageTemplate;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppDataDto;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
@@ -32,9 +32,9 @@ public interface ApiWhatsappService {
      ResponseWhatsapp sendDocumentMessageByUrl(MessageBody payload, String documentUrl, String filename);
      ResponseMediaMetadata getMediaMetadata(String mediaId);
      ResponseWhatsapp sendTemplatefeedback(String toPhoneNumber);
-     Page<TemplateMessageDto> getResponsesTemplate(Pageable pageable, Boolean onlyAnswered);
-     List<TemplateMessageDto> listResponseTemplateByPhone(String WhatsAppPhone);
-     List<TemplateMessageDto> listResponseTemplateByDate(LocalDateTime inicio, LocalDateTime fin);
-     List<TemplateMessageDto> listResponseTemplateByName(String templateName);
+     Page<ResponseMessageTemplate> getResponsesTemplate(Pageable pageable, Boolean onlyAnswered);
+     List<ResponseMessageTemplate> listResponseTemplateByPhone(String WhatsAppPhone);
+     List<ResponseMessageTemplate> listResponseTemplateByDate(LocalDateTime inicio, LocalDateTime fin);
+     List<ResponseMessageTemplate> listResponseTemplateByName(String templateName);
 
 }
