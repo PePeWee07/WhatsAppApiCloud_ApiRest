@@ -59,6 +59,7 @@ import com.BackEnd.WhatsappApiCloud.service.erp.ErpServerClient;
 import com.BackEnd.WhatsappApiCloud.service.glpi.GlpiService;
 import com.BackEnd.WhatsappApiCloud.service.openAi.AiResponseService;
 import com.BackEnd.WhatsappApiCloud.service.openAi.OpenAiServerClient;
+import com.BackEnd.WhatsappApiCloud.service.sse.MessageEventStreamService;
 import com.BackEnd.WhatsappApiCloud.service.userChat.UserChatSessionService;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
 import com.BackEnd.WhatsappApiCloud.util.MessageMapperHelper;
@@ -122,6 +123,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     private AttachmentRepository attachmentRepository;
     @Autowired
     private MessagePricingRepository messagePricingRepository;
+    @Autowired
+    private MessageEventStreamService messageEventStreamService;
 
     // ================ Constructor para inicializar el cliente REST =====================
     public ApiWhatsappServiceImpl(
@@ -211,7 +214,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             throw new RuntimeException("Error al enviar mensaje", e);
         }
     }
-
 
     // ================ Mensaje leído ===========================
     public void markAsRead(RequestWhatsappAsRead request) {
@@ -476,7 +478,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         return sent.response();
     }
 
-    // ================ LLegada de Exepeciones Informativas o Moderación de IA ===================
+    // ================ Envio de exepeciones Informativas o Moderación de IA ===================
     private ResponseWhatsapp handleApiInfoException(ApiInfoException e, String waId) {
         userChatRepository.findByWhatsappPhone(waId).ifPresent(user -> {
             if (e.getModeration() != null) {
@@ -546,7 +548,14 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     MessageDirectionEnum.INBOUND,
                     MessageSourceEnum.USER
                 );
-                messageRepository.save(entity);
+                MessageEntity saved = messageRepository.save(entity);
+                messageEventStreamService.notifyUpdate(
+                    saved.getConversationUserPhone(),
+                    "new_inbound",
+                    saved.getType(),
+                    saved.getTextBody()
+                );
+
             }
 
             // Manejar estados de conversación

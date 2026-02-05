@@ -8,7 +8,8 @@ public enum MessageTypeEnum {
     VIDEO,
     STICKER,
     LOCATION,
-    CONTACT,
+    REACTION,
+    CONTACTS,
     TEMPLATE,
     UNSUPPORTED,
     UNKNOWN

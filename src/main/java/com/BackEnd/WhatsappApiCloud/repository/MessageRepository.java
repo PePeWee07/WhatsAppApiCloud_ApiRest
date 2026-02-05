@@ -51,7 +51,6 @@ public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
         LEFT JOIN m.messageAddresEntity ma
         LEFT JOIN m.messageErrorEntity me
         WHERE m.conversationUserPhone = :phone
-        ORDER BY m.timestamp DESC
     """)
     Page<MessageRowView> findHistoryByPhone(@Param("phone") String phone, Pageable pageable);
 
