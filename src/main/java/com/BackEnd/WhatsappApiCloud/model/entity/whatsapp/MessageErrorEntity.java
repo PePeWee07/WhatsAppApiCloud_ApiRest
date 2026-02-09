@@ -11,7 +11,7 @@ import lombok.Setter;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "messages_errors")
+@Table(name = "messages_error")
 public class MessageErrorEntity {
 
     @Id

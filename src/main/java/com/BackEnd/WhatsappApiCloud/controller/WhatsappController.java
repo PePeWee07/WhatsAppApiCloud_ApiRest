@@ -21,12 +21,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.MessageTemplateDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseMediaMetadata;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseMessageTemplate;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.webhookEvents.WhatsAppDataDto;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
+import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.MessageHistoryService;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.WhatsappMediaService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
@@ -37,11 +39,16 @@ public class WhatsappController {
 
     private final ApiWhatsappService apiWhatsappService;
     private final WhatsappMediaService whatsappMediaService;
+    private final MessageHistoryService messageHistoryService;
     private static final int MAX_PAGE_SIZE = 100;
 
-    public WhatsappController(ApiWhatsappService apiWhatsappService, WhatsappMediaService whatsappMediaService) {
+    public WhatsappController(
+        ApiWhatsappService apiWhatsappService,
+        WhatsappMediaService whatsappMediaService, 
+        MessageHistoryService messageHistoryService) {
         this.apiWhatsappService = apiWhatsappService;
         this.whatsappMediaService = whatsappMediaService;
+        this.messageHistoryService = messageHistoryService;
     }
 
     
@@ -285,6 +292,14 @@ public class WhatsappController {
             return ResponseEntity.noContent().build();
         }
         return ResponseEntity.ok(list);
+    }
+
+    @GetMapping("/messages/{id}/template")
+    public MessageTemplateDto getTemplateByMessageId(@PathVariable("id") Long messageId) {
+        if (messageId == null || messageId <= 0) {
+            throw new IllegalArgumentException("Invalid message ID");
+        }
+        return messageHistoryService.getMessageTemplateByMessageId(messageId);
     }
 
 }

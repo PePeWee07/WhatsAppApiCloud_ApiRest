@@ -50,10 +50,10 @@ import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageErrorEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessagePricingEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageTemplateEntity;
 import com.BackEnd.WhatsappApiCloud.repository.AttachmentRepository;
-import com.BackEnd.WhatsappApiCloud.repository.MessagePricingRepository;
-import com.BackEnd.WhatsappApiCloud.repository.MessageRepository;
-import com.BackEnd.WhatsappApiCloud.repository.TemplateMessageRepository;
 import com.BackEnd.WhatsappApiCloud.repository.UserChatRepository;
+import com.BackEnd.WhatsappApiCloud.repository.message.MessagePricingRepository;
+import com.BackEnd.WhatsappApiCloud.repository.message.MessageRepository;
+import com.BackEnd.WhatsappApiCloud.repository.message.MessageTemplateRepository;
 import com.BackEnd.WhatsappApiCloud.service.erp.ErpCacheService;
 import com.BackEnd.WhatsappApiCloud.service.erp.ErpServerClient;
 import com.BackEnd.WhatsappApiCloud.service.glpi.GlpiService;
@@ -118,7 +118,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     @Autowired
     private AiResponseService chatHistoryService;
     @Autowired
-    private TemplateMessageRepository templateMsgRepo;
+    private MessageTemplateRepository templateMsgRepo;
     @Autowired
     private AttachmentRepository attachmentRepository;
     @Autowired

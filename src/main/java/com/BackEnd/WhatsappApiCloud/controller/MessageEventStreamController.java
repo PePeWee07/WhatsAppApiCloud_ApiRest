@@ -8,7 +8,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.BackEnd.WhatsappApiCloud.service.sse.MessageEventStreamService;
 
-@RequestMapping("/api/v1")
+@RequestMapping("/api/v1/messages")
 @RestController
 public class MessageEventStreamController {
     private final MessageEventStreamService sseService;
@@ -17,7 +17,7 @@ public class MessageEventStreamController {
         this.sseService = sseService;
     }
 
-    @GetMapping("/messages/stream")
+    @GetMapping("/stream")
     public SseEmitter streamMessages(@RequestParam("phone") String phone) {
         return sseService.subscribe(phone);
     }
