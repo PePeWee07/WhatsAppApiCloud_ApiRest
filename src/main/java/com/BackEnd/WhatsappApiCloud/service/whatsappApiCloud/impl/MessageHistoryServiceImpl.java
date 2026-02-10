@@ -12,11 +12,13 @@ import org.springframework.stereotype.Service;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.AiResponseDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.AiToolCallDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.MessageAddresDto;
+import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.MessageDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.MessageErrorDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.MessagePricingDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.MessageRowView;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.MessageTemplateDto;
 import com.BackEnd.WhatsappApiCloud.model.entity.openIA.AiResponseEntity;
+import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageEntity;
 import com.BackEnd.WhatsappApiCloud.repository.AiResponseRepository;
 import com.BackEnd.WhatsappApiCloud.repository.AitoolCallRepository;
 import com.BackEnd.WhatsappApiCloud.repository.message.MessageAddresRespositoy;
@@ -123,41 +125,100 @@ public class MessageHistoryServiceImpl implements MessageHistoryService {
     }
 
     
-@Override
-public List<AiResponseDto> getAiResponsesByMessageId(Long messageId) {
+    @Override
+    public List<AiResponseDto> getAiResponsesByMessageId(Long messageId) {
 
-    List<AiResponseEntity> responses = aiResponseRepository.findByMessageIdOrderByCreatedAtAsc(messageId);
+        List<AiResponseEntity> responses = aiResponseRepository.findByMessageIdOrderByCreatedAtAsc(messageId);
 
-    return responses.stream().map(r -> {
-        List<AiToolCallDto> toolDtos = aiToolCallRepository
-            .findByAiResponseIdOrderByIdAsc(r.getId())
-            .stream()
-            .map(tc -> new AiToolCallDto(
-                tc.getId(),
-                tc.getCallId(),
-                tc.getToolName(),
-                tc.getArguments(),
-                tc.getOutput()
-            ))
-            .collect(Collectors.toList());
+        return responses.stream().map(r -> {
+            List<AiToolCallDto> toolDtos = aiToolCallRepository
+                .findByAiResponseIdOrderByIdAsc(r.getId())
+                .stream()
+                .map(tc -> new AiToolCallDto(
+                    tc.getId(),
+                    tc.getCallId(),
+                    tc.getToolName(),
+                    tc.getArguments(),
+                    tc.getOutput()
+                ))
+                .collect(Collectors.toList());
 
-        return new AiResponseDto(
-            r.getId(),
-            r.getResponseId(),
-            r.getPreviousResponseId(),
-            r.getCreatedAt() == null ? null : r.getCreatedAt().getEpochSecond(),
-            r.getModel(),
-            r.getPromptId(),
-            r.getPromptVariables(),
-            r.getPromptVersion(),
-            r.getInputTokens(),
-            r.getOutputTokens(),
-            r.getTotalTokens(),
-            r.getMetadata(),
-            r.getReasoning(),
-            toolDtos
+            return new AiResponseDto(
+                r.getId(),
+                r.getResponseId(),
+                r.getPreviousResponseId(),
+                r.getCreatedAt() == null ? null : r.getCreatedAt().getEpochSecond(),
+                r.getModel(),
+                r.getPromptId(),
+                r.getPromptVariables(),
+                r.getPromptVersion(),
+                r.getInputTokens(),
+                r.getOutputTokens(),
+                r.getTotalTokens(),
+                r.getMetadata(),
+                r.getReasoning(),
+                toolDtos
+            );
+        }).collect(Collectors.toList());
+    }
+
+    @Override
+    public MessageDto getMessageDetailsById(Long messageId) {
+
+        MessageEntity m = messageRepository.findById(messageId)
+            .orElseThrow(() -> new RuntimeException("Mensaje no encontrado: " + messageId));
+
+        MessagePricingDto pricingDto = getMessagePricingByMessageId(messageId);
+
+        MessageAddresDto addresDto = getMessageAddresByMessageId(messageId);
+
+        MessageErrorDto errorDto = getMessageErrorByMessageId(messageId);
+
+        MessageTemplateDto templateDto = getMessageTemplateByMessageId(messageId);
+
+        // ---- AiResponses + toolCalls ----
+        List<AiResponseDto> aiDtos = getAiResponsesByMessageId(messageId);
+
+        // ---- Timestamps a Long (epoch) ----
+        Long ts = (m.getTimestamp() == null) ? null : m.getTimestamp().getEpochSecond();
+        Long sentAt = (m.getSentAt() == null) ? null : m.getSentAt().getEpochSecond();
+        Long deliveredAt = (m.getDeliveredAt() == null) ? null : m.getDeliveredAt().getEpochSecond();
+        Long readAt = (m.getReadAt() == null) ? null : m.getReadAt().getEpochSecond();
+        Long failedAt = (m.getFailedAt() == null) ? null : m.getFailedAt().getEpochSecond();
+
+        return new MessageDto(
+            m.getId(),
+            m.getWamid(),
+
+            m.getProfileName(),
+            m.getConversationUserPhone(),
+            m.getFromPhone(),
+            m.getToPhone(),
+            m.getDirection(),
+            m.getSource(),
+
+            ts,
+            sentAt,
+            deliveredAt,
+            readAt,
+            failedAt,
+
+            m.getMediaId(),
+            m.getMediaMimeType(),
+            m.getMediaFilename(),
+            m.getMediaCaption(),
+
+            m.getType(),
+            m.getRelatedWamid(),
+            m.getReactionEmoji(),
+            m.getTextBody(),
+
+            aiDtos,
+            templateDto,
+            pricingDto,
+            addresDto,
+            errorDto
         );
-    }).collect(Collectors.toList());
-}
+    }
 
 }

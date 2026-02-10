@@ -1,5 +1,7 @@
 package com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage;
 
+import java.util.List;
+
 import com.BackEnd.WhatsappApiCloud.util.enums.MessageDirectionEnum;
 import com.BackEnd.WhatsappApiCloud.util.enums.MessageSourceEnum;
 import com.BackEnd.WhatsappApiCloud.util.enums.MessageTypeEnum;
@@ -39,7 +41,7 @@ public class MessageDto {
     private String reactionEmoji;
     private String textBody;
     
-    private int aiResponseCount;
+    private List<AiResponseDto> aiResponses;
     private MessageTemplateDto messageTemplate;
     private MessagePricingDto messagePricing;
     private MessageAddresDto messageAddres;

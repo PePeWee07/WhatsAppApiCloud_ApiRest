@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.AiResponseDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.MessageAddresDto;
+import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.MessageDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.MessageErrorDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.MessagePricingDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.MessageRowView;
@@ -64,6 +65,11 @@ public class MessageHistoryController {
     @GetMapping("/{id}/ai-response")
     public List<AiResponseDto> getAiResponses(@PathVariable("id") Long messageId) {
         return historyService.getAiResponsesByMessageId(messageId);
+    }
+
+    @GetMapping("/{id}")
+    public MessageDto getMessageDetails(@PathVariable("id") Long messageId) {
+        return historyService.getMessageDetailsById(messageId);
     }
 
 }
