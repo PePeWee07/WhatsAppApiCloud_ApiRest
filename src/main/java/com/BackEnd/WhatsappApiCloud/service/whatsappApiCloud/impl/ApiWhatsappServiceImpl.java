@@ -574,11 +574,42 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     }
     
                     case READY: {
-                        if (messageOptionalText.isEmpty() || !messageType.equals("text")) {
-                            return null;
+
+                        if (messageType.equals("image") || messageType.equals("document") 
+                                || messageType.equals("audio") || messageType.equals("video")) {
+
+                            if (user.getLimitQuestions() <= 0) {
+                                return null;
+                            }
+                            
+                            return sendMessage(
+                                new MessageBody(
+                                    waId, 
+                                    """
+                                    > ⚠️  He detectado que enviaste un archivo multimedia.
+
+                                    > Por el momento no puedo procesar archivos, imágenes, videos ni audios de forma directa en este chat.
+                                    > Solo puedo usar archivos o imágenes cuando estoy ayudándote con un ticket de soporte (por ejemplo, al crear un ticket o al agregar un seguimiento).
+                                    > Si quieres, descríbeme en texto tu problema o dime si deseas que te ayude a crear un ticket para adjuntar el archivo correctamente.
+                                    """,
+                                    "System",
+                                    MessageSourceEnum.BACK_END,
+                                    businessPhoneNumber, 
+                                    MessageTypeEnum.TEXT,
+                                    wamid)
+                            );
                         }
-                        String messageText = messageOptionalText.get().body();
-                        return handleReadyState(user, messageText, waId, timeNow);
+
+                        if (messageType.equals("text")) {
+                            if (messageOptionalText.isEmpty()) {
+                                return null;
+                            }
+
+                            String messageText = messageOptionalText.get().body();
+                            return handleReadyState(user, messageText, waId, timeNow);
+                        }
+
+                        return null;
                     }
     
                     case WAITING_ATTACHMENTS: {
