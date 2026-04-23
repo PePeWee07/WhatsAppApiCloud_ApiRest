@@ -1,6 +1,6 @@
 services:
-  backend:
-    container_name: whatsapp-api-cloud-app
+  whatsapp_app:
+    container_name: catia-core
     build:
       context: .
       dockerfile: Dockerfile.dev
@@ -9,9 +9,9 @@ services:
     env_file:
       - .env
     depends_on:
-      db:
+      whatsapp_db:
         condition: service_healthy
-      redis:
+      whatsapp_redis:
         condition: service_started
     volumes:
       - .:/app
@@ -19,12 +19,12 @@ services:
     networks:
       - virtual_assistant_network
     environment:
-      SPRING_REDIS_HOST: redis
+      SPRING_REDIS_HOST: whatsapp_redis
       SPRING_REDIS_PORT: 6379
       SPRING_PROFILES_ACTIVE: docker
 
-  db:
-    container_name: whatsapp-api-cloud-db
+  whatsapp_db:
+    container_name: catia-db
     image: postgres:13.3
     ports:
       - "5433:5432"
@@ -35,7 +35,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ${DB_DATABASE}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - whatsapp_postgres_data:/var/lib/postgresql/data
     restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_DATABASE}"]
@@ -43,22 +43,21 @@ services:
       retries: 5
       start_period: 30s
 
-  redis:
-    container_name: whatsapp-api-cloud-redis
+  whatsapp_redis:
+    container_name: catia-redis
     image: redis:7-alpine
     ports:
       - "6379:6379"
     restart: always
     volumes:
-      - redis_data:/data
+      - whatsapp_redis_data:/data
     networks:
       - virtual_assistant_network
     command: ["redis-server", "--appendonly", "yes"]
 
 volumes:
-  postgres_data:
-  whatsappapicloud_logs:
-  redis_data:
+  whatsapp_postgres_data:
+  whatsapp_redis_data:
 
 networks:
   virtual_assistant_network:

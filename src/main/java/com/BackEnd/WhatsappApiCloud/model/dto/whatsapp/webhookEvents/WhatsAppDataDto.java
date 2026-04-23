@@ -35,7 +35,8 @@ public class WhatsAppDataDto {
 
     public record Contact(
         Profile profile,
-        String wa_id
+        String wa_id,
+        String user_id
     ) {}
 
     public record Profile(
@@ -45,6 +46,7 @@ public class WhatsAppDataDto {
     public record Message(
         String from,
         String id,
+        String from_user_id,
         String timestamp,
         Optional<Text> text,
         String type,

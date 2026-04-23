@@ -24,6 +24,7 @@ public class MessageMapperHelper {
         // Datos básicos
         entity.setWamid(msg.id());
         entity.setConversationUserPhone(value.contacts().get(0).wa_id());
+        entity.setProfileName(value.contacts().get(0).profile().name());
         entity.setFromPhone(msg.from());
         entity.setToPhone(value.metadata().display_phone_number());
         entity.setDirection(direction);

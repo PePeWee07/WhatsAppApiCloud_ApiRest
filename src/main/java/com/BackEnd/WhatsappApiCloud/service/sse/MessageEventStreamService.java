@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -13,6 +15,8 @@ import com.BackEnd.WhatsappApiCloud.util.enums.MessageTypeEnum;
 
 @Service
 public class MessageEventStreamService {
+
+    private static final Logger logger = LoggerFactory.getLogger(MessageEventStreamService.class);
 
     // Emitters por conversación (phone)
     private final Map<String, Set<SseEmitter>> emittersByPhone = new ConcurrentHashMap<>();
@@ -27,9 +31,18 @@ public class MessageEventStreamService {
         emittersByPhone.computeIfAbsent(phone, k -> ConcurrentHashMap.newKeySet()).add(emitter);
 
         // Limpieza automática
-        emitter.onCompletion(() -> remove(phone, emitter));
-        emitter.onTimeout(() -> remove(phone, emitter));
-        emitter.onError((ex) -> remove(phone, emitter));
+        emitter.onCompletion(() -> {
+            logger.info("SSE completed for phone: {}", phone);
+            remove(phone, emitter);
+        });
+        emitter.onTimeout(() -> {
+            logger.info("SSE TimeOut for phone: {}", phone);
+            remove(phone, emitter);
+        });
+        emitter.onError((ex) -> {
+            logger.info("SSE Error for phone: {}", phone);
+            remove(phone, emitter);
+        });
 
         // (opcional) para confirmar conexión
         try {

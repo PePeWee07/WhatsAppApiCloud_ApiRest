@@ -11,6 +11,7 @@ import org.springframework.web.cors.*;
 
 import com.BackEnd.WhatsappApiCloud.config.security.RestAccessDeniedHandler;
 import com.BackEnd.WhatsappApiCloud.config.security.RestAuthenticationEntryPoint;
+import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
 public class SecurityConfig {
@@ -18,6 +19,9 @@ public class SecurityConfig {
     private final ApiKeyFilter apiKeyFilter;
     private final RestAuthenticationEntryPoint authEntryPoint;
     private final RestAccessDeniedHandler accessDeniedHandler;
+
+    @Value("${API_KEY_HEADER}")
+    private String apiKeyHeader;
 
     public SecurityConfig(
       ApiKeyFilter apiKeyFilter,
@@ -55,7 +59,7 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOriginPatterns(List.of("http://localhost:*", "https://ia-sp-webhook.ucatolica.cue.ec"));
         config.setAllowedMethods(List.of("GET","POST","PUT","DELETE","OPTIONS", "PATCH"));
-        config.setAllowedHeaders(List.of("x-api-key","Content-Type","Authorization"));
+        config.setAllowedHeaders(List.of(apiKeyHeader,"Content-Type","Authorization"));
         config.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
