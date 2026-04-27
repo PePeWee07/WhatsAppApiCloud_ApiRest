@@ -10,6 +10,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.MediaDownloadResult;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.MessageTemplateDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseMediaMetadata;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseMessageTemplate;
@@ -226,6 +228,17 @@ public class WhatsappController {
     public ResponseEntity<ResponseMediaMetadata> getMediaMetadata(@PathVariable String mediaId) {
         ResponseMediaMetadata meta = apiWhatsappService.getMediaMetadata(mediaId);
         return ResponseEntity.ok(meta);
+    }
+
+    // ================ Obtener Binario de archivo multimedia por ID ======================
+    @GetMapping("/media/donwload/{mediaId}")
+    public ResponseEntity<byte[]> getMediaBinary(@PathVariable String mediaId) throws IOException {
+
+        MediaDownloadResult result = whatsappMediaService.downloadMediaAsBytes(mediaId);
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(result.mimeType()))
+                .body(result.bytes());
     }
 
     // ================ Enviar feedback =======================

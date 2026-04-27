@@ -586,11 +586,12 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                                 new MessageBody(
                                     waId, 
                                     """
-                                    > ⚠️  He detectado que enviaste un archivo multimedia.
+                                    > ⚠️ *Carga de archivos cerrada*
 
-                                    > Por el momento no puedo procesar archivos, imágenes, videos ni audios de forma directa en este chat.
-                                    > Solo puedo usar archivos o imágenes cuando estoy ayudándote con un ticket de soporte (por ejemplo, al crear un ticket o al agregar un seguimiento).
-                                    > Si quieres, descríbeme en texto tu problema o dime si deseas que te ayude a crear un ticket para adjuntar el archivo correctamente.
+                                    ```Detecté un archivo, pero mi sistema de recepción no está activo.```
+
+                                    🎫 ```¿Es para un soporte?```
+                                    Por favor, inicia un ticket de soporte para poder recibir tu información.
                                     """,
                                     "System",
                                     MessageSourceEnum.BACK_END,

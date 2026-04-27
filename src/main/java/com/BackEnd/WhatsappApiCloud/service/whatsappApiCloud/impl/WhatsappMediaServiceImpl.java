@@ -4,6 +4,7 @@ import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.WhatsappMediaServic
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.BackEnd.WhatsappApiCloud.exception.ServerClientException;
+import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.MediaDownloadResult;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseMediaMetadata;
 
 import org.apache.poi.ss.usermodel.*;
@@ -165,6 +166,23 @@ public class WhatsappMediaServiceImpl implements WhatsappMediaService {
         Files.write(tmp.toPath(), bytes);
 
         return tmp;
+    }
+
+    @Override
+    public MediaDownloadResult downloadMediaAsBytes(String mediaId) {
+
+        if (mediaId == null || mediaId.isBlank()) {
+            throw new IllegalArgumentException("mediaId no puede ser vacío.");
+        }
+
+        ResponseMediaMetadata meta = getMediaMetadata(mediaId);
+
+        byte[] bytes = restDownloadClient.get()
+                .uri(meta.url())
+                .retrieve()
+                .body(byte[].class);
+
+        return new MediaDownloadResult(bytes, meta.mimeType());
     }
 
     
