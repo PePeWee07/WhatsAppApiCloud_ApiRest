@@ -307,6 +307,7 @@ public class WhatsappController {
         return ResponseEntity.ok(list);
     }
 
+    // ============== Obtener resultado de plantilla por ID de mensaje ==================
     @GetMapping("/template/messages/{id}")
     public MessageTemplateDto getTemplateByMessageId(@PathVariable("id") Long messageId) {
         if (messageId == null || messageId <= 0) {
