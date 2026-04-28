@@ -307,7 +307,7 @@ public class WhatsappController {
         return ResponseEntity.ok(list);
     }
 
-    @GetMapping("/messages/{id}/template")
+    @GetMapping("/template/messages/{id}")
     public MessageTemplateDto getTemplateByMessageId(@PathVariable("id") Long messageId) {
         if (messageId == null || messageId <= 0) {
             throw new IllegalArgumentException("Invalid message ID");
