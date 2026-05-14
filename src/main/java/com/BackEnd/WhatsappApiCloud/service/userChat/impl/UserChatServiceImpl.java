@@ -178,28 +178,38 @@ public class UserChatServiceImpl implements UserchatService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<UserChatFullDto> searchByIdentificacion(String identificacion) {
-        List<UserChatFullDto> users = repo.findByIdentificacionContaining(identificacion).stream()
+    public Page<UserChatFullDto> searchByIdentificacion(String identificacion, int page, int size, String sortBy, String direction) {
+        Sort sort = Sort.by(sortBy);
+        sort = "desc".equalsIgnoreCase(direction) ? sort.descending() : sort.ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Page<UserChatEntity> pageLocal = repo.findByIdentificacionContaining(identificacion, pageable);
+
+        List<UserChatFullDto> users = pageLocal.getContent().stream()
             .map(this::mapToFullDto)
             .collect(Collectors.toList());
 
         if (users.isEmpty()) {
             throw new UserNotFoundException("No se encontraron usuarios con identificacion que contenga: " + identificacion);
         }
-        return users;
+        return new PageImpl<>(users, pageable, pageLocal.getTotalElements());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<UserChatFullDto> searchByWhatsappPhone(String whatsAppPhone) {
-        List<UserChatFullDto> users = repo.findByWhatsappPhoneContaining(whatsAppPhone).stream()
+    public Page<UserChatFullDto> searchByWhatsappPhone(String whatsAppPhone, int page, int size, String sortBy, String direction) {
+        Sort sort = Sort.by(sortBy);
+        sort = "desc".equalsIgnoreCase(direction) ? sort.descending() : sort.ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+        Page<UserChatEntity> pageLocal = repo.findByWhatsappPhoneContaining(whatsAppPhone, pageable);
+
+        List<UserChatFullDto> users = pageLocal.getContent().stream()
             .map(this::mapToFullDto)
             .collect(Collectors.toList());
 
         if (users.isEmpty()) {
             throw new UserNotFoundException("No se encontraron usuarios con whatsAppPhone que contenga: " + whatsAppPhone);
         }
-        return users;
+        return new PageImpl<>(users, pageable, pageLocal.getTotalElements());
     }
 
     // ================ Paginar todos los usuarios ======================

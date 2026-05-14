@@ -40,9 +40,13 @@ public class UserChatController {
 
     // ========== Encontrar usuario por identificacion o whatsappPhone =============
     @GetMapping("/user/find")
-    public ResponseEntity<List<UserChatFullDto>> findUser(
+    public ResponseEntity<Page<UserChatFullDto>> findUser(
         @RequestParam(value = "identificacion", required = false) String identificacion,
-        @RequestParam(value = "whatsappPhone", required = false) String whatsAppPhone) {
+        @RequestParam(value = "whatsappPhone", required = false) String whatsAppPhone,
+        @RequestParam(value = "page", defaultValue = "0") int page,
+        @RequestParam(value = "pageSize", defaultValue = "10") int pageSize,
+        @RequestParam(value = "sortBy", defaultValue = "lastInteraction") String sortBy,
+        @RequestParam(value = "direction", defaultValue = "asc") String direction) {
 
         if (identificacion != null && whatsAppPhone != null) {
             throw new BadRequestException("Debe indicar solo un paramentro de busqueda: identificacion o whatsappPhone");
@@ -60,11 +64,17 @@ public class UserChatController {
             throw new BadRequestException("El whatsappPhone no puede estar vacio");
         }
 
-        List<UserChatFullDto> users;
+        int size = Math.min(pageSize, MAX_PAGE_SIZE);
+
+        if (!UserChatFieldsSorby.ALLOWED_SORT_FIELDS.contains(sortBy)) {
+            return ResponseEntity.badRequest().body(Page.empty());
+        }
+
+        Page<UserChatFullDto> users;
         if (identificacion != null) {
-            users = userchatService.searchByIdentificacion(identificacion);
+            users = userchatService.searchByIdentificacion(identificacion, page, size, sortBy, direction);
         } else {
-            users = userchatService.searchByWhatsappPhone(whatsAppPhone);
+            users = userchatService.searchByWhatsappPhone(whatsAppPhone, page, size, sortBy, direction);
         }
         return ResponseEntity.ok(users);
     }

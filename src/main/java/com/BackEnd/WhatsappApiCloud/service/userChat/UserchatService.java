@@ -17,8 +17,8 @@ public interface UserchatService {
     Page<UserChatFullDto> tablefindByChatSessionStart(int page, int size, String sortBy, String direction, LocalDateTime inicio, LocalDateTime fin);
     UserChatFullDto findByIdentificacion(String identificacion);
     UserChatFullDto findByWhatsappPhone(String whatsappPhone);
-    List<UserChatFullDto> searchByIdentificacion(String identificacion);
-    List<UserChatFullDto> searchByWhatsappPhone(String whatsappPhone);
+    Page<UserChatFullDto> searchByIdentificacion(String identificacion, int page, int size, String sortBy, String direction);
+    Page<UserChatFullDto> searchByWhatsappPhone(String whatsappPhone, int page, int size, String sortBy, String direction);
     TicketInfoDto userRequestTicketInfo(String whatsAppPhone, Long ticketId) throws JsonProcessingException, IOException;
     List<UserTicketDto> userRequestTicketList(String whatsAppPhone) throws JsonProcessingException;
     Object setWaitingAttachmentsState(String whatsappPhone);
