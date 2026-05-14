@@ -116,6 +116,18 @@ public class UserChatServiceImpl implements UserchatService {
         return fullDto;
     }
 
+    private UserChatFullDto mapToFullDto(UserChatEntity user) {
+        List<UserChatSessionDto> sesionesDto = user.getChatSessions().stream()
+            .map(cs -> new UserChatSessionDto(
+                cs.getId(),
+                cs.getMessageCount(),
+                cs.getStartTime()))
+            .collect(Collectors.toList());
+
+        List<UserTicketDto> ticketsDto = listOpenTickets(user.getWhatsappPhone());
+        return buildUserChatFullDto(user, sesionesDto, ticketsDto);
+    }
+
     @Override
     @Transactional(readOnly = true)
     public UserChatFullDto findByIdentificacion(String identificacion) {
@@ -162,6 +174,32 @@ public class UserChatServiceImpl implements UserchatService {
             fullDto.setErpUser(erpUser);
         }
         return fullDto;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserChatFullDto> searchByIdentificacion(String identificacion) {
+        List<UserChatFullDto> users = repo.findByIdentificacionContaining(identificacion).stream()
+            .map(this::mapToFullDto)
+            .collect(Collectors.toList());
+
+        if (users.isEmpty()) {
+            throw new UserNotFoundException("No se encontraron usuarios con identificacion que contenga: " + identificacion);
+        }
+        return users;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserChatFullDto> searchByWhatsappPhone(String whatsAppPhone) {
+        List<UserChatFullDto> users = repo.findByWhatsappPhoneContaining(whatsAppPhone).stream()
+            .map(this::mapToFullDto)
+            .collect(Collectors.toList());
+
+        if (users.isEmpty()) {
+            throw new UserNotFoundException("No se encontraron usuarios con whatsAppPhone que contenga: " + whatsAppPhone);
+        }
+        return users;
     }
 
     // ================ Paginar todos los usuarios ======================

@@ -1,6 +1,7 @@
 package com.BackEnd.WhatsappApiCloud.repository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -24,6 +25,12 @@ public interface UserChatRepository extends JpaRepository<UserChatEntity, Long> 
 
     @EntityGraph(attributePaths = "chatSessions")
     Optional<UserChatEntity> findByWhatsappPhone(String whatsappPhone);
+
+    @EntityGraph(attributePaths = "chatSessions")
+    List<UserChatEntity> findByIdentificacionContaining(String identificacion);
+
+    @EntityGraph(attributePaths = "chatSessions")
+    List<UserChatEntity> findByWhatsappPhoneContaining(String whatsappPhone);
 
     Page<UserChatEntity> findByPreviousResponseIdIsNotNullAndLastInteractionBetween(
             LocalDateTime inicio,

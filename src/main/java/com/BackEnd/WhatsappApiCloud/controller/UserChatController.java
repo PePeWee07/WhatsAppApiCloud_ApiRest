@@ -40,7 +40,7 @@ public class UserChatController {
 
     // ========== Encontrar usuario por identificacion o whatsappPhone =============
     @GetMapping("/user/find")
-    public ResponseEntity<UserChatFullDto> findUser(
+    public ResponseEntity<List<UserChatFullDto>> findUser(
         @RequestParam(value = "identificacion", required = false) String identificacion,
         @RequestParam(value = "whatsappPhone", required = false) String whatsAppPhone) {
 
@@ -52,13 +52,21 @@ public class UserChatController {
             throw new BadRequestException("Debe indicar un paramentro de busqueda: identificacion o whatsappPhone");
         }
 
-        UserChatFullDto dto;
-        if (identificacion != null) {
-            dto = userchatService.findByIdentificacion(identificacion);
-        } else {
-            dto = userchatService.findByWhatsappPhone(whatsAppPhone);
+        if (identificacion != null && identificacion.isBlank()) {
+            throw new BadRequestException("La identificacion no puede estar vacia");
         }
-        return ResponseEntity.ok(dto);
+
+        if (whatsAppPhone != null && whatsAppPhone.isBlank()) {
+            throw new BadRequestException("El whatsappPhone no puede estar vacio");
+        }
+
+        List<UserChatFullDto> users;
+        if (identificacion != null) {
+            users = userchatService.searchByIdentificacion(identificacion);
+        } else {
+            users = userchatService.searchByWhatsappPhone(whatsAppPhone);
+        }
+        return ResponseEntity.ok(users);
     }
 
     // =================== Paginar todos los usuarios ========================
