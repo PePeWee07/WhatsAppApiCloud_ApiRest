@@ -32,6 +32,7 @@ public class MessageDto {
     private Long failedAt;
 
     private String mediaId;
+    private String mediaUrl;
     private String mediaMimeType;
     private String mediaFilename;
     private String mediaCaption;

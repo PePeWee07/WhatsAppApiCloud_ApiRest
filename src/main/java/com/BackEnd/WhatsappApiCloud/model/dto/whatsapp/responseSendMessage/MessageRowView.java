@@ -27,6 +27,7 @@ public interface MessageRowView {
     Instant getFailedAt();
 
     String getMediaId();
+    String getMediaUrl();
     String getMediaMimeType();
     String getMediaFilename();
     String getMediaCaption();

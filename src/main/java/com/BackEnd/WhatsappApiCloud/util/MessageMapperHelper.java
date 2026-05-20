@@ -20,13 +20,16 @@ public class MessageMapperHelper {
             MessageDirectionEnum direction,
             MessageSourceEnum source) {
         MessageEntity entity = new MessageEntity();
+        WhatsAppDataDto.Contact contact = value.contacts() != null && !value.contacts().isEmpty()
+                ? value.contacts().get(0)
+                : null;
 
         // Datos básicos
         entity.setWamid(msg.id());
-        entity.setConversationUserPhone(value.contacts().get(0).wa_id());
-        entity.setProfileName(value.contacts().get(0).profile().name());
+        entity.setConversationUserPhone(contact != null ? contact.wa_id() : msg.from());
+        entity.setProfileName(contact != null && contact.profile() != null ? contact.profile().name() : null);
         entity.setFromPhone(msg.from());
-        entity.setToPhone(value.metadata().display_phone_number());
+        entity.setToPhone(value.metadata() != null ? value.metadata().display_phone_number() : null);
         entity.setDirection(direction);
         entity.setSource(source);
         entity.setType(MessageTypeEnum.valueOf(msg.type().toUpperCase()));
@@ -45,40 +48,40 @@ public class MessageMapperHelper {
 
         // Datos según tipo
         switch (msg.type()) {
-            case "text" -> msg.text().ifPresent(t -> {
+            case "text" -> java.util.Optional.ofNullable(msg.text()).orElse(java.util.Optional.empty()).ifPresent(t -> {
                 entity.setTextBody(t.body());
             });
 
-            case "image" -> msg.image().ifPresent(img -> {
+            case "image" -> java.util.Optional.ofNullable(msg.image()).orElse(java.util.Optional.empty()).ifPresent(img -> {
                 entity.setMediaCaption(img.caption());
                 entity.setMediaMimeType(img.mime_type());
                 entity.setMediaId(img.id());
             });
 
-            case "document" -> msg.document().ifPresent(doc -> {
+            case "document" -> java.util.Optional.ofNullable(msg.document()).orElse(java.util.Optional.empty()).ifPresent(doc -> {
                 entity.setMediaCaption(doc.caption());
                 entity.setMediaMimeType(doc.mime_type());
                 entity.setMediaId(doc.id());
                 entity.setMediaFilename(doc.filename());
             });
 
-            case "audio" -> msg.audio().ifPresent(aud -> {
+            case "audio" -> java.util.Optional.ofNullable(msg.audio()).orElse(java.util.Optional.empty()).ifPresent(aud -> {
                 entity.setMediaMimeType(aud.mime_type());
                 entity.setMediaId(aud.id());
                 entity.setMediaCaption(aud.voice() ? "Nota de voz" : "Archivo de audio");
             });
 
-            case "sticker" -> msg.sticker().ifPresent(st -> {
+            case "sticker" -> java.util.Optional.ofNullable(msg.sticker()).orElse(java.util.Optional.empty()).ifPresent(st -> {
                 entity.setMediaMimeType(st.mime_type());
                 entity.setMediaId(st.id());
             });
 
-            case "reaction" -> msg.reaction().ifPresent(r -> {
+            case "reaction" -> java.util.Optional.ofNullable(msg.reaction()).orElse(java.util.Optional.empty()).ifPresent(r -> {
                 entity.setReactionEmoji(r.emoji());
                 entity.setRelatedWamid(r.message_id());
             });
 
-            case "location" -> msg.location().ifPresent(loc -> {
+            case "location" -> java.util.Optional.ofNullable(msg.location()).orElse(java.util.Optional.empty()).ifPresent(loc -> {
                 MessageAddresEntity addressEntity = new MessageAddresEntity();
                 addressEntity.setLatitude(Double.valueOf(loc.latitude()));
                 addressEntity.setLongitude(Double.valueOf(loc.longitude()));
@@ -88,13 +91,13 @@ public class MessageMapperHelper {
                 entity.setMessageAddresEntity(addressEntity);
             });
 
-            case "video" -> msg.video().ifPresent(vid -> {
+            case "video" -> java.util.Optional.ofNullable(msg.video()).orElse(java.util.Optional.empty()).ifPresent(vid -> {
                 entity.setMediaCaption(vid.caption());
                 entity.setMediaMimeType(vid.mime_type());
                 entity.setMediaId(vid.id());
             });
 
-            case "unsupported" -> msg.unsupported().ifPresent(err -> {
+            case "unsupported" -> java.util.Optional.ofNullable(msg.unsupported()).orElse(java.util.Optional.empty()).ifPresent(err -> {
                 MessageErrorEntity entityError = new MessageErrorEntity();
                 entityError.setErrorCode(err.code());
                 entityError.setErrorTitle(err.title());

@@ -33,6 +33,7 @@ public interface MessageRepository extends JpaRepository<MessageEntity, Long> {
           m.readAt as readAt,
           m.failedAt as failedAt,
           m.mediaId as mediaId,
+          m.mediaUrl as mediaUrl,
           m.mediaMimeType as mediaMimeType,
           m.mediaFilename as mediaFilename,
           m.mediaCaption as mediaCaption,

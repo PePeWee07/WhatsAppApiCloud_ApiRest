@@ -247,7 +247,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             welcomeMessage = new String(bytes, StandardCharsets.UTF_8).trim();
         } catch (Exception e) {
             logger.error("Error al leer el archivo de bienvenida: ", e);
-            welcomeMessage = "Mensaje de bienvenidad no econtrado. Por favor, reporta a soportetic@ucaue.edu.ec.";
+            welcomeMessage = "Mensaje de bienvenida no econtrado. Por favor, reporta a soportetic@ucaue.edu.ec.";
         }
         sendStickerMessageByUrl(new MessageBody(
             waId,
@@ -491,17 +491,144 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 MessageSourceEnum.IA, businessPhoneNumber,  MessageTypeEnum.TEXT, null));
     }
 
+    private Optional<WhatsAppDataDto.Value> getFirstChangeValue(WhatsAppDataDto.WhatsAppMessage message) {
+        if (message == null || message.entry() == null || message.entry().isEmpty()) {
+            return Optional.empty();
+        }
+
+        var entry = message.entry().get(0);
+        if (entry == null || entry.changes() == null || entry.changes().isEmpty()) {
+            return Optional.empty();
+        }
+
+        var change = entry.changes().get(0);
+        if (change == null || change.value() == null) {
+            return Optional.empty();
+        }
+
+        return Optional.of(change.value());
+    }
+
+    private boolean isNullOrEmpty(List<?> values) {
+        return values == null || values.isEmpty();
+    }
+
+    private void logWebhookErrors(List<WhatsAppDataDto.WhatsAppError> errors) {
+        if (isNullOrEmpty(errors)) {
+            return;
+        }
+
+        for (var error : errors) {
+            if (error == null) {
+                continue;
+            }
+
+            String details = error.error_data() != null ? error.error_data().details() : null;
+            logger.warn(
+                    "Webhook WhatsApp con error general. code={}, title={}, message={}, details={}, href={}",
+                    error.code(),
+                    error.title(),
+                    error.message(),
+                    details,
+                    error.href());
+        }
+    }
+
+    private void logFailedStatusError(WhatsAppDataDto.Status status) {
+        if (status == null || isNullOrEmpty(status.errors())) {
+            logger.warn(
+                    "Estado failed recibido para wamid={}, recipient_id={}, sin detalle de error.",
+                    status != null ? status.id() : null,
+                    status != null ? status.recipient_id() : null);
+            return;
+        }
+
+        for (var error : status.errors()) {
+            if (error == null) {
+                continue;
+            }
+
+            String details = error.error_data() != null ? error.error_data().details() : null;
+            logger.warn(
+                    "Estado failed de WhatsApp. wamid={}, recipient_id={}, code={}, title={}, message={}, details={}",
+                    status.id(),
+                    status.recipient_id(),
+                    error.code(),
+                    error.title(),
+                    error.message(),
+                    details);
+        }
+    }
+
+    private Instant parseWhatsappTimestamp(String timestamp) {
+        try {
+            return Instant.ofEpochSecond(Long.parseLong(timestamp));
+        } catch (Exception e) {
+            logger.warn("Timestamp de WhatsApp inválido: {}", timestamp);
+            return Instant.now();
+        }
+    }
+
+    private void attachFirstStatusError(MessageEntity msg, WhatsAppDataDto.Status status) {
+        if (msg == null || status == null || isNullOrEmpty(status.errors())) {
+            return;
+        }
+
+        var err = status.errors().get(0);
+        if (err == null) {
+            return;
+        }
+
+        MessageErrorEntity entityError = Optional.ofNullable(msg.getMessageErrorEntity())
+                .orElseGet(MessageErrorEntity::new);
+        entityError.setErrorCode(err.code());
+        entityError.setErrorTitle(err.title());
+        entityError.setErrorMessage(err.message());
+        entityError.setErrorDetails(err.error_data() != null ? err.error_data().details() : null);
+        entityError.setMessage(msg);
+        msg.setMessageErrorEntity(entityError);
+    }
+
     // =================== Recibir y enviar respuesta automática ======================
     @Override
     public ResponseWhatsapp handleUserMessage(WhatsAppDataDto.WhatsAppMessage message) {
         LocalDateTime timeNow = LocalDateTime.now();
-        var changeValue = message.entry().get(0).changes().get(0).value();
+        var changeValueOptional = getFirstChangeValue(message);
 
-        if (changeValue.messages() != null && !changeValue.messages().isEmpty()) {
-            String messageType = changeValue.messages().get(0).type();
-            String wamid = changeValue.messages().get(0).id();
-            String waId = changeValue.contacts().get(0).wa_id();
-            var messageOptionalText = changeValue.messages().get(0).text();
+        if (changeValueOptional.isEmpty()) {
+            logger.warn("Webhook WhatsApp recibido sin entry/changes/value válido.");
+            return null;
+        }
+
+        var changeValue = changeValueOptional.get();
+
+        if (!isNullOrEmpty(changeValue.errors())) {
+            logWebhookErrors(changeValue.errors());
+            return null;
+        }
+
+        if (!isNullOrEmpty(changeValue.statuses())) {
+            handleMessageStatus(message);
+            return null;
+        }
+
+        if (!isNullOrEmpty(changeValue.messages())) {
+            var firstMessage = changeValue.messages().get(0);
+            if (firstMessage == null) {
+                logger.warn("Webhook WhatsApp con messages[] pero el primer mensaje es null.");
+                return null;
+            }
+            String messageType = firstMessage.type();
+            String wamid = firstMessage.id();
+            String waId = !isNullOrEmpty(changeValue.contacts())
+                    ? changeValue.contacts().get(0).wa_id()
+                    : firstMessage.from();
+            var messageOptionalText = Optional.ofNullable(firstMessage.text()).orElse(Optional.empty());
+
+            if (waId == null || waId.isBlank()) {
+                logger.warn("Webhook WhatsApp con messages[] pero sin wa_id/from válido.");
+                return null;
+            }
 
             UserChatEntity user = userChatRepository.findByWhatsappPhone(waId)
                     .orElseGet(() -> createNewUser(waId, timeNow));
@@ -513,14 +640,13 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             markAsRead(new RequestWhatsappAsRead("whatsapp", "read", wamid, new TypingIndicator("text")));
 
             if ("interactive".equals(messageType)) {
-                var msg = changeValue.messages().get(0);
+                var msg = firstMessage;
                 var ctx = msg.context();
                 Object rawInteractive = msg.interactive();
                 String ts = msg.timestamp();
 
-                long epochSec = Long.parseLong(ts);
                 LocalDateTime answeredAt = LocalDateTime.ofInstant(
-                        Instant.ofEpochSecond(epochSec),
+                        parseWhatsappTimestamp(ts),
                         ZoneId.systemDefault());
 
                 if (ctx != null && rawInteractive instanceof Map<?, ?> interactiveMap) {
@@ -633,7 +759,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                             ));
                         }
 
-                        var msg = changeValue.messages().get(0);
+                        var msg = firstMessage;
                         switch (messageType) {
                             case "text" -> {
                                 String messageText = messageOptionalText.get().body();
@@ -691,7 +817,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                                     MessageSourceEnum.BACK_END, businessPhoneNumber,  MessageTypeEnum.TEXT, null));
                         }
 
-                        var msg = changeValue.messages().get(0);
+                        var msg = firstMessage;
                         switch (messageType) {
                             case "text" -> {
                                 String messageText = messageOptionalText.get().body();
@@ -786,22 +912,49 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     // =================== Recivir estados de mensajes ======================
     @Override
     public void handleMessageStatus(WhatsAppDataDto.WhatsAppMessage status) {
-        var changeValue = status.entry().get(0).changes().get(0).value();
+        var changeValueOptional = getFirstChangeValue(status);
 
-        if (changeValue.statuses() == null || changeValue.statuses().isEmpty()) {
+        if (changeValueOptional.isEmpty()) {
+            logger.warn("Webhook de estado sin entry/changes/value válido.");
+            return;
+        }
+
+        var changeValue = changeValueOptional.get();
+
+        if (isNullOrEmpty(changeValue.statuses())) {
             logger.warn("⚠️ Webhook de estado sin contenido válido.");
             return;
         }
 
         for (var s : changeValue.statuses()) {
+            if (s == null) {
+                continue;
+            }
 
             String waId = s.recipient_id();
             String messageId = s.id();
             String state = s.status();
             String timestamp = s.timestamp();
 
-            UserChatEntity user = userChatRepository.findByWhatsappPhone(waId)
-                    .orElseThrow(() -> new RuntimeException("Usuario no encontrado para waId: " + waId));
+            logger.info("Estado de mensaje WhatsApp recibido. wamid={}, recipient_id={}, status={}", messageId, waId, state);
+
+            if (waId == null || waId.isBlank() || messageId == null || messageId.isBlank() || state == null || state.isBlank()) {
+                logger.warn("Estado de WhatsApp incompleto. wamid={}, recipient_id={}, status={}", messageId, waId, state);
+                continue;
+            }
+
+            if ("failed".equals(state)) {
+                logFailedStatusError(s);
+            }
+
+            Optional<UserChatEntity> userOptional = userChatRepository.findByWhatsappPhone(waId);
+
+            if (userOptional.isEmpty()) {
+                logger.warn("Usuario no encontrado para estado de WhatsApp. waId={}, wamid={}", waId, messageId);
+                continue;
+            }
+
+            UserChatEntity user = userOptional.get();
 
             if (user.isBlock()) {
                 return;
@@ -822,27 +975,21 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 msg.setFromPhone(businessPhoneNumber);
                 msg.setToPhone(waId);
                 msg.setWamid(messageId);
-                msg.setFailedAt(Instant.ofEpochSecond(Long.parseLong(timestamp)));
+                if ("failed".equals(state)) {
+                    msg.setFailedAt(parseWhatsappTimestamp(timestamp));
+                }
                 msg.setTimestamp(Instant.now());
                 msg.setDirection(MessageDirectionEnum.INBOUND);
                 msg.setSource(MessageSourceEnum.UNKNOWN);
 
-                if (s.errors() != null && !s.errors().isEmpty()) {
-                    var err = s.errors().get(0);
-                    MessageErrorEntity entityError = new MessageErrorEntity();
-                    entityError.setErrorCode(err.code());
-                    entityError.setErrorTitle(err.title());
-                    entityError.setErrorDetails(err.message());
-                    if (err.error_data() != null)
-                        entityError.setErrorDetails(err.error_data().details());
-                }
+                attachFirstStatusError(msg, s);
 
                 messageRepository.save(msg);
             } else {
                 msg = op.get();
             }
 
-            Instant ts = Instant.ofEpochSecond(Long.parseLong(timestamp));
+            Instant ts = parseWhatsappTimestamp(timestamp);
 
             switch (state) {
                 case "sent" -> {
@@ -859,22 +1006,15 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 }
                 case "failed" -> {
                     msg.setFailedAt(ts);
-                    if (s.errors() != null && !s.errors().isEmpty()) {
-                        var err = s.errors().get(0);
-                        MessageErrorEntity entityError = new MessageErrorEntity();
-                        entityError.setErrorCode(err.code());
-                        entityError.setErrorTitle(err.title());
-                        entityError.setErrorDetails(err.message());
-                        if (err.error_data() != null)
-                            entityError.setErrorDetails(err.error_data().details());
-                    }
+                    attachFirstStatusError(msg, s);
 
                 }
                 default -> logger.debug("Estado no manejado: {}", state);
             }
 
-            if (s.pricing().isPresent()) {
-                var p = s.pricing().get();
+            Optional<WhatsAppDataDto.Pricing> pricingOptional = Optional.ofNullable(s.pricing()).orElse(Optional.empty());
+            if (pricingOptional.isPresent()) {
+                var p = pricingOptional.get();
 
                 MessagePricingEntity pricing = messagePricingRepository.findByMessageId(msg.getId())
                         .orElseGet(() -> {
@@ -1101,6 +1241,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
             if (res != null && !res.messages().isEmpty()) {
                 MessageEntity entity = MessageMapperHelper.createSentMessageEntity(payload, res);
+                entity.setMediaUrl(imageUrl);
                 messageRepository.save(entity);
             }
 
@@ -1145,6 +1286,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
             if (res != null && !res.messages().isEmpty()) {
                 MessageEntity entity = MessageMapperHelper.createSentMessageEntity(payload, res);
+                entity.setMediaUrl(documentUrl);
+                entity.setMediaFilename(filename);
                 messageRepository.save(entity);
             }
 
@@ -1167,6 +1310,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
             if (res != null && !res.messages().isEmpty()) {
                 MessageEntity entity = MessageMapperHelper.createSentMessageEntity(payload, res);
+                entity.setMediaUrl(videoUrl);
                 messageRepository.save(entity);
             }
 
@@ -1210,6 +1354,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
             if (res != null && !res.messages().isEmpty()) {
                 MessageEntity entity = MessageMapperHelper.createSentMessageEntity(payload, res);
+                entity.setMediaUrl(stickerUrl);
                 messageRepository.save(entity);
             }
 

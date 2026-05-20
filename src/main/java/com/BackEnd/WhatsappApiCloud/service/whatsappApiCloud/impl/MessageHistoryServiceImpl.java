@@ -204,6 +204,7 @@ public class MessageHistoryServiceImpl implements MessageHistoryService {
             failedAt,
 
             m.getMediaId(),
+            m.getMediaUrl(),
             m.getMediaMimeType(),
             m.getMediaFilename(),
             m.getMediaCaption(),

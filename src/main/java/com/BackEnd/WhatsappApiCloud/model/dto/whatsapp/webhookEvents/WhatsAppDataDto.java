@@ -25,7 +25,8 @@ public class WhatsAppDataDto {
         Metadata metadata,
         List<Contact> contacts,
         List<Message> messages,
-        List<Status> statuses
+        List<Status> statuses,
+        List<WhatsAppError> errors
     ) {}
 
     public record Metadata(
@@ -129,14 +130,15 @@ public class WhatsAppDataDto {
         String timestamp,
         String recipient_id,
         Optional<Pricing> pricing,
-        List<ErrorStatus> errors
+        List<WhatsAppError> errors
     ) {}
 
-    public record ErrorStatus(
+    public record WhatsAppError(
         String code,
         String title,
         String message,
-        ErrorData error_data
+        ErrorData error_data,
+        String href
     ) {}
 
     public record ErrorData(

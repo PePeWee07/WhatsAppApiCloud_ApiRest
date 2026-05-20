@@ -34,11 +34,15 @@ import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.MessageHistoryServi
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.WhatsappMediaService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 @RestController
 @RequestMapping("/api/v1/whatsapp")
 public class WhatsappController {
 
+    private static final Logger logger = LoggerFactory.getLogger(WhatsappController.class);
     private final ApiWhatsappService apiWhatsappService;
     private final WhatsappMediaService whatsappMediaService;
     private final MessageHistoryService messageHistoryService;
@@ -53,11 +57,20 @@ public class WhatsappController {
         this.messageHistoryService = messageHistoryService;
     }
 
+    private boolean hasBusinessPhoneNumber(MessageBody payload) {
+        return payload != null
+                && payload.businessPhoneNumber() != null
+                && !payload.businessPhoneNumber().isBlank();
+    }
+
     
     // =================== Enviar mensaje a un usuario de WhatsApp especifico ===================
     @PostMapping("/send")
     public ResponseEntity<ResponseWhatsapp> sendMessageToWhatsApp(@RequestBody MessageBody payload) {
         try {
+            if (!hasBusinessPhoneNumber(payload)) {
+                return ResponseEntity.badRequest().body(null);
+            }
             ResponseWhatsapp response = apiWhatsappService.sendMessage(payload);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
@@ -68,13 +81,12 @@ public class WhatsappController {
     // ================ Recibir mensaje de un usuario de WhatsApp ========================
     @PostMapping("/receive-message")
     public ResponseWhatsapp receiveMessage(@RequestBody WhatsAppDataDto.WhatsAppMessage message) throws JsonProcessingException {
-        System.out.println("Mensaje recibido: " + message.entry().get(0).changes().get(0).value().messages().get(0).text()); //! Debug
         return apiWhatsappService.handleUserMessage(message);
     }
 
     @PostMapping("/receive-message-status")
     public ResponseEntity<String> receiveMessageStatus(@RequestBody WhatsAppDataDto.WhatsAppMessage message) throws JsonProcessingException {
-        System.out.println("Estado de mensaje recibido: " + message.entry().get(0).changes().get(0).value().statuses().get(0).status()); //! Debug
+        logger.debug("Webhook de estado recibido.");
         apiWhatsappService.handleMessageStatus(message);
         return ResponseEntity.ok("Status processed successfully");
     }
@@ -125,6 +137,9 @@ public class WhatsappController {
             @RequestBody MessageBody payload,
             @RequestParam String imageId) {
         try {
+            if (!hasBusinessPhoneNumber(payload)) {
+                return ResponseEntity.badRequest().body(null);
+            }
             ResponseWhatsapp response = apiWhatsappService.sendImageMessageById(payload, imageId);
             if (response != null) {
                 return ResponseEntity.ok(response);
@@ -142,6 +157,9 @@ public class WhatsappController {
             @RequestBody MessageBody payload,
             @RequestParam String imageUrl) {
         try {
+            if (!hasBusinessPhoneNumber(payload)) {
+                return ResponseEntity.badRequest().body(null);
+            }
             ResponseWhatsapp response = apiWhatsappService.sendImageMessageByUrl(payload, imageUrl);
             if (response != null) {
                 return ResponseEntity.ok(response);
@@ -159,6 +177,9 @@ public class WhatsappController {
             @RequestBody MessageBody payload,
             @RequestParam String videoId) {
         try {
+            if (!hasBusinessPhoneNumber(payload)) {
+                return ResponseEntity.badRequest().body(null);
+            }
             ResponseWhatsapp response = apiWhatsappService.sendVideoMessageById(payload, videoId);
             if (response != null) {
                 return ResponseEntity.ok(response);
@@ -176,6 +197,9 @@ public class WhatsappController {
         @RequestBody MessageBody payload,
         @RequestParam String videoUrl) {
         try {
+            if (!hasBusinessPhoneNumber(payload)) {
+                return ResponseEntity.badRequest().body(null);
+            }
             ResponseWhatsapp response = apiWhatsappService.sendVideoMessageByUrl(payload, videoUrl);
             if (response != null) {
                 return ResponseEntity.ok(response);
@@ -194,6 +218,9 @@ public class WhatsappController {
             @RequestParam String documentId,
             @RequestParam String filename) {
         try {
+            if (!hasBusinessPhoneNumber(payload)) {
+                return ResponseEntity.badRequest().body(null);
+            }
             ResponseWhatsapp response = apiWhatsappService.sendDocumentMessageById(payload, documentId, filename);
             if (response != null) {
                 return ResponseEntity.ok(response);
@@ -212,6 +239,9 @@ public class WhatsappController {
             @RequestParam String documentUrl,
             @RequestParam String filename) {
         try {
+            if (!hasBusinessPhoneNumber(payload)) {
+                return ResponseEntity.badRequest().body(null);
+            }
             ResponseWhatsapp response = apiWhatsappService.sendDocumentMessageByUrl(payload, documentUrl, filename);
             if (response != null) {
                 return ResponseEntity.ok(response);

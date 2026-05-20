@@ -49,6 +49,8 @@ public class MessageEntity {
     
     private String mediaMimeType;
     private String mediaId;
+    @Column(columnDefinition = "TEXT")
+    private String mediaUrl;
     private String mediaFilename;
     @Column(columnDefinition = "TEXT")
     private String mediaCaption;
