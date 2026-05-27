@@ -34,6 +34,7 @@ import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.Reques
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.RequestWhatsappAsRead;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.requestSendMessage.TypingIndicator;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseMediaMetadata;
+import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.MessageDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseMessageTemplate;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsapp;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.ResponseWhatsappMessage;
@@ -62,6 +63,7 @@ import com.BackEnd.WhatsappApiCloud.service.openAi.OpenAiServerClient;
 import com.BackEnd.WhatsappApiCloud.service.sse.MessageEventStreamService;
 import com.BackEnd.WhatsappApiCloud.service.userChat.UserChatSessionService;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
+import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.MessageHistoryService;
 import com.BackEnd.WhatsappApiCloud.util.MessageMapperHelper;
 import com.BackEnd.WhatsappApiCloud.util.enums.AttachmentStatusEnum;
 import com.BackEnd.WhatsappApiCloud.util.enums.ConversationStateEnum;
@@ -81,6 +83,9 @@ import org.slf4j.LoggerFactory;
 public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
     private static final Logger logger = LoggerFactory.getLogger(ApiWhatsappServiceImpl.class);
+    private static final String MESSAGE_UPDATE_EVENT_TYPE = "message_update";
+    private static final String MESSAGE_READ_EVENT_TYPE = "message_read";
+
     private final RestClient restClient;
     private final RestClient restMediaClient;
     private final ObjectMapper objectMapper;
@@ -125,6 +130,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     private MessagePricingRepository messagePricingRepository;
     @Autowired
     private MessageEventStreamService messageEventStreamService;
+    @Autowired
+    private MessageHistoryService messageHistoryService;
 
     // ================ Constructor para inicializar el cliente REST =====================
     public ApiWhatsappServiceImpl(
@@ -186,10 +193,10 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
     @Override
     public ResponseWhatsapp sendMessage(MessageBody payload) {
-        return sendMessageAndReturnEntity(payload).response();
+        return sendMessageAndReturnEntity(payload, true).response();
     }
 
-    public SendResult sendMessageAndReturnEntity(MessageBody payload) {
+    private SendResult sendMessageAndReturnEntity(MessageBody payload, boolean notifyImmediately) {
         try {
             RequestMessages requestBody = RequestMessagesFactory.buildTextMessage(
                     payload.number(),
@@ -206,6 +213,9 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
             MessageEntity entity = MessageMapperHelper.createSentMessageEntity(payload, response);
             entity = messageRepository.save(entity);
+            if (notifyImmediately) {
+                notifyMessageUpdate(entity);
+            }
 
             return new SendResult(response, entity);
 
@@ -460,10 +470,11 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 MessageTypeEnum.TEXT,
                 null);
 
-        SendResult sent = sendMessageAndReturnEntity(outPayload);
+        SendResult sent = sendMessageAndReturnEntity(outPayload, false);
 
         if (sent.entity() != null) {
             chatHistoryService.saveAiResponses(data, sent.entity());
+            notifyMessageUpdate(sent.entity());
         } else {
             logger.warn("No se pudo guardar historial IA: no se guardó MessageEntity del mensaje final.");
         }
@@ -589,6 +600,69 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         msg.setMessageErrorEntity(entityError);
     }
 
+    private void notifyMessageUpdate(MessageEntity message) {
+        if (message == null || message.getId() == null) {
+            return;
+        }
+
+        String phone = message.getConversationUserPhone();
+        if (phone == null || phone.isBlank() || !messageEventStreamService.hasSubscribers(phone)) {
+            return;
+        }
+
+        try {
+            MessageDto dto = messageHistoryService.getMessageDetailsById(message.getId());
+            messageEventStreamService.notifyUpdate(phone, MESSAGE_UPDATE_EVENT_TYPE, dto);
+        } catch (Exception ex) {
+            logger.warn("No se pudo notificar actualización SSE para messageId={} phone={}",
+                    message.getId(),
+                    phone,
+                    ex);
+        }
+    }
+
+    private void notifyMessageUpdateById(Long messageId) {
+        if (messageId == null) {
+            return;
+        }
+
+        try {
+            MessageDto dto = messageHistoryService.getMessageDetailsById(messageId);
+            String phone = dto.getConversationUserPhone();
+            if (phone == null || phone.isBlank() || !messageEventStreamService.hasSubscribers(phone)) {
+                return;
+            }
+            messageEventStreamService.notifyUpdate(phone, MESSAGE_UPDATE_EVENT_TYPE, dto);
+        } catch (Exception ex) {
+            logger.warn("No se pudo notificar actualización SSE para messageId={}", messageId, ex);
+        }
+    }
+
+    private void notifyCatiaMessageRead(MessageEntity message) {
+        if (message == null || message.getId() == null) {
+            return;
+        }
+
+        if (message.getDirection() != MessageDirectionEnum.OUTBOUND || message.getSource() != MessageSourceEnum.IA) {
+            return;
+        }
+
+        String phone = message.getConversationUserPhone();
+        if (phone == null || phone.isBlank() || !messageEventStreamService.hasSubscribers(phone)) {
+            return;
+        }
+
+        try {
+            MessageDto dto = messageHistoryService.getMessageDetailsById(message.getId());
+            messageEventStreamService.notifyStatusUpdate(phone, MESSAGE_READ_EVENT_TYPE, "read", dto);
+        } catch (Exception ex) {
+            logger.warn("No se pudo notificar lectura SSE para messageId={} phone={}",
+                    message.getId(),
+                    phone,
+                    ex);
+        }
+    }
+
     // =================== Recibir y enviar respuesta automática ======================
     @Override
     public ResponseWhatsapp handleUserMessage(WhatsAppDataDto.WhatsAppMessage message) {
@@ -660,6 +734,9 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                             template.setAnswer(answerJson);
                             template.setAnsweredAt(answeredAt);
                             templateMsgRepo.save(template);
+                            messageRepository.findByWamid(parentWamid)
+                                    .map(MessageEntity::getId)
+                                    .ifPresent(this::notifyMessageUpdateById);
                         });
                     }
                 }
@@ -675,12 +752,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     MessageSourceEnum.USER
                 );
                 MessageEntity saved = messageRepository.save(entity);
-                messageEventStreamService.notifyUpdate(
-                    saved.getConversationUserPhone(),
-                    "new_inbound",
-                    saved.getType(),
-                    saved.getTextBody()
-                );
+                notifyMessageUpdate(saved);
 
             }
 
@@ -979,17 +1051,18 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     msg.setFailedAt(parseWhatsappTimestamp(timestamp));
                 }
                 msg.setTimestamp(Instant.now());
-                msg.setDirection(MessageDirectionEnum.INBOUND);
+                msg.setDirection(MessageDirectionEnum.OUTBOUND);
                 msg.setSource(MessageSourceEnum.UNKNOWN);
 
                 attachFirstStatusError(msg, s);
 
-                messageRepository.save(msg);
+                msg = messageRepository.save(msg);
             } else {
                 msg = op.get();
             }
 
             Instant ts = parseWhatsappTimestamp(timestamp);
+            boolean shouldNotifyRead = false;
 
             switch (state) {
                 case "sent" -> {
@@ -1001,8 +1074,10 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                         msg.setDeliveredAt(ts);
                 }
                 case "read" -> {
-                    if (msg.getReadAt() == null)
+                    if (msg.getReadAt() == null) {
                         msg.setReadAt(ts);
+                        shouldNotifyRead = true;
+                    }
                 }
                 case "failed" -> {
                     msg.setFailedAt(ts);
@@ -1015,11 +1090,12 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             Optional<WhatsAppDataDto.Pricing> pricingOptional = Optional.ofNullable(s.pricing()).orElse(Optional.empty());
             if (pricingOptional.isPresent()) {
                 var p = pricingOptional.get();
+                MessageEntity messageForPricing = msg;
 
                 MessagePricingEntity pricing = messagePricingRepository.findByMessageId(msg.getId())
                         .orElseGet(() -> {
                             MessagePricingEntity x = new MessagePricingEntity();
-                            x.setMessage(msg);
+                            x.setMessage(messageForPricing);
                             return x;
                         });
 
@@ -1032,7 +1108,10 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             }
 
             try {
-                messageRepository.save(msg);
+                msg = messageRepository.save(msg);
+                if (shouldNotifyRead) {
+                    notifyCatiaMessageRead(msg);
+                }
             } catch (Exception e) {
                 logger.error("Error al guardar estado {} para mensaje {}: {}", state, messageId, e.getMessage());
             }
@@ -1118,7 +1197,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 null);
 
         MessageEntity messageEntity = MessageMapperHelper.createSentMessageEntity(body, resp);
-        messageRepository.save(messageEntity);
+        messageEntity = messageRepository.save(messageEntity);
 
         // Guardar registro de plantilla vinculado al mensaje
         MessageTemplateEntity templateMessage = new MessageTemplateEntity();
@@ -1128,6 +1207,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         templateMessage.setAnswer(null);
         templateMessage.setMessage(messageEntity);
         templateMsgRepo.save(templateMessage);
+        notifyMessageUpdate(messageEntity);
 
         return resp;
     }
@@ -1219,7 +1299,9 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
             if (res != null && !res.messages().isEmpty()) {
                 MessageEntity entity = MessageMapperHelper.createSentMessageEntity(payload, res);
-                messageRepository.save(entity);
+                entity.setMediaId(mediaId);
+                entity = messageRepository.save(entity);
+                notifyMessageUpdate(entity);
             }
 
             return res;
@@ -1242,7 +1324,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             if (res != null && !res.messages().isEmpty()) {
                 MessageEntity entity = MessageMapperHelper.createSentMessageEntity(payload, res);
                 entity.setMediaUrl(imageUrl);
-                messageRepository.save(entity);
+                entity = messageRepository.save(entity);
+                notifyMessageUpdate(entity);
             }
 
             return res;
@@ -1262,7 +1345,10 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
             if (res != null && !res.messages().isEmpty()) {
                 MessageEntity entity = MessageMapperHelper.createSentMessageEntity(payload, res);
-                messageRepository.save(entity);
+                entity.setMediaId(documentId);
+                entity.setMediaFilename(filename);
+                entity = messageRepository.save(entity);
+                notifyMessageUpdate(entity);
             }
 
             return res;
@@ -1288,7 +1374,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 MessageEntity entity = MessageMapperHelper.createSentMessageEntity(payload, res);
                 entity.setMediaUrl(documentUrl);
                 entity.setMediaFilename(filename);
-                messageRepository.save(entity);
+                entity = messageRepository.save(entity);
+                notifyMessageUpdate(entity);
             }
 
             return res;
@@ -1311,7 +1398,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             if (res != null && !res.messages().isEmpty()) {
                 MessageEntity entity = MessageMapperHelper.createSentMessageEntity(payload, res);
                 entity.setMediaUrl(videoUrl);
-                messageRepository.save(entity);
+                entity = messageRepository.save(entity);
+                notifyMessageUpdate(entity);
             }
 
             return res;
@@ -1333,7 +1421,9 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
             if (res != null && !res.messages().isEmpty()) {
                 MessageEntity entity = MessageMapperHelper.createSentMessageEntity(payload, res);
-                messageRepository.save(entity);
+                entity.setMediaId(videoId);
+                entity = messageRepository.save(entity);
+                notifyMessageUpdate(entity);
             }
 
             return res;
@@ -1355,7 +1445,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             if (res != null && !res.messages().isEmpty()) {
                 MessageEntity entity = MessageMapperHelper.createSentMessageEntity(payload, res);
                 entity.setMediaUrl(stickerUrl);
-                messageRepository.save(entity);
+                entity = messageRepository.save(entity);
+                notifyMessageUpdate(entity);
             }
 
             return res;
