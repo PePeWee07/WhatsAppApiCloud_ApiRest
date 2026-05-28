@@ -638,12 +638,12 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         }
     }
 
-    private void notifyCatiaMessageRead(MessageEntity message) {
+    private void notifyOutboundMessageRead(MessageEntity message) {
         if (message == null || message.getId() == null) {
             return;
         }
 
-        if (message.getDirection() != MessageDirectionEnum.OUTBOUND || message.getSource() != MessageSourceEnum.IA) {
+        if (message.getDirection() != MessageDirectionEnum.OUTBOUND) {
             return;
         }
 
@@ -1110,7 +1110,7 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             try {
                 msg = messageRepository.save(msg);
                 if (shouldNotifyRead) {
-                    notifyCatiaMessageRead(msg);
+                    notifyOutboundMessageRead(msg);
                 }
             } catch (Exception e) {
                 logger.error("Error al guardar estado {} para mensaje {}: {}", state, messageId, e.getMessage());
