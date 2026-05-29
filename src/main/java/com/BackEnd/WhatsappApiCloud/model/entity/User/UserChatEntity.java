@@ -72,6 +72,9 @@ public class UserChatEntity {
     @Column(name = "blocking_reason")
     private String blockingReason;
 
+    @Column(name = "ia_paused")
+    private boolean iaPaused;
+
     @Column(name = "valid_question_count")
     private int validQuestionCount;
 

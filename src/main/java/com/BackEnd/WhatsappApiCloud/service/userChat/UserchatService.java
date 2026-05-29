@@ -21,6 +21,7 @@ public interface UserchatService {
     Page<UserChatFullDto> searchByWhatsappPhone(String whatsappPhone, int page, int size, String sortBy, String direction);
     TicketInfoDto userRequestTicketInfo(String whatsAppPhone, Long ticketId) throws JsonProcessingException, IOException;
     List<UserTicketDto> userRequestTicketList(String whatsAppPhone) throws JsonProcessingException;
+    Object setIaPaused(String whatsappPhone, boolean paused);
     Object setWaitingAttachmentsState(String whatsappPhone);
     Object setWaitingAttachmentsStateForExistingTicket(String whatsappPhone, Long ticketId);
     Object createNoteForTicket( Long ticketId, String contentNote, String whatsAppPhone);

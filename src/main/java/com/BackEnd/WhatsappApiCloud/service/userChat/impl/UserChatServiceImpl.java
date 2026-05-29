@@ -103,6 +103,7 @@ public class UserChatServiceImpl implements UserchatService {
         fullDto.setLimitStrike(user.getLimitStrike());
         fullDto.setBlock(user.isBlock());
         fullDto.setBlockingReason(user.getBlockingReason());
+        fullDto.setIaPaused(user.isIaPaused());
         fullDto.setValidQuestionCount(user.getValidQuestionCount());
         fullDto.setChatSessions(sesionesDto);
         fullDto.setUserTickets(ticketsDto);
@@ -598,6 +599,17 @@ public class UserChatServiceImpl implements UserchatService {
             apiWhatsappService.sendMessage(new MessageBody(whatsAppPhone, message, "System", MessageSourceEnum.BACK_END, businessPhoneNumber,  MessageTypeEnum.TEXT, null));
         }
         return ticketsDto;
+    }
+
+    // ============ Switch de takeover humano (pausar/reanudar CatIA) ============
+    @Override
+    @Transactional
+    public Object setIaPaused(String whatsappPhone, boolean paused) {
+        UserChatEntity user = repo.findByWhatsappPhone(whatsappPhone)
+            .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado con whatsAppPhone: " + whatsappPhone));
+        user.setIaPaused(paused);
+        repo.save(user);
+        return paused;
     }
 
     // ============  Para adjuntos durante la creacion Ticket ============

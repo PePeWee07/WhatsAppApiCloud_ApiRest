@@ -186,6 +186,15 @@ public class UserChatController {
             return ResponseEntity.ok().body(ticketList);
     }
 
+    // ================== Pausar / reanudar a CatIA (takeover humano) ==================
+    @PatchMapping("/user/ia/pause")
+    public ResponseEntity<String> toggleIaPause(
+            @RequestParam("whatsappPhone") String whatsappPhone,
+            @RequestParam("paused") boolean paused) {
+        userchatService.setIaPaused(whatsappPhone, paused);
+        return ResponseEntity.ok(paused ? "CatIA en pausa" : "CatIA reactivada");
+    }
+
     // ================== Cambiar estado del usuario a WAITING_ATTACHMENTS ==================
     @PatchMapping("/user/state/waiting-attachment")
     public ResponseEntity<String> setUserStateToWaitingAttachment(@RequestParam("whatsappPhone") String whatsappPhone) {

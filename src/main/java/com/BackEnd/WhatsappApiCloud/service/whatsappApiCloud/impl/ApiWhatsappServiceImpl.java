@@ -211,6 +211,18 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
 
             chatSessionService.createSessionIfNotExists(payload.number());
 
+            // Auto-pausa: si un agente humano escribe desde el backoffice, dormimos a CatIA.
+            // Los mensajes del sistema (BACK_END) y de la IA no activan la pausa.
+            if (payload.source() == MessageSourceEnum.BACK_OFFICE) {
+                userChatRepository.findByWhatsappPhone(payload.number()).ifPresent(u -> {
+                    if (!u.isIaPaused()) {
+                        u.setIaPaused(true);
+                        userChatRepository.save(u);
+                        logger.info("CatIA pausada automáticamente para {} (mensaje desde backoffice).", payload.number());
+                    }
+                });
+            }
+
             MessageEntity entity = MessageMapperHelper.createSentMessageEntity(payload, response);
             entity = messageRepository.save(entity);
             if (notifyImmediately) {
@@ -711,8 +723,6 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 return null;
             }
 
-            markAsRead(new RequestWhatsappAsRead("whatsapp", "read", wamid, new TypingIndicator("text")));
-
             if ("interactive".equals(messageType)) {
                 var msg = firstMessage;
                 var ctx = msg.context();
@@ -755,6 +765,14 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                 notifyMessageUpdate(saved);
 
             }
+
+            // Takeover humano
+            if (user.isIaPaused()) {
+                logger.info("CatIA en pausa (takeover humano) para {}. Mensaje guardado sin autorespuesta.", waId);
+                return null;
+            }
+
+            markAsRead(new RequestWhatsappAsRead("whatsapp", "read", wamid, new TypingIndicator("text")));
 
             // Manejar estados de conversación
             try {

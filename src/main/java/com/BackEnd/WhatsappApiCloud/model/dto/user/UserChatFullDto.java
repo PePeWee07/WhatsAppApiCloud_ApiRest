@@ -31,6 +31,7 @@ public class UserChatFullDto {
     private int limitStrike;
     private boolean block;
     private String blockingReason;
+    private boolean iaPaused;
     private int validQuestionCount;
     private String identificacion;
 
