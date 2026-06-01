@@ -24,4 +24,7 @@ public interface UserChatSessionRepository extends JpaRepository<UserChatSession
             String whatsappPhone,
             LocalDateTime startTime,
             LocalDateTime endTime);
+
+    // Listar todas las sesiones de un usuario (más recientes primero)
+    List<UserChatSessionEntity> findByWhatsappPhoneOrderByStartTimeDesc(String whatsappPhone);
 }

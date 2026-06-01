@@ -1,5 +1,8 @@
 package com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.impl;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -30,6 +33,11 @@ import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.MessageHistoryServi
 
 @Service
 public class MessageHistoryServiceImpl implements MessageHistoryService {
+
+    // Zona horaria de la app (coincide con spring.jackson.time-zone).
+    // El timestamp se guarda como Instant (UTC); convertimos el rango local del
+    // backoffice a Instant en esta zona para que "el día" cuadre con lo que ve el operador.
+    private static final ZoneId APP_ZONE = ZoneId.of("America/Guayaquil");
 
     private final MessageRepository messageRepository;
     private final MessagePricingRepository messagePricingRepository;
@@ -70,6 +78,24 @@ public class MessageHistoryServiceImpl implements MessageHistoryService {
         Pageable pageable = PageRequest.of(safePage, safeSize, sort);
 
         return messageRepository.findHistoryByPhone(phone, pageable);
+    }
+
+    @Override
+    public Page<MessageRowView> getHistoryByPhoneAndRange(String phone, LocalDateTime start, LocalDateTime end, int page, int size, String direction) {
+
+        int safeSize = Math.min(Math.max(size, 1), 100);
+        int safePage = Math.max(page, 0);
+
+        Sort sort = "desc".equalsIgnoreCase(direction)
+                ? Sort.by("timestamp").descending()
+                : Sort.by("timestamp").ascending(); // default asc (lectura cronológica del día)
+
+        Pageable pageable = PageRequest.of(safePage, safeSize, sort);
+
+        Instant startInstant = start.atZone(APP_ZONE).toInstant();
+        Instant endInstant = end.atZone(APP_ZONE).toInstant();
+
+        return messageRepository.findHistoryByPhoneAndTimestampBetween(phone, startInstant, endInstant, pageable);
     }
 
     @Override

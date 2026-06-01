@@ -1,5 +1,6 @@
 package com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
@@ -14,6 +15,7 @@ import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.Messa
 
 public interface MessageHistoryService {
     Page<MessageRowView> getHistoryByPhone(String phone, int page, int size, String direction);
+    Page<MessageRowView> getHistoryByPhoneAndRange(String phone, LocalDateTime start, LocalDateTime end, int page, int size, String direction);
     MessagePricingDto getMessagePricingByMessageId(Long messageId);
     MessageErrorDto getMessageErrorByMessageId(Long messageId);
     MessageAddresDto getMessageAddresByMessageId(Long messageId);

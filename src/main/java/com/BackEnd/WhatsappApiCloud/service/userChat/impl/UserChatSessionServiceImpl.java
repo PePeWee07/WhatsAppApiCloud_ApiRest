@@ -1,10 +1,13 @@
 package com.BackEnd.WhatsappApiCloud.service.userChat.impl;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
+import com.BackEnd.WhatsappApiCloud.model.dto.user.UserChatSessionDto;
 import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatSessionEntity;
 import com.BackEnd.WhatsappApiCloud.repository.UserChatSessionRepository;
 import com.BackEnd.WhatsappApiCloud.service.userChat.UserChatSessionService;
@@ -49,6 +52,17 @@ public class UserChatSessionServiceImpl implements UserChatSessionService {
         session.setStartTime(now);
         session.setMessageCount(1);
         return chatSessionRepository.save(session);
+    }
+
+    /**
+     * Lista todas las sesiones de chat de un usuario (más recientes primero).
+     */
+    @Override
+    public List<UserChatSessionDto> listSessions(String whatsappPhone) {
+        return chatSessionRepository.findByWhatsappPhoneOrderByStartTimeDesc(whatsappPhone)
+                .stream()
+                .map(cs -> new UserChatSessionDto(cs.getId(), cs.getMessageCount(), cs.getStartTime()))
+                .collect(Collectors.toList());
     }
 
 }

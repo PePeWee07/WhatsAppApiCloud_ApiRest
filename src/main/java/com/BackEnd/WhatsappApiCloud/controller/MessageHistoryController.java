@@ -1,20 +1,24 @@
 package com.BackEnd.WhatsappApiCloud.controller;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.BackEnd.WhatsappApiCloud.model.dto.user.UserChatSessionDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.AiResponseDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.MessageAddresDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.MessageDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.MessageErrorDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.MessagePricingDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.whatsapp.responseSendMessage.MessageRowView;
+import com.BackEnd.WhatsappApiCloud.service.userChat.UserChatSessionService;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.MessageHistoryService;
 
 @RequestMapping("/api/v1/messages")
@@ -22,9 +26,34 @@ import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.MessageHistoryServi
 public class MessageHistoryController {
 
     private final MessageHistoryService historyService;
+    private final UserChatSessionService sessionService;
 
-    public MessageHistoryController(MessageHistoryService historyService) {
+    public MessageHistoryController(MessageHistoryService historyService, UserChatSessionService sessionService) {
         this.historyService = historyService;
+        this.sessionService = sessionService;
+    }
+
+    /*
+     * Listar las sesiones de chat (días con actividad) de un usuario.
+     */
+    @GetMapping("/sessions")
+    public List<UserChatSessionDto> getSessions(@RequestParam String phone) {
+        return sessionService.listSessions(phone);
+    }
+
+    /*
+     * Cargar el historial de un usuario en un rango de fechas [start, end].
+     * start/end en formato ISO local (ej. 2026-05-30T00:00:00); se interpretan en zona America/Guayaquil.
+     */
+    @GetMapping("/history/range")
+    public Page<MessageRowView> getHistoryByRange(
+            @RequestParam String phone,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(defaultValue = "asc") String direction) {
+        return historyService.getHistoryByPhoneAndRange(phone, start, end, page, size, direction);
     }
 
     /* 
