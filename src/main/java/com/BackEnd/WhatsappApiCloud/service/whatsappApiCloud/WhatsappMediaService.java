@@ -13,6 +13,15 @@ public interface WhatsappMediaService {
      * @param filenameHint  nombre sugerido (caption/alias) opcional
      */
     File downloadMediaToTemp(String mediaId, @Nullable String filenameHint) throws IOException;
+
+    /** Sube un media a WhatsApp SIN validación estricta (uso interno, p. ej. reenvío desde GLPI que ya pre-filtra). */
     String uploadMedia(File mediaFile);
+
+    /**
+     * Sube un media a WhatsApp validando MIME y tamaño contra la whitelist (doc/img/video) antes de enviar;
+     * lanza 400 si no cumple. Usado por la subida del backoffice.
+     */
+    String uploadValidatedMedia(File mediaFile);
+
     MediaDownloadResult downloadMediaAsBytes(String mediaId) throws IOException;
 }

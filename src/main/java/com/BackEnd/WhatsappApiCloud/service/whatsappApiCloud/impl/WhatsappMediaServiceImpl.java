@@ -85,10 +85,14 @@ public class WhatsappMediaServiceImpl implements WhatsappMediaService {
         // Imágenes (5 MB)
         Map.entry("image/jpeg", ".jpg"),
         Map.entry("image/jpg",  ".jpg"),
-        Map.entry("image/png",  ".png")
+        Map.entry("image/png",  ".png"),
+        // Video (16 MB)
+        Map.entry("video/mp4",  ".mp4"),
+        Map.entry("video/3gpp", ".3gp")
     );
     private static final long MAX_IMAGE = 5L  * 1024 * 1024;
     private static final long MAX_DOC   = 100L * 1024 * 1024;
+    private static final long MAX_VIDEO = 16L * 1024 * 1024;
 
     private static String baseMime(String mime) {
         return mime == null ? "" : mime.toLowerCase(Locale.ROOT).split(";", 2)[0].trim();
@@ -106,17 +110,23 @@ public class WhatsappMediaServiceImpl implements WhatsappMediaService {
             || m.equals("application/vnd.openxmlformats-officedocument.presentationml.presentation")
             || m.equals("application/pdf");
     }
+    private static boolean isAllowedVideo(String m) {
+        return m.equals("video/mp4") || m.equals("video/3gpp");
+    }
     private static void assertAllowedMimeAndSize(String mime, long sizeBytes) {
         String m = baseMime(mime);
         if (!ALLOWED_MIME_TO_EXT.containsKey(m)) {
             throw new IllegalStateException("Formato no soportado: " + m
-                + ". Permitidos: JPG, PNG, PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT.");
+                + ". Permitidos: JPG, PNG, PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, MP4, 3GP.");
         }
         if (isAllowedImage(m) && sizeBytes > MAX_IMAGE) {
             throw new IllegalStateException("Imagen supera el límite de 5 MB.");
         }
         if (isAllowedDoc(m) && sizeBytes > MAX_DOC) {
             throw new IllegalStateException("Documento supera el límite de 100 MB.");
+        }
+        if (isAllowedVideo(m) && sizeBytes > MAX_VIDEO) {
+            throw new IllegalStateException("Video supera el límite de 16 MB.");
         }
     }
     private static String ensureExt(String name, String ext) {
@@ -214,8 +224,19 @@ public class WhatsappMediaServiceImpl implements WhatsappMediaService {
 
 
     // ============== Cargar archivo multimedia a servidores WhatsApp ===============
+    // Uso interno (GLPI ya pre-filtra los MIME): se sube sin validación estricta.
     @Override
     public String uploadMedia(File mediaFile) {
+        return doUpload(mediaFile, false);
+    }
+
+    // Subida del backoffice: valida MIME y tamaño (doc/img/video) antes de enviar.
+    @Override
+    public String uploadValidatedMedia(File mediaFile) {
+        return doUpload(mediaFile, true);
+    }
+
+    private String doUpload(File mediaFile, boolean validate) {
         try {
             if (mediaFile.length() == 0 || !mediaFile.exists()) {
                 throw new ResponseStatusException(
@@ -229,6 +250,11 @@ public class WhatsappMediaServiceImpl implements WhatsappMediaService {
             if ("text/csv".equals(contentType)) {
                 mediaFile = convertCsvToExcel(mediaFile);
                 contentType = "application/vnd.ms-excel";
+            }
+
+            // Se valida DESPUÉS de la conversión CSV→Excel para no rechazar el CSV original.
+            if (validate) {
+                assertAllowedMimeAndSize(contentType, mediaFile.length());
             }
 
             MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
@@ -249,6 +275,11 @@ public class WhatsappMediaServiceImpl implements WhatsappMediaService {
         } catch (IOException e) {
             logger.error("Error al leer el archivo: ", e);
             throw new RuntimeException("Error al leer el archivo: ", e);
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (IllegalStateException e) {
+            logger.warn("Subida rechazada por validación: {}", e.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
         } catch (Exception e) {
             logger.error("Error inesperado al subir el archivo: ", e);
             throw new RuntimeException("Error inesperado al subir el archivo al servidor de Whatsapp: ", e);

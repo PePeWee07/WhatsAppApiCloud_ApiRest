@@ -98,7 +98,7 @@ public class WhatsappController {
             // Guardar temporalmente el archivo en el sistema
             File tempFile = File.createTempFile("upload_", file.getOriginalFilename());
             file.transferTo(tempFile);
-            String mediaId = whatsappMediaService.uploadMedia(tempFile);
+            String mediaId = whatsappMediaService.uploadValidatedMedia(tempFile);
             tempFile.delete();
 
             if (mediaId != null) {
