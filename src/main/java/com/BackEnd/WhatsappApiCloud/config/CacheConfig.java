@@ -37,9 +37,17 @@ public class CacheConfig {
                 .fromSerializer(jacksonSerializer))
             .disableCachingNullValues();
 
+        // Cache de permisos de tools (se evicta en cada edición; TTL como respaldo)
+        RedisCacheConfiguration toolPermsConfig = RedisCacheConfiguration.defaultCacheConfig()
+            .entryTtl(Duration.ofMinutes(30))
+            .serializeValuesWith(RedisSerializationContext.SerializationPair
+                .fromSerializer(jacksonSerializer))
+            .disableCachingNullValues();
+
         Map<String, RedisCacheConfiguration> cacheConfigs = new HashMap<>();
         cacheConfigs.put("erpUserCache", erpConfig);
         cacheConfigs.put("mediaIdCache", mediaConfig);
+        cacheConfigs.put("toolPermissionsCache", toolPermsConfig);
 
         return RedisCacheManager.builder(connectionFactory)
                 .withInitialCacheConfigurations(cacheConfigs)

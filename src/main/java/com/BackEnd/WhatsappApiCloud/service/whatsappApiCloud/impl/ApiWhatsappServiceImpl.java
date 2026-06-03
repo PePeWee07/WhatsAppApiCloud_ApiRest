@@ -61,6 +61,7 @@ import com.BackEnd.WhatsappApiCloud.service.glpi.GlpiService;
 import com.BackEnd.WhatsappApiCloud.service.openAi.AiResponseService;
 import com.BackEnd.WhatsappApiCloud.service.openAi.OpenAiServerClient;
 import com.BackEnd.WhatsappApiCloud.service.sse.MessageEventStreamService;
+import com.BackEnd.WhatsappApiCloud.service.tools.ToolPermissionService;
 import com.BackEnd.WhatsappApiCloud.service.userChat.UserChatSessionService;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.MessageHistoryService;
@@ -132,6 +133,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     private MessageEventStreamService messageEventStreamService;
     @Autowired
     private MessageHistoryService messageHistoryService;
+    @Autowired
+    private ToolPermissionService toolPermissionService;
 
     // ================ Constructor para inicializar el cliente REST =====================
     public ApiWhatsappServiceImpl(
@@ -468,7 +471,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             user.getIdentificacion(),
             userDto.getEmailInstitucional(),
             userDto.getEmailPersonal(),
-            userDto.getSexo()
+            userDto.getSexo(),
+            toolPermissionService.getPermissionsMap()
         );
 
         AnswersOpenIADto data = openAiServerClient.getOpenAiData(question);
