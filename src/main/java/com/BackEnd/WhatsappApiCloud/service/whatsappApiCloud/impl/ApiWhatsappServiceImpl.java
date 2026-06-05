@@ -62,6 +62,7 @@ import com.BackEnd.WhatsappApiCloud.service.openAi.AiResponseService;
 import com.BackEnd.WhatsappApiCloud.service.openAi.OpenAiServerClient;
 import com.BackEnd.WhatsappApiCloud.service.sse.MessageEventStreamService;
 import com.BackEnd.WhatsappApiCloud.service.tools.ToolPermissionService;
+import com.BackEnd.WhatsappApiCloud.service.tools.ToolUsageService;
 import com.BackEnd.WhatsappApiCloud.service.userChat.UserChatSessionService;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.ApiWhatsappService;
 import com.BackEnd.WhatsappApiCloud.service.whatsappApiCloud.MessageHistoryService;
@@ -99,6 +100,9 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     @Value("${limit.questions.per.day}")
     private int limitQuestionsPerDay;
 
+    @Value("${hours.to.renew.questions:12}")
+    private int hoursToRenewQuestions;
+
     @Value("${hours.to.wait.after.limit}")
     private int hoursToWaitAfterLimit;
 
@@ -135,6 +139,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     private MessageHistoryService messageHistoryService;
     @Autowired
     private ToolPermissionService toolPermissionService;
+    @Autowired
+    private ToolUsageService toolUsageService;
 
     // ================ Constructor para inicializar el cliente REST =====================
     public ApiWhatsappServiceImpl(
@@ -428,8 +434,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
                     "System", MessageSourceEnum.BACK_END, businessPhoneNumber,  MessageTypeEnum.TEXT, null));
         }
 
-        //! 3. Restablece el límite de preguntas diarias si han pasado 24 horas
-        if (Duration.between(user.getLastInteraction(), timeNow).toHours() >= 24) {
+        //! 3. Restablece el límite de preguntas si ha pasado el periodo de renovación (default 12h)
+        if (Duration.between(user.getLastInteraction(), timeNow).toHours() >= hoursToRenewQuestions) {
             user.setLimitQuestions(limitQuestionsPerDay);
             user.setNextResetDate(null);
             userChatRepository.save(user);
@@ -462,6 +468,10 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         //! 6. Obtener respuesta de IA
         List<String> userRoles = userDto.getRolesUsuario().stream().map(ErpRolUserDto::getTipoRol).collect(Collectors.toList());
 
+        Map<String, List<String>> toolPerms = toolPermissionService.getPermissionsMap();
+        Map<String, Integer> toolCooldowns = toolPermissionService.getCooldownMap();
+        Map<String, Integer> toolCooldownRemaining = toolUsageService.getRemainingMap(waId, toolCooldowns);
+
         QuestionOpenIADto question = new QuestionOpenIADto(
             messageText,
             userDto.getNombres() + " " + userDto.getApellidos(),
@@ -472,10 +482,15 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             userDto.getEmailInstitucional(),
             userDto.getEmailPersonal(),
             userDto.getSexo(),
-            toolPermissionService.getPermissionsMap()
+            toolPerms,
+            toolCooldowns,
+            toolCooldownRemaining
         );
 
         AnswersOpenIADto data = openAiServerClient.getOpenAiData(question);
+
+        // Registra (last_executed_at = ahora) las tools que Gpt-Tics ejecutó, para el cooldown.
+        toolUsageService.recordExecutions(waId, data.executedTools());
 
         MessageBody outPayload = new MessageBody(
                 waId,

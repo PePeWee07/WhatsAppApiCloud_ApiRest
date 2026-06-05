@@ -46,7 +46,7 @@ public class ToolPermissionController {
     public ResponseEntity<ToolPermissionDto> upsert(
             @PathVariable String toolName,
             @RequestBody ToolPermissionUpsertRequest body) {
-        return ResponseEntity.ok(service.upsert(toolName, body.allowedRoles(), body.enabled()));
+        return ResponseEntity.ok(service.upsert(toolName, body.allowedRoles(), body.enabled(), body.cooldownSeconds()));
     }
 
     // Habilitar / deshabilitar una tool
@@ -69,5 +69,5 @@ public class ToolPermissionController {
         return ResponseEntity.ok(service.restoreDefaults());
     }
 
-    public record ToolPermissionUpsertRequest(Set<String> allowedRoles, Boolean enabled) {}
+    public record ToolPermissionUpsertRequest(Set<String> allowedRoles, Boolean enabled, Integer cooldownSeconds) {}
 }

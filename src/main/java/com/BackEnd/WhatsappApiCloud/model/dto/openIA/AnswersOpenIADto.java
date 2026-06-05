@@ -4,6 +4,10 @@ import java.util.List;
 
 import com.BackEnd.WhatsappApiCloud.model.dto.openIA.DataResponse.DataHistoryDto;
 
-public record AnswersOpenIADto(String answer, String previousResponseId, List<DataHistoryDto> data) {
-    
+public record AnswersOpenIADto(
+        String answer,
+        String previousResponseId,
+        List<DataHistoryDto> data,
+        List<String> executedTools) {
+
 }

@@ -49,4 +49,8 @@ public class ToolPermissionEntity {
 
     @Column(name = "enabled", nullable = false)
     private boolean enabled = true;
+
+    // Segundos de enfriamiento entre ejecuciones de esta tool (0 = sin cooldown / concurrente).
+    @Column(name = "cooldown_seconds")
+    private Integer cooldownSeconds = 0;
 }

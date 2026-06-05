@@ -6,5 +6,6 @@ public record ToolPermissionDto(
         Long id,
         String toolName,
         Set<String> allowedRoles,
-        boolean enabled) {
+        boolean enabled,
+        int cooldownSeconds) {
 }

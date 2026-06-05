@@ -55,7 +55,7 @@ public class ToolPermissionService {
      * Una tool deshabilitada (enabled=false) se devuelve con lista vacía => se deniega a todos.
      * Las tools que NO estén en esta tabla no aparecen aquí: Gpt-Tics usará su default estático.
      */
-    @Cacheable(CACHE_NAME)
+    @Cacheable(value = CACHE_NAME, key = "'roles'")
     @Transactional(readOnly = true)
     public Map<String, List<String>> getPermissionsMap() {
         Map<String, List<String>> map = new HashMap<>();
@@ -72,6 +72,23 @@ public class ToolPermissionService {
         return map;
     }
 
+    /**
+     * Mapa toolName -> segundos de cooldown configurados. Solo incluye tools con cooldown > 0
+     * (las ausentes se tratan como sin enfriamiento).
+     */
+    @Cacheable(value = CACHE_NAME, key = "'cooldowns'")
+    @Transactional(readOnly = true)
+    public Map<String, Integer> getCooldownMap() {
+        Map<String, Integer> map = new HashMap<>();
+        for (ToolPermissionEntity e : repo.findAll()) {
+            int cd = e.getCooldownSeconds() == null ? 0 : e.getCooldownSeconds();
+            if (cd > 0) {
+                map.put(e.getToolName(), cd);
+            }
+        }
+        return map;
+    }
+
     @Transactional(readOnly = true)
     public List<ToolPermissionDto> listAll() {
         return repo.findAll().stream().map(this::toDto).collect(Collectors.toList());
@@ -80,7 +97,7 @@ public class ToolPermissionService {
     /** Crea o actualiza los roles (y opcionalmente el estado enabled) de una tool. */
     @CacheEvict(value = CACHE_NAME, allEntries = true)
     @Transactional
-    public ToolPermissionDto upsert(String toolName, Set<String> roles, Boolean enabled) {
+    public ToolPermissionDto upsert(String toolName, Set<String> roles, Boolean enabled, Integer cooldownSeconds) {
         if (toolName == null || toolName.isBlank()) {
             throw new BadRequestException("toolName es obligatorio.");
         }
@@ -100,6 +117,9 @@ public class ToolPermissionService {
         }
         if (enabled != null) {
             e.setEnabled(enabled);
+        }
+        if (cooldownSeconds != null) {
+            e.setCooldownSeconds(Math.max(0, cooldownSeconds));
         }
         return toDto(repo.save(e));
     }
@@ -137,12 +157,14 @@ public class ToolPermissionService {
                     });
             e.setAllowedRoles(new HashSet<>(DEFAULT_ROLES));
             e.setEnabled(true);
+            e.setCooldownSeconds(0); // por defecto sin enfriamiento; se configura por endpoint
             result.add(toDto(repo.save(e)));
         }
         return result;
     }
 
     private ToolPermissionDto toDto(ToolPermissionEntity e) {
-        return new ToolPermissionDto(e.getId(), e.getToolName(), e.getAllowedRoles(), e.isEnabled());
+        int cd = e.getCooldownSeconds() == null ? 0 : e.getCooldownSeconds();
+        return new ToolPermissionDto(e.getId(), e.getToolName(), e.getAllowedRoles(), e.isEnabled(), cd);
     }
 }

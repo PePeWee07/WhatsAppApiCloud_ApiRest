@@ -13,7 +13,9 @@ public record QuestionOpenIADto(
         String emailInstitucional,
         String emailPersonal,
         String sexo,
-        Map<String, List<String>> toolPermissions) {
+        Map<String, List<String>> toolPermissions,
+        Map<String, Integer> toolCooldowns,
+        Map<String, Integer> toolCooldownRemaining) {
     public QuestionOpenIADto(
             String ask,
             String name,
@@ -24,6 +26,6 @@ public record QuestionOpenIADto(
             String emailPersonal,
             String sexo
         ) {
-        this(ask, name, phone, roles, null, identifiacion, emailInstitucional, emailPersonal, sexo, null);
+        this(ask, name, phone, roles, null, identifiacion, emailInstitucional, emailPersonal, sexo, null, null, null);
     }
 }
