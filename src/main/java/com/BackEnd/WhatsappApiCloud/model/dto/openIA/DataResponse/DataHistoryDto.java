@@ -3,6 +3,9 @@ package com.BackEnd.WhatsappApiCloud.model.dto.openIA.DataResponse;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record DataHistoryDto(
     long created_at,
     List<Map<String,Object>> input,
