@@ -9,6 +9,7 @@ import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -43,6 +44,7 @@ import com.BackEnd.WhatsappApiCloud.model.dto.erp.ErpUserDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.erp.ErpRolUserDto;
 import com.BackEnd.WhatsappApiCloud.model.dto.openIA.AnswersOpenIADto;
 import com.BackEnd.WhatsappApiCloud.model.dto.openIA.QuestionOpenIADto;
+import com.BackEnd.WhatsappApiCloud.model.dto.openIA.promptConfig.ResolvedPromptConfigDto;
 import com.BackEnd.WhatsappApiCloud.model.entity.user.AttachmentEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.user.UserChatEntity;
 import com.BackEnd.WhatsappApiCloud.model.entity.whatsapp.MessageBody;
@@ -58,6 +60,7 @@ import com.BackEnd.WhatsappApiCloud.repository.message.MessageTemplateRepository
 import com.BackEnd.WhatsappApiCloud.service.erp.ErpCacheService;
 import com.BackEnd.WhatsappApiCloud.service.erp.ErpServerClient;
 import com.BackEnd.WhatsappApiCloud.service.glpi.GlpiService;
+import com.BackEnd.WhatsappApiCloud.service.openAi.AiPromptConfigService;
 import com.BackEnd.WhatsappApiCloud.service.openAi.AiResponseService;
 import com.BackEnd.WhatsappApiCloud.service.openAi.OpenAiServerClient;
 import com.BackEnd.WhatsappApiCloud.service.sse.MessageEventStreamService;
@@ -141,6 +144,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
     private ToolPermissionService toolPermissionService;
     @Autowired
     private ToolUsageService toolUsageService;
+    @Autowired
+    private AiPromptConfigService aiPromptConfigService;
 
     // ================ Constructor para inicializar el cliente REST =====================
     public ApiWhatsappServiceImpl(
@@ -472,6 +477,17 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
         Map<String, Integer> toolCooldowns = toolPermissionService.getCooldownMap();
         Map<String, Integer> toolCooldownRemaining = toolUsageService.getRemainingMap(waId, toolCooldowns);
 
+        // Config de prompt
+        Map<String, String> promptVars = new HashMap<>();
+        promptVars.put("names", userDto.getNombres() + " " + userDto.getApellidos());
+        promptVars.put("phone", waId);
+        promptVars.put("roles", String.join(", ", userRoles));
+        promptVars.put("identificacion", user.getIdentificacion());
+        promptVars.put("email_institucional", userDto.getEmailInstitucional());
+        promptVars.put("email_personal", userDto.getEmailPersonal());
+        promptVars.put("sexo", userDto.getSexo());
+        ResolvedPromptConfigDto promptConfig = aiPromptConfigService.resolveFor(promptVars);
+
         QuestionOpenIADto question = new QuestionOpenIADto(
             messageText,
             userDto.getNombres() + " " + userDto.getApellidos(),
@@ -484,7 +500,8 @@ public class ApiWhatsappServiceImpl implements ApiWhatsappService {
             userDto.getSexo(),
             toolPerms,
             toolCooldowns,
-            toolCooldownRemaining
+            toolCooldownRemaining,
+            promptConfig
         );
 
         AnswersOpenIADto data = openAiServerClient.getOpenAiData(question);

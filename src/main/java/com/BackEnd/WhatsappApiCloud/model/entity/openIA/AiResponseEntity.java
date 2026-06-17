@@ -46,15 +46,6 @@ public class AiResponseEntity {
     @Column(name = "model", nullable = false)
     private String model;
 
-    @Column(name = "prompt_id", nullable = false)
-    private String promptId;
-
-    @Column(name = "prompt_variables", columnDefinition = "TEXT")
-    private String promptVariables;
-
-    @Column(name = "prompt_version", nullable = false)
-    private String promptVersion;
-
     @Column(name = "input_tokens", nullable = false)
     private int inputTokens;
 

@@ -15,9 +15,6 @@ public class AiResponseDto {
     private String previousResponseId;
     private Long createdAt;
     private String model;
-    private String promptId;
-    private String promptVariables;
-    private String promptVersion;
     private int inputTokens;
     private int outputTokens;
     private int totalTokens;

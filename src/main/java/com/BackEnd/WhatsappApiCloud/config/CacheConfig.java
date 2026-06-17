@@ -44,10 +44,18 @@ public class CacheConfig {
                 .fromSerializer(jacksonSerializer))
             .disableCachingNullValues();
 
+        // Cache de la config del prompt (se evicta en cada edición; TTL como respaldo)
+        RedisCacheConfiguration aiPromptConfig = RedisCacheConfiguration.defaultCacheConfig()
+            .entryTtl(Duration.ofMinutes(30))
+            .serializeValuesWith(RedisSerializationContext.SerializationPair
+                .fromSerializer(jacksonSerializer))
+            .disableCachingNullValues();
+
         Map<String, RedisCacheConfiguration> cacheConfigs = new HashMap<>();
         cacheConfigs.put("erpUserCache", erpConfig);
         cacheConfigs.put("mediaIdCache", mediaConfig);
         cacheConfigs.put("toolPermissionsCache", toolPermsConfig);
+        cacheConfigs.put("aiPromptConfigCache", aiPromptConfig);
 
         return RedisCacheManager.builder(connectionFactory)
                 .withInitialCacheConfigurations(cacheConfigs)

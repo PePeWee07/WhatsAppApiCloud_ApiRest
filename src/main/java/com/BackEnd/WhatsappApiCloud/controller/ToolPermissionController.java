@@ -63,7 +63,14 @@ public class ToolPermissionController {
         return ResponseEntity.noContent().build();
     }
 
-    // Restaurar de fábrica: sobrescribe las tools básicas a sus roles por defecto (enabled=true)
+    // Sincroniza la tabla con las function tools de la config activa:
+    // crea las que falten (deshabilitadas, sin roles) y respeta las existentes. No destructivo.
+    @PostMapping("/sync-from-config")
+    public ResponseEntity<List<ToolPermissionDto>> syncFromConfig() {
+        return ResponseEntity.ok(service.syncFromConfig());
+    }
+
+    // Reset de fábrica de permisos: aplica DEFAULT_ROLES + enabled a las function tools de la config.
     @PostMapping("/restore-defaults")
     public ResponseEntity<List<ToolPermissionDto>> restoreDefaults() {
         return ResponseEntity.ok(service.restoreDefaults());

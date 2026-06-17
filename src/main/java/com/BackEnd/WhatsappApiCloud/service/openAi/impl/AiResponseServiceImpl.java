@@ -46,9 +46,6 @@ public class AiResponseServiceImpl implements AiResponseService {
             ai.setPreviousResponseId(dto.previous_response_id());
             ai.setCreatedAt(Instant.ofEpochSecond(dto.created_at()));
             ai.setModel(dto.model());
-            ai.setPromptId(dto.prompt().id());
-            ai.setPromptVariables(objectMapper.writeValueAsString(dto.prompt().variables()));
-            ai.setPromptVersion(dto.prompt().version());
             ai.setInputTokens(dto.usage().input_tokens());
             ai.setOutputTokens(dto.usage().output_tokens());
             ai.setTotalTokens(dto.usage().total_tokens());

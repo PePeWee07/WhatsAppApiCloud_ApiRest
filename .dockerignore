@@ -1,6 +1,7 @@
 # Ignorar archivos de configuración de entorno (por seguridad)
 .env
 *.env
+.env.prod
 
 # Ignorar carpetas de dependencias locales de Maven
 # .mvn/

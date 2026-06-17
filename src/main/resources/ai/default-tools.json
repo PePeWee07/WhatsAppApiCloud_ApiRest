@@ -1,0 +1,168 @@
+[
+  {
+    "type": "function",
+    "name": "submit_support_case",
+    "description": "El usuario necesita enviar un ticket a la mesa de servicios de soporte TIC, proporcionando un asunto, una descripción del incidente y opcionalmente una lista de observadores que recibirán copia del correo de ticket.",
+    "parameters": {
+      "type": "object",
+      "required": ["asunto", "description"],
+      "properties": {
+        "asunto": {
+          "type": "string",
+          "description": "Asunto del ticket que servirá como título del caso."
+        },
+        "description": {
+          "type": "string",
+          "description": "Descripción detallada del incidente."
+        },
+        "observadores": {
+          "type": "array",
+          "description": "Lista de correos electrónicos que irán en copia (CC) del correo de creación del ticket.",
+          "items": {
+            "type": "string",
+            "format": "email",
+            "description": "Correo electrónico de un observador que recibirá copia."
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "strict": false
+  },
+  {
+    "type": "function",
+    "name": "send_support_email",
+    "description": "Solo debe usarse si el asistente no puede generar un ticket ni proporcionar ayuda relevante. Esta función envía un correo al equipo de Soporte TIC en UCACUE como último recurso.",
+    "parameters": {
+      "type": "object",
+      "required": ["user_query", "subject", "body"],
+      "properties": {
+        "user_query": {
+          "type": "string",
+          "description": "Texto original de la consulta del usuario"
+        },
+        "subject": {
+          "type": "string",
+          "description": "Asunto del correo de soporte"
+        },
+        "body": {
+          "type": "string",
+          "description": "Cuerpo del correo detallando la consulta y contexto"
+        }
+      },
+      "additionalProperties": false
+    },
+    "strict": true
+  },
+  {
+    "type": "function",
+    "name": "get_user_tickets",
+    "description": "Consulta todos los casos o tickets del usuario en la mesa de servicios TIC, cada vez que el usuario lo solicite.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "strict": true
+  },
+  {
+    "type": "function",
+    "name": "get_ticket_info",
+    "description": "El usuario podra obtener informacion del ticket o caso que solicite, para ello tienen que proporcionar el ID del cual van a consultar.",
+    "parameters": {
+      "type": "object",
+      "required": ["ticket_id"],
+      "properties": {
+        "ticket_id": {
+          "type": "string",
+          "description": "ID del ticket o caso que se desea consultar"
+        }
+      },
+      "additionalProperties": false
+    },
+    "strict": true
+  },
+  {
+    "type": "function",
+    "name": "accept_ticket",
+    "description": "El usuario podrá aceptar la solución de un ticket. Debe proporcionar el ID del ticket que desea marcar como aceptado.",
+    "parameters": {
+      "type": "object",
+      "required": ["ticket_id"],
+      "properties": {
+        "ticket_id": {
+          "type": "string",
+          "description": "ID del ticket o caso que el usuario desea aceptar"
+        }
+      },
+      "additionalProperties": false
+    },
+    "strict": true
+  },
+  {
+    "type": "function",
+    "name": "create_ticket_note",
+    "description": "Agrega un seguimiento (nota) a un ticket o caso existente en la mesa de servicios TIC.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "ticket_id": {
+          "type": "string",
+          "description": "Identificador único del ticket o caso"
+        },
+        "content": {
+          "type": "string",
+          "description": "Comentario o nota para el seguimiento"
+        }
+      },
+      "required": ["ticket_id", "content"],
+      "additionalProperties": false
+    },
+    "strict": true
+  },
+  {
+    "type": "function",
+    "name": "invite_user_feedback",
+    "description": "Invita al usuario a dejar feedback sobre la asistencia recibida",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    },
+    "strict": true
+  },
+  {
+    "type": "function",
+    "name": "open_attachment_session",
+    "description": "Invócala únicamente cuando el usuario solicite adjuntar archivos para un ticket DURANTE la creación.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    },
+    "strict": false
+  },
+  {
+    "type": "function",
+    "name": "agg_attachment_existing_ticket",
+    "description": "Invócala únicamente cuando el usuario solicite adjuntar archivos a un ticket EXISTENTE proporcionando el ticket_id.",
+    "parameters": {
+      "type": "object",
+      "required": ["ticket_id"],
+      "properties": {
+        "ticket_id": {
+          "type": "integer",
+          "description": "ID del ticket existente al que se adjuntarán los archivos."
+        }
+      },
+      "additionalProperties": false
+    },
+    "strict": true
+  },
+  {
+    "type": "file_search",
+    "vector_store_ids": ["vs_6903be448c3081918b49a572eaef60aa"]
+  }
+]
